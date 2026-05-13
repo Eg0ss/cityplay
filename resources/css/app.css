@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --primary-orange: #FF9F1C;
+        --primary-dark: #1A1A1A;
+        --bg-light: #FDFCFB;
+        --accent-yellow: #FFBF00;
+    }
+}
+
