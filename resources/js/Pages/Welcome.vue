@@ -65,16 +65,17 @@ const toggleFaq = (index) => {
                         <span class="text-xl font-black tracking-tighter uppercase italic dark:text-white text-gray-900">Cityplay</span>
                     </Link>
                     <nav class="hidden lg:flex items-center gap-6">
-                        <Link href="#" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Championnat</Link>
-                        <Link href="#" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Organisations</Link>
-                        <Link href="#" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Actualités</Link>
+                        <Link :href="route('how-to-play')" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Comment jouer</Link>
+                        <Link href="#" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Rejoindre via un code</Link>
+                        <Link :href="route('explore')" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer des villes</Link>
                     </nav>
                 </div>
 
                 <div class="flex items-center gap-4 lg:gap-6">
                     <!-- Theme Toggle -->
-                    <button @click="toggleTheme" class="p-2 rounded-xl dark:bg-white/5 bg-gray-100 text-xl hover:scale-110 transition-all">
-                        {{ isDark ? '🌙' : '☀️' }}
+                    <button @click="toggleTheme" class="p-2 rounded-xl dark:bg-white/5 bg-gray-100 hover:scale-110 transition-all flex items-center justify-center">
+                        <svg v-if="isDark" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
                     </button>
 
                     <div class="hidden lg:flex items-center gap-4">
@@ -83,8 +84,9 @@ const toggleFaq = (index) => {
                     </div>
 
                     <!-- Mobile Menu Button -->
-                    <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="lg:hidden text-2xl">
-                        {{ isMobileMenuOpen ? '✕' : '☰' }}
+                    <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                        <svg v-if="isMobileMenuOpen" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
                     </button>
                 </div>
             </div>
@@ -94,9 +96,9 @@ const toggleFaq = (index) => {
                  class="lg:hidden border-t px-6 py-8 space-y-6 transition-all"
                  :class="isDark ? 'bg-[#0D0D0F] border-white/5' : 'bg-white border-gray-100'">
                 <nav class="flex flex-col gap-6">
-                    <Link href="#" class="text-xs font-black uppercase tracking-widest">Championnat</Link>
-                    <Link href="#" class="text-xs font-black uppercase tracking-widest">Organisations</Link>
-                    <Link href="#" class="text-xs font-black uppercase tracking-widest">Actualités</Link>
+                    <Link :href="route('how-to-play')" class="text-xs font-black uppercase tracking-widest">Comment jouer</Link>
+                    <Link href="#" class="text-xs font-black uppercase tracking-widest">Rejoindre via un code</Link>
+                    <Link :href="route('explore')" class="text-xs font-black uppercase tracking-widest">Explorer des villes</Link>
                 </nav>
                 <div class="pt-6 border-t dark:border-white/5 border-gray-100 flex flex-col gap-4">
                     <Link :href="route('login')" class="text-center py-4 text-xs font-black uppercase tracking-widest">Connexion</Link>
@@ -109,9 +111,9 @@ const toggleFaq = (index) => {
         <section class="relative min-h-screen flex items-center justify-center pt-32 pb-20 overflow-hidden">
             <!-- Map Background -->
             <div class="absolute inset-0 z-0 scale-110 lg:scale-100">
-                <img src="https://images.unsplash.com/photo-1526772662000-3f88f10405ff?q=80&w=2000&auto=format&fit=crop" alt="Background" class="h-full w-full object-cover opacity-20 dark:opacity-40 grayscale" />
+                <img src="/images/logo.png" alt="Background" class="h-full w-full object-cover" />
                 <div class="absolute inset-0 transition-colors"
-                     :class="isDark ? 'bg-gradient-to-b from-[#0A0A0B]/80 via-[#0A0A0B]/40 to-[#0A0A0B]' : 'bg-gradient-to-b from-white/80 via-white/40 to-white'"></div>
+                     :class="isDark ? 'bg-gradient-to-b from-[#0A0A0B]/50 via-[#0A0A0B]/30 to-[#0A0A0B]/50' : 'bg-gradient-to-b from-white/50 via-white/30 to-white/50'"></div>
             </div>
 
             <div class="relative z-10 w-full max-w-7xl px-6 flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
@@ -163,20 +165,20 @@ const toggleFaq = (index) => {
         <!-- Features -->
         <section class="py-24 lg:py-32 space-y-32">
             <div v-for="(feature, i) in [
-                { title: 'Explorez le pays', text: 'Découvrez des lieux chargés d\'histoire, des palais royaux aux marchés vibrants.', emoji: '🏛️' },
-                { title: 'Jouez entre amis', text: 'Créez des guildes, lancez des défis et grimpez ensemble vers le sommet du classement.', emoji: '🤝' },
-                { title: 'Devenez une légende', text: 'Résolvez les énigmes les plus complexes pour gagner des badges épiques et des récompenses.', emoji: '👑' }
+                { title: 'Explorez le pays', text: 'Découvrez des lieux chargés d\'histoire, des palais royaux aux marchés vibrants.', img: '/images/image_1.png' },
+                { title: 'Jouez entre amis', text: 'Créez des guildes, lancez des défis et grimpez ensemble vers le sommet du classement.', img: '/images/image_2.png' },
+                { title: 'Devenez une légende', text: 'Résolvez les énigmes les plus complexes pour gagner des badges épiques et des récompenses.', img: '/images/image_3.png' }
             ]" :key="i" 
             class="mx-auto max-w-7xl px-6 grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-24">
                 <div :class="i % 2 !== 0 ? 'lg:order-2' : ''" class="space-y-6">
-                    <div class="text-5xl mb-4">{{ feature.emoji }}</div>
                     <h2 class="text-4xl lg:text-6xl font-black uppercase italic leading-none tracking-tighter">{{ feature.title }}</h2>
                     <p class="text-lg lg:text-xl dark:text-gray-400 text-gray-600 font-medium leading-relaxed">{{ feature.text }}</p>
                     <button class="text-[#FF9F1C] font-black uppercase tracking-widest text-xs border-b-2 border-[#FF9F1C] pb-2 hover:translate-x-2 transition-transform inline-block">En savoir plus →</button>
                 </div>
                 <div :class="i % 2 !== 0 ? 'lg:order-1' : ''" class="flex justify-center group">
-                    <div class="w-full aspect-video lg:aspect-square max-w-lg dark:bg-white/5 bg-gray-100 rounded-[3rem] overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-700">
-                        <img :src="`https://images.unsplash.com/photo-${1500000000000 + i}?q=80&w=800`" class="h-full w-full object-cover mix-blend-overlay opacity-50 grayscale group-hover:grayscale-0 transition-all duration-700" alt="Feature" />
+                    <div class="w-full aspect-video lg:aspect-square max-w-lg dark:bg-white/5 bg-gray-100 rounded-[3rem] overflow-hidden shadow-2xl group-hover:scale-105 transition-transform duration-700 relative">
+                        <img :src="feature.img" class="h-full w-full object-cover transition-all duration-700" :alt="feature.title" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                     </div>
                 </div>
             </div>
@@ -195,7 +197,9 @@ const toggleFaq = (index) => {
                          class="dark:bg-[#0A0A0B] bg-white rounded-3xl overflow-hidden border dark:border-white/5 border-gray-100 shadow-sm">
                         <button @click="toggleFaq(index)" class="w-full px-8 py-7 flex justify-between items-center text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-all group">
                             <span class="text-base lg:text-lg font-black uppercase tracking-tight group-hover:text-[#FF9F1C] transition-colors">{{ faq.question }}</span>
-                            <span class="text-2xl font-light text-gray-400 group-hover:rotate-90 transition-transform duration-300">{{ faq.open ? '−' : '+' }}</span>
+                            <span class="text-gray-400 group-hover:text-[#FF9F1C] transition-all duration-300" :class="faq.open ? 'rotate-180' : ''">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </span>
                         </button>
                         <transition name="fade">
                             <div v-if="faq.open" class="px-8 pb-8 dark:text-gray-400 text-gray-600 font-medium leading-relaxed text-sm lg:text-base">
