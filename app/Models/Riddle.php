@@ -6,15 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Riddle extends Model
 {
-    protected $fillable = ['place_id', 'niveau', 'description', 'reponse', 'photos'];
+    protected $fillable = ['place_id', 'niveau', 'description', 'reponse', 'mcq_options'];
 
     protected $casts = [
-        'photos' => 'json',
+        'mcq_options' => 'array',
     ];
 
     public function place()
     {
         return $this->belongsTo(Place::class);
+    }
+
+    public function images()
+    {
+        return $this->hasMany(RiddleImage::class);
     }
 
     public function gameRiddles()

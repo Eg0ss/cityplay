@@ -49,7 +49,7 @@ const toggleFaq = (index) => {
         </header>
 
         <!-- Hero Section with Map Background -->
-        <section class="relative h-screen min-h-[800px] flex items-center justify-center pt-20">
+        <section class="relative h-screen min-h-[800px] flex items-center justify-center pt-20" id="bg-custom">
             <div class="absolute inset-0 z-0">
                 <img src="/images/map_benin.png" alt="Bénin Map" class="h-full w-full object-cover" />
                 <div class="absolute inset-0 bg-gradient-to-b from-white/40 via-white/10 to-white"></div>
@@ -176,5 +176,11 @@ const toggleFaq = (index) => {
 
 h1, h2, h3 {
     letter-spacing: -0.05em;
+}
+
+#bg-custom {
+    background-image: url('/images/image.png');
+    background-size: cover;
+    background-position: center;
 }
 </style>

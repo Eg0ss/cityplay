@@ -8,15 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::dropIfExists('riddles');
-        Schema::dropIfExists('enigmas');
         Schema::create('riddles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('place_id')->constrained()->onDelete('cascade');
             $table->integer('niveau'); // 1, 2, 3
-            $table->text('description');
-            $table->string('reponse');
-            $table->json('photos')->nullable();
+            $table->text('description'); // Le texte de l'énigme
+            $table->string('reponse'); // La réponse à l'énigme
+            $table->json('mcq_options')->nullable(); // Options QCM pour niveaux 1 & 2
             $table->timestamps();
         });
     }

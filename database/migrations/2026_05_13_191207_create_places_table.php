@@ -14,9 +14,10 @@ return new class extends Migration
             $table->string('nom');
             $table->string('ville');
             $table->string('departement');
+            $table->text('verified_description');
             $table->decimal('lat', 10, 8);
             $table->decimal('lng', 11, 8);
-            $table->integer('rayon_marge')->default(50); // en mètres
+            $table->integer('rayon_marge')->default(5); // en mètres
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

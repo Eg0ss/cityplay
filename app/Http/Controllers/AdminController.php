@@ -66,11 +66,12 @@ class AdminController extends Controller
             'niveau' => 'required|integer|between:1,3',
             'description' => 'required|string',
             'reponse' => 'required|string|max:255',
+            'mcq_options' => 'nullable|array',
             'photos' => 'nullable|array',
         ]);
 
         $place->riddles()->create($validated);
 
-        return back()->with('success', 'Énigme ajoutée.');
+        return back()->with('success', 'Énigme ajoutée à la matrice.');
     }
 }
