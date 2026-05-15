@@ -33,67 +33,77 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Reset Password" />
+        <Head title="Réinitialisation du Code" />
 
-        <form @submit.prevent="submit">
+        <div class="mb-8 space-y-2">
+            <h2 class="text-2xl font-black uppercase italic tracking-tighter">Nouveau <span class="text-[#FF9F1C]">Cryptage</span></h2>
+            <p class="text-xs dark:text-gray-500 text-gray-500 font-medium">Définissez votre nouveau code d'accès pour reprendre votre mission.</p>
+        </div>
+
+        <form @submit.prevent="submit" class="space-y-6">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Canal de Liaison (Email)" />
 
                 <TextInput
                     id="email"
                     type="email"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full opacity-50"
                     v-model="form.email"
                     required
-                    autofocus
+                    readonly
                     autocomplete="username"
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+            <div class="grid grid-cols-1 gap-6">
+                <div class="space-y-2">
+                    <InputLabel for="password" value="Nouveau Code (Password)" />
 
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
+                    <TextInput
+                        id="password"
+                        type="password"
+                        class="mt-1 block w-full"
+                        v-model="form.password"
+                        required
+                        autocomplete="new-password"
+                        placeholder="••••••••"
+                    />
 
-                <InputError class="mt-2" :message="form.errors.password" />
+                    <InputError class="mt-2" :message="form.errors.password" />
+                </div>
+
+                <div class="space-y-2">
+                    <InputLabel
+                        for="password_confirmation"
+                        value="Confirmation"
+                    />
+
+                    <TextInput
+                        id="password_confirmation"
+                        type="password"
+                        class="mt-1 block w-full"
+                        v-model="form.password_confirmation"
+                        required
+                        autocomplete="new-password"
+                        placeholder="••••••••"
+                    />
+
+                    <InputError
+                        class="mt-2"
+                        :message="form.errors.password_confirmation"
+                    />
+                </div>
             </div>
 
-            <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
-                />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
+            <div class="pt-4 flex items-center justify-end">
                 <PrimaryButton
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
+                    class="w-full"
                 >
-                    Reset Password
+                    Réinitialiser le Code
                 </PrimaryButton>
             </div>
         </form>

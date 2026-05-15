@@ -1,198 +1,161 @@
 <script setup>
-import { ref } from 'vue';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import { ref, onMounted } from 'vue';
 import { Link } from '@inertiajs/vue3';
 
-const showingNavigationDropdown = ref(false);
+const isMobileMenuOpen = ref(false);
+const isDark = ref(true);
+
+const toggleTheme = () => {
+    isDark.value = !isDark.value;
+    localStorage.setItem('cityplay-theme', isDark.value ? 'dark' : 'light');
+    updateTheme();
+};
+
+const updateTheme = () => {
+    if (isDark.value) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+};
+
+onMounted(() => {
+    const savedTheme = localStorage.getItem('cityplay-theme');
+    if (savedTheme) {
+        isDark.value = savedTheme === 'dark';
+    }
+    updateTheme();
+});
 </script>
 
 <template>
-    <div>
-        <div class="min-h-screen bg-gray-100">
-            <nav
-                class="border-b border-gray-100 bg-white"
-            >
-                <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
-                        <div class="flex">
-                            <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
-                                    <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
-                                    />
-                                </Link>
+    <div class="min-h-screen font-sans transition-colors duration-300"
+         :class="isDark ? 'bg-[#0A0A0B] text-white' : 'bg-gray-50 text-gray-900'">
+        
+        <!-- Top Navigation -->
+        <nav class="fixed top-0 z-50 w-full border-b backdrop-blur-md transition-colors"
+             :class="isDark ? 'bg-black/80 border-white/5' : 'bg-white/80 border-gray-200'">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="flex h-20 items-center justify-between">
+                    <div class="flex items-center gap-8">
+                        <!-- Logo -->
+                        <Link href="/dashboard" class="flex items-center gap-2">
+                            <div class="bg-[#FF9F1C] p-2 rounded-lg shadow-lg">
+                                <span class="text-white font-black text-lg">CP</span>
                             </div>
+                            <span class="text-lg font-black tracking-tighter uppercase italic hidden sm:block">Cityplay</span>
+                        </Link>
 
-                            <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
-                            >
-                                <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
-                                >
-                                    Dashboard
-                                </NavLink>
+                        <!-- Player Stats (Desktop) -->
+                        <div class="hidden lg:flex items-center gap-6">
+                            <div class="flex flex-col">
+                                <span class="text-[8px] font-black uppercase text-gray-500 tracking-widest">Niveau</span>
+                                <span class="text-xs font-black dark:text-[#FF9F1C] text-gray-900">BRONZE II</span>
+                            </div>
+                            <div class="h-8 w-[1px] dark:bg-white/5 bg-gray-200"></div>
+                            <div class="flex flex-col">
+                                <span class="text-[8px] font-black uppercase text-gray-500 tracking-widest">XP Actuel</span>
+                                <span class="text-xs font-black dark:text-white text-gray-900">1,240 XP</span>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                            <!-- Settings Dropdown -->
-                            <div class="relative ms-3">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {{ $page.props.auth.user.name }}
+                    <div class="flex items-center gap-4">
+                        <!-- Theme Toggle -->
+                        <button @click="toggleTheme" class="p-2 rounded-xl dark:bg-white/5 bg-gray-100 text-xl hover:scale-110 transition-all">
+                            {{ isDark ? '🌙' : '☀️' }}
+                        </button>
 
-                                                <svg
-                                                    class="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clip-rule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                        >
-                                            Profile
-                                        </DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </DropdownLink>
-                                    </template>
-                                </Dropdown>
+                        <!-- User Profile Dropdown (Desktop) -->
+                        <div class="hidden sm:flex items-center gap-4 border-l dark:border-white/5 border-gray-200 pl-6">
+                            <div class="text-right">
+                                <p class="text-xs font-black uppercase tracking-tight">{{ $page.props.auth.user.name }}</p>
+                                <p class="text-[9px] text-[#FF9F1C] font-bold uppercase tracking-widest italic">Explorateur</p>
+                            </div>
+                            <div class="h-10 w-10 rounded-full dark:bg-white/5 bg-gray-200 border dark:border-white/10 border-gray-300 flex items-center justify-center font-black text-xs text-[#FF9F1C]">
+                                {{ $page.props.auth.user.name.substring(0, 2).toUpperCase() }}
                             </div>
                         </div>
 
-                        <!-- Hamburger -->
-                        <div class="-me-2 flex items-center sm:hidden">
-                            <button
-                                @click="
-                                    showingNavigationDropdown =
-                                        !showingNavigationDropdown
-                                "
-                                class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
-                            >
-                                <svg
-                                    class="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        :class="{
-                                            hidden: showingNavigationDropdown,
-                                            'inline-flex':
-                                                !showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        :class="{
-                                            hidden: !showingNavigationDropdown,
-                                            'inline-flex':
-                                                showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
+                        <!-- Hamburger (Mobile) -->
+                        <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="sm:hidden text-2xl">
+                            {{ isMobileMenuOpen ? '✕' : '☰' }}
+                        </button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Responsive Navigation Menu -->
-                <div
-                    :class="{
-                        block: showingNavigationDropdown,
-                        hidden: !showingNavigationDropdown,
-                    }"
-                    class="sm:hidden"
-                >
-                    <div class="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            :href="route('dashboard')"
-                            :active="route().current('dashboard')"
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
-                    </div>
-
-                    <!-- Responsive Settings Options -->
-                    <div
-                        class="border-t border-gray-200 pb-1 pt-4"
-                    >
-                        <div class="px-4">
-                            <div
-                                class="text-base font-medium text-gray-800"
-                            >
-                                {{ $page.props.auth.user.name }}
-                            </div>
-                            <div class="text-sm font-medium text-gray-500">
-                                {{ $page.props.auth.user.email }}
-                            </div>
+            <!-- Mobile Menu -->
+            <transition name="fade">
+                <div v-if="isMobileMenuOpen" class="sm:hidden border-t dark:bg-[#0D0D0F] bg-white dark:border-white/5 border-gray-200 px-6 py-8 space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 rounded-2xl dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-100">
+                            <p class="text-[8px] font-black text-gray-500 uppercase tracking-widest">Points</p>
+                            <p class="text-lg font-black dark:text-[#FF9F1C] text-gray-900">4,500</p>
                         </div>
-
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Profile
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
+                        <div class="p-4 rounded-2xl dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-100">
+                            <p class="text-[8px] font-black text-gray-500 uppercase tracking-widest">Niveau</p>
+                            <p class="text-lg font-black dark:text-blue-500 text-gray-900">12</p>
                         </div>
                     </div>
+                    <nav class="flex flex-col gap-4">
+                        <Link :href="route('dashboard')" class="text-sm font-black uppercase tracking-widest py-3 border-b dark:border-white/5 border-gray-100">Tableau de Bord</Link>
+                        <Link href="#" class="text-sm font-black uppercase tracking-widest py-3 border-b dark:border-white/5 border-gray-100">Ma Progression</Link>
+                        <Link :href="route('profile.edit')" class="text-sm font-black uppercase tracking-widest py-3 border-b dark:border-white/5 border-gray-100">Paramètres</Link>
+                        <Link :href="route('logout')" method="post" as="button" class="text-sm font-black uppercase tracking-widest py-3 text-red-500 text-left">Déconnexion</Link>
+                    </nav>
                 </div>
-            </nav>
+            </transition>
+        </nav>
 
-            <!-- Page Heading -->
-            <header
-                class="bg-white shadow"
-                v-if="$slots.header"
-            >
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <!-- Main Content Wrapper -->
+        <div class="pt-20">
+            <!-- Secondary Nav (Optional for Sub-pages) -->
+            <div class="border-b dark:bg-white/2 dark:border-white/5 border-gray-200 hidden lg:block">
+                <div class="mx-auto max-w-7xl px-8 flex gap-8">
+                    <Link :href="route('dashboard')" 
+                        :class="route().current('dashboard') ? 'border-[#FF9F1C] text-[#FF9F1C]' : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'"
+                        class="py-4 border-b-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all">
+                        Vue d'ensemble
+                    </Link>
+                    <Link href="#" class="py-4 border-b-2 border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white text-[10px] font-black uppercase tracking-[0.2em] transition-all">
+                        Quêtes Dispo
+                    </Link>
+                    <Link href="#" class="py-4 border-b-2 border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white text-[10px] font-black uppercase tracking-[0.2em] transition-all">
+                        Classement
+                    </Link>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <main class="mx-auto max-w-7xl p-6 lg:p-12">
+                <!-- Page Heading (Breeze style slot) -->
+                <div v-if="$slots.header" class="mb-12">
                     <slot name="header" />
                 </div>
-            </header>
-
-            <!-- Page Content -->
-            <main>
+                
                 <slot />
             </main>
         </div>
+
+        <!-- Floating Action Button (Mobile) -->
+        <button class="fixed bottom-8 right-8 h-16 w-16 bg-[#FF9F1C] text-black rounded-2xl shadow-2xl flex items-center justify-center text-3xl sm:hidden z-40 animate-bounce">
+            🚀
+        </button>
     </div>
 </template>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
+
+html.dark {
+    background-color: #0A0A0B;
+}
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+}
+</style>

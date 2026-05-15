@@ -48,8 +48,15 @@ Route::middleware(['auth', 'verified'])->prefix('game')->name('game.')->group(fu
 // Admin Routes
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
-    Route::get('/places', [AdminController::class, 'places'])->name('places');
-    Route::post('/places', [AdminController::class, 'storePlace'])->name('places.store');
+    
+    // Cities Management
+    Route::get('/cities', [AdminController::class, 'cities'])->name('cities');
+    Route::post('/cities', [AdminController::class, 'storeCity'])->name('cities.store');
+    
+    // Places Management (linked to City)
+    Route::get('/cities/{city}/places', [AdminController::class, 'places'])->name('cities.places');
+    Route::post('/cities/{city}/places', [AdminController::class, 'storePlace'])->name('places.store');
+    
     Route::post('/places/{place}/toggle', [AdminController::class, 'togglePlace'])->name('places.toggle');
     Route::get('/places/{place}/enigmas', [AdminController::class, 'riddles'])->name('enigmas');
     Route::post('/places/{place}/enigmas', [AdminController::class, 'storeRiddle'])->name('enigmas.store');

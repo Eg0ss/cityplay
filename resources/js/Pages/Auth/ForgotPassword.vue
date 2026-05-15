@@ -23,24 +23,22 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Forgot Password" />
+        <Head title="Récupération de Code" />
 
-        <div class="mb-4 text-sm text-gray-600">
-            Forgot your password? No problem. Just let us know your email
-            address and we will email you a password reset link that will allow
-            you to choose a new one.
+        <div class="mb-6 text-sm dark:text-gray-400 text-gray-600 font-medium leading-relaxed">
+            Vous avez perdu votre code d'accès ? Pas de panique, explorateur. Indiquez-nous votre adresse Matrix (email) et nous vous enverrons un lien de réinitialisation sécurisé.
         </div>
 
         <div
             v-if="status"
-            class="mb-4 text-sm font-medium text-green-600"
+            class="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-xs font-black uppercase tracking-widest text-green-500"
         >
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit">
+        <form @submit.prevent="submit" class="space-y-6">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Canal de Liaison (Email)" />
 
                 <TextInput
                     id="email"
@@ -50,17 +48,19 @@ const submit = () => {
                     required
                     autofocus
                     autocomplete="username"
+                    placeholder="votre@email.com"
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
+            <div class="flex items-center justify-end">
                 <PrimaryButton
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
+                    class="w-full"
                 >
-                    Email Password Reset Link
+                    Envoyer le lien de secours
                 </PrimaryButton>
             </div>
         </form>
