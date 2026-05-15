@@ -30,14 +30,25 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+use App\Http\Controllers\GameController;
+
+// ...
+
+// Game Routes
+Route::middleware(['auth', 'verified'])->prefix('game')->name('game.')->group(function () {
+    Route::post('/sessions', [GameController::class, 'createSession'])->name('create');
+    Route::get('/sessions/{token}', [GameController::class, 'showSession'])->name('session');
+    Route::post('/sessions/{session}/riddles/{riddle}', [GameController::class, 'submitAnswer'])->name('submit');
+});
+
 // Admin Routes
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/places', [AdminController::class, 'places'])->name('places');
     Route::post('/places', [AdminController::class, 'storePlace'])->name('places.store');
     Route::post('/places/{place}/toggle', [AdminController::class, 'togglePlace'])->name('places.toggle');
-    Route::get('/places/{place}/enigmas', [AdminController::class, 'enigmas'])->name('enigmas');
-    Route::post('/places/{place}/enigmas', [AdminController::class, 'storeEnigma'])->name('enigmas.store');
+    Route::get('/places/{place}/enigmas', [AdminController::class, 'riddles'])->name('enigmas');
+    Route::post('/places/{place}/enigmas', [AdminController::class, 'storeRiddle'])->name('enigmas.store');
 });
 
 Route::middleware('auth')->group(function () {

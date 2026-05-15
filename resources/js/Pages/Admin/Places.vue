@@ -9,11 +9,12 @@ defineProps({
 
 const showForm = ref(false);
 const form = useForm({
-    name: '',
-    city: '',
-    description: '',
-    latitude: 6.3667,
-    longitude: 2.4333,
+    nom: '',
+    ville: '',
+    departement: '',
+    lat: 6.3667,
+    lng: 2.4333,
+    rayon_marge: 50,
 });
 
 const submit = () => {
@@ -45,23 +46,27 @@ const submit = () => {
                 <form @submit.prevent="submit" class="grid gap-8 md:grid-cols-2">
                     <div class="space-y-2">
                         <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Nom du Lieu</label>
-                        <input v-model="form.name" type="text" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" placeholder="La Porte du Non-Retour" />
+                        <input v-model="form.nom" type="text" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" placeholder="La Porte du Non-Retour" />
                     </div>
                     <div class="space-y-2">
                         <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Ville</label>
-                        <input v-model="form.city" type="text" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" placeholder="Ouidah" />
+                        <input v-model="form.ville" type="text" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" placeholder="Ouidah" />
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Département</label>
+                        <input v-model="form.departement" type="text" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" placeholder="Atlantique" />
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Rayon Marge (m)</label>
+                        <input v-model="form.rayon_marge" type="number" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" />
                     </div>
                     <div class="space-y-2">
                         <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Latitude (GPS)</label>
-                        <input v-model="form.latitude" type="number" step="any" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" />
+                        <input v-model="form.lat" type="number" step="any" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" />
                     </div>
                     <div class="space-y-2">
                         <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Longitude (GPS)</label>
-                        <input v-model="form.longitude" type="number" step="any" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" />
-                    </div>
-                    <div class="md:col-span-2 space-y-2">
-                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Description</label>
-                        <textarea v-model="form.description" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C] h-32"></textarea>
+                        <input v-model="form.lng" type="number" step="any" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" />
                     </div>
                     <div class="md:col-span-2">
                         <button type="submit" :disabled="form.processing" class="w-full bg-[#1A1A1A] text-white py-5 rounded-2xl font-bold shadow-xl hover:bg-black transition-all disabled:opacity-50">
@@ -85,10 +90,10 @@ const submit = () => {
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-for="place in places" :key="place.id" class="hover:bg-gray-50 transition-colors">
-                            <td class="px-8 py-6 font-bold text-lg">{{ place.name }}</td>
-                            <td class="px-8 py-6 text-gray-500">{{ place.city }}</td>
+                            <td class="px-8 py-6 font-bold text-lg">{{ place.nom }}</td>
+                            <td class="px-8 py-6 text-gray-500">{{ place.ville }} ({{ place.departement }})</td>
                             <td class="px-8 py-6">
-                                <span class="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-600">{{ place.enigmas_count }} énigmes</span>
+                                <span class="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-600">{{ place.riddles_count }} énigmes</span>
                             </td>
                             <td class="px-8 py-6">
                                 <span :class="place.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-3 py-1 rounded-full text-xs font-bold">

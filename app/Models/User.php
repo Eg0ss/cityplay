@@ -21,28 +21,32 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
+        'is_partner',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    public function gameSessions()
+    {
+        return $this->belongsToMany(GameSession::class, 'game_players', 'user_id', 'session_id');
+    }
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    public function scores()
+    {
+        return $this->hasMany(Score::class);
+    }
+
+    public function gamePlayers()
+    {
+        return $this->hasMany(GamePlayer::class);
+    }
+
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
+            'is_partner' => 'boolean',
         ];
     }
 }

@@ -1,6 +1,6 @@
 <script setup>
 import AdminLayout from './AdminLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -10,11 +10,10 @@ const props = defineProps({
 
 const showForm = ref(false);
 const form = useForm({
-    level: 1,
+    niveau: 1,
     description: '',
-    answer: '',
-    latitude: props.place.latitude,
-    longitude: props.place.longitude,
+    reponse: '',
+    photos: [],
 });
 
 const submit = () => {
@@ -28,14 +27,14 @@ const submit = () => {
 </script>
 
 <template>
-    <Head :title="'Énigmes - ' + place.name" />
+    <Head :title="'Énigmes - ' + place.nom" />
     <AdminLayout>
         <div class="space-y-12">
             <div class="flex justify-between items-center">
                 <div>
                     <div class="flex items-center gap-4">
                         <Link :href="route('admin.places')" class="text-[#FF9F1C] font-bold hover:underline">← Retour</Link>
-                        <h1 class="text-4xl font-black text-[#1A1A1A]">Énigmes : {{ place.name }}</h1>
+                        <h1 class="text-4xl font-black text-[#1A1A1A]">Énigmes : {{ place.nom }}</h1>
                     </div>
                     <p class="text-gray-500 mt-2">Gérez les défis par niveau pour ce lieu spécifique.</p>
                 </div>
@@ -49,7 +48,7 @@ const submit = () => {
                 <form @submit.prevent="submit" class="grid gap-8 md:grid-cols-2">
                     <div class="space-y-2">
                         <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Niveau de difficulté</label>
-                        <select v-model="form.level" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]">
+                        <select v-model="form.niveau" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]">
                             <option :value="1">🔵 Niveau 1 (Débutant)</option>
                             <option :value="2">🟡 Niveau 2 (Intermédiaire)</option>
                             <option :value="3">🔴 Niveau 3 (Expert)</option>
@@ -57,19 +56,11 @@ const submit = () => {
                     </div>
                     <div class="space-y-2">
                         <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Réponse attendue</label>
-                        <input v-model="form.answer" type="text" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" placeholder="Ex: Dahomey" />
+                        <input v-model="form.reponse" type="text" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" placeholder="Ex: Dahomey" />
                     </div>
                     <div class="md:col-span-2 space-y-2">
                         <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Description / Énigme</label>
                         <textarea v-model="form.description" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C] h-40" placeholder="Écrivez le texte de l'énigme ici..."></textarea>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Latitude Street View (Optionnel)</label>
-                        <input v-model="form.latitude" type="number" step="any" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" />
-                    </div>
-                    <div class="space-y-2">
-                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-400">Longitude Street View (Optionnel)</label>
-                        <input v-model="form.longitude" type="number" step="any" class="w-full border-gray-100 bg-gray-50 rounded-xl py-4 px-6 focus:ring-2 focus:ring-[#FF9F1C]" />
                     </div>
                     <div class="md:col-span-2">
                         <button type="submit" :disabled="form.processing" class="w-full bg-[#FF9F1C] text-white py-5 rounded-2xl font-bold shadow-xl hover:bg-[#e68a00] transition-all disabled:opacity-50">
@@ -88,17 +79,17 @@ const submit = () => {
                         <span v-else>🔴 Niveau 3</span>
                     </h3>
                     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <div v-for="enigma in enigmas.filter(e => e.level === level)" :key="enigma.id" class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                        <div v-for="enigma in enigmas.filter(e => e.niveau === level)" :key="enigma.id" class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
                             <p class="text-gray-700 italic mb-4 line-clamp-3">"{{ enigma.description }}"</p>
                             <div class="flex items-center justify-between pt-4 border-t border-gray-50">
-                                <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Réponse: {{ enigma.answer }}</span>
+                                <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Réponse: {{ enigma.reponse }}</span>
                                 <div class="flex gap-2">
                                     <button class="text-gray-400 hover:text-[#1A1A1A]">✏️</button>
                                     <button class="text-gray-400 hover:text-red-500">🗑️</button>
                                 </div>
                             </div>
                         </div>
-                        <div v-if="enigmas.filter(e => e.level === level).length === 0" class="md:col-span-3 py-12 text-center border-2 border-dashed border-gray-100 rounded-3xl text-gray-400">
+                        <div v-if="enigmas.filter(e => e.niveau === level).length === 0" class="md:col-span-3 py-12 text-center border-2 border-dashed border-gray-100 rounded-3xl text-gray-400">
                             Aucune énigme pour ce niveau.
                         </div>
                     </div>

@@ -1,38 +1,33 @@
 <script setup>
 import PageTemplate from './PageTemplate.vue';
+import { Link } from '@inertiajs/vue3';
+
+const steps = [
+    { title: "Choisissez un lieu", desc: "Explorez la carte et sélectionnez un monument ou un endroit emblématique du Bénin.", icon: "📍" },
+    { title: "Résolvez l'énigme", desc: "Utilisez les indices textuels et visuels pour deviner l'histoire ou le nom caché.", icon: "🧩" },
+    { title: "Gagnez des points", desc: "Accumulez des points pour chaque bonne réponse et grimpez dans le classement mondial.", icon: "🏆" },
+];
 </script>
 
 <template>
-    <PageTemplate title="Comment jouer ?" subtitle="Apprenez les règles du jeu et commencez votre exploration du Bénin dès aujourd'hui.">
+    <PageTemplate title="COMMENT JOUER ?" subtitle="Suivez ces trois étapes simples pour devenir un expert de l'exploration béninoise.">
         <div class="grid gap-12 md:grid-cols-3">
-            <div class="space-y-6">
-                <div class="h-16 w-16 bg-[#FF9F1C] text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-lg shadow-orange-100">1</div>
-                <h3 class="text-2xl font-bold">Choisissez un Lieu</h3>
-                <p class="text-gray-500">Parcourez la carte ou la liste des lieux emblématiques du Bénin. Sélectionnez l'endroit que vous souhaitez découvrir.</p>
-            </div>
-            <div class="space-y-6">
-                <div class="h-16 w-16 bg-[#FF9F1C] text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-lg shadow-orange-100">2</div>
-                <h3 class="text-2xl font-bold">Résolvez l'Énigme</h3>
-                <p class="text-gray-500">Chaque lieu est protégé par une énigme créée par nos administrateurs. Utilisez votre logique et vos connaissances pour trouver la réponse.</p>
-            </div>
-            <div class="space-y-6">
-                <div class="h-16 w-16 bg-[#FF9F1C] text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-lg shadow-orange-100">3</div>
-                <h3 class="text-2xl font-bold">Gagnez des Points</h3>
-                <p class="text-gray-500">Une fois l'énigme résolue, vous débloquez l'histoire secrète du lieu et gagnez des points pour grimper dans le classement national.</p>
+            <div v-for="(step, i) in steps" :key="i" class="bg-white p-12 rounded-[3rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                <div class="h-20 w-20 bg-gray-50 rounded-[2rem] flex items-center justify-center text-4xl mb-8 group-hover:scale-110 transition-transform duration-500">
+                    {{ step.icon }}
+                </div>
+                <h3 class="text-3xl font-black uppercase italic tracking-tighter mb-4">{{ step.title }}</h3>
+                <p class="text-lg text-gray-500 font-medium leading-relaxed">{{ step.desc }}</p>
             </div>
         </div>
 
-        <div class="mt-20 bg-[#1A1A1A] p-12 rounded-3xl text-white">
-            <h3 class="text-3xl font-bold mb-6 text-center">Les types d'énigmes</h3>
-            <div class="grid gap-8 md:grid-cols-2">
-                <div class="border border-white/10 p-8 rounded-2xl hover:bg-white/5 transition-all">
-                    <h4 class="text-xl font-bold text-[#FF9F1C] mb-4">Énigmes Historiques</h4>
-                    <p class="text-gray-400">Basées sur les faits réels, les rois du Dahomey et les moments clés de notre histoire.</p>
-                </div>
-                <div class="border border-white/10 p-8 rounded-2xl hover:bg-white/5 transition-all">
-                    <h4 class="text-xl font-bold text-[#FF9F1C] mb-4">Énigmes Géographiques</h4>
-                    <p class="text-gray-400">Testez votre sens de l'orientation et vos connaissances sur les paysages béninois.</p>
-                </div>
+        <div class="mt-24 bg-[#1A1A1A] p-16 rounded-[4rem] text-center space-y-8">
+            <h2 class="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter">Prêt pour l'aventure ?</h2>
+            <p class="text-xl text-gray-400 max-w-2xl mx-auto font-medium">Rejoignez des milliers de joueurs et découvrez le Bénin comme vous ne l'avez jamais vu.</p>
+            <div class="pt-4">
+                <Link :href="route('register')" class="inline-block bg-[#FF9F1C] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-500/20 hover:scale-105 transition-all">
+                    Commencer Maintenant
+                </Link>
             </div>
         </div>
     </PageTemplate>

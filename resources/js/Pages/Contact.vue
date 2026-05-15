@@ -1,26 +1,41 @@
 <script setup>
 import PageTemplate from './PageTemplate.vue';
+import { useForm } from '@inertiajs/vue3';
+
+const form = useForm({
+    name: '',
+    email: '',
+    message: '',
+});
+
+const submit = () => {
+    // Logic for form submission
+};
 </script>
 
 <template>
-    <PageTemplate title="Contactez-nous" subtitle="Une question ? Une idée d'énigme ? N'hésitez pas à nous écrire.">
-        <div class="max-w-2xl mx-auto bg-white p-12 rounded-3xl shadow-xl border border-gray-100">
-            <form class="space-y-6">
-                <div>
-                    <label class="block text-sm font-bold uppercase tracking-widest text-gray-400 mb-2">Nom Complet</label>
-                    <input type="text" class="w-full border-gray-100 bg-gray-50 rounded-xl focus:ring-2 focus:ring-[#FF9F1C] focus:border-transparent py-4" placeholder="Votre nom" />
+    <PageTemplate title="CONTACTEZ-NOUS" subtitle="Vous avez une question ou une suggestion d'énigme ? Notre équipe d'aventuriers est à votre écoute.">
+        <div class="mx-auto max-w-4xl bg-white p-16 rounded-[4rem] border border-gray-100 shadow-sm">
+            <form @submit.prevent="submit" class="space-y-12">
+                <div class="grid gap-8 md:grid-cols-2">
+                    <div class="space-y-4">
+                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Votre Nom</label>
+                        <input v-model="form.name" type="text" class="w-full border-gray-100 bg-gray-50 rounded-2xl py-5 px-8 font-bold focus:ring-2 focus:ring-[#FF9F1C] border-2 transition-all" placeholder="Ex: Koffi Benin" />
+                    </div>
+                    <div class="space-y-4">
+                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Adresse E-mail</label>
+                        <input v-model="form.email" type="email" class="w-full border-gray-100 bg-gray-50 rounded-2xl py-5 px-8 font-bold focus:ring-2 focus:ring-[#FF9F1C] border-2 transition-all" placeholder="koffi@exemple.com" />
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-bold uppercase tracking-widest text-gray-400 mb-2">Email</label>
-                    <input type="email" class="w-full border-gray-100 bg-gray-50 rounded-xl focus:ring-2 focus:ring-[#FF9F1C] focus:border-transparent py-4" placeholder="votre@email.com" />
+                <div class="space-y-4">
+                    <label class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Message</label>
+                    <textarea v-model="form.message" class="w-full border-gray-100 bg-gray-50 rounded-2xl py-5 px-8 font-bold focus:ring-2 focus:ring-[#FF9F1C] border-2 transition-all h-48" placeholder="Votre message ici..."></textarea>
                 </div>
-                <div>
-                    <label class="block text-sm font-bold uppercase tracking-widest text-gray-400 mb-2">Message</label>
-                    <textarea class="w-full border-gray-100 bg-gray-50 rounded-xl focus:ring-2 focus:ring-[#FF9F1C] focus:border-transparent py-4 h-40" placeholder="Comment pouvons-nous vous aider ?"></textarea>
+                <div class="pt-6">
+                    <button type="submit" class="w-full bg-[#1A1A1A] text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-xl hover:bg-black transition-all hover:scale-[1.02]">
+                        Envoyer le message
+                    </button>
                 </div>
-                <button type="submit" class="w-full rounded-xl bg-[#FF9F1C] py-4 text-lg font-bold text-white shadow-xl transition-all hover:bg-[#e68a00] hover:scale-[1.02]">
-                    Envoyer le message
-                </button>
             </form>
         </div>
     </PageTemplate>

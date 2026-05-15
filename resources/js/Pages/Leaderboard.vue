@@ -2,42 +2,51 @@
 import PageTemplate from './PageTemplate.vue';
 
 const players = [
-    { rank: 1, name: "Koffi L.", points: 1250, solved: 24 },
-    { rank: 2, name: "Sika A.", points: 1100, solved: 21 },
-    { rank: 3, name: "Yao B.", points: 950, solved: 18 },
-    { rank: 4, name: "Mireille T.", points: 880, solved: 17 },
-    { rank: 5, name: "Dossou P.", points: 720, solved: 14 },
-    { rank: 6, name: "Amadou M.", points: 650, solved: 12 },
-    { rank: 7, name: "Evelyne K.", points: 590, solved: 11 },
+    { rank: 1, name: "Koffi l'Explorateur", points: 12500, solved: 45, avatar: "👑" },
+    { rank: 2, name: "Awa du Nord", points: 11200, solved: 42, avatar: "🥈" },
+    { rank: 3, name: "Sami le Guerrier", points: 9800, solved: 38, avatar: "🥉" },
+    { rank: 4, name: "Bao Benin", points: 8500, solved: 30, avatar: "👤" },
+    { rank: 5, name: "Ouidah Queen", points: 7900, solved: 28, avatar: "👤" },
+    { rank: 6, name: "Dahomey King", points: 7200, solved: 25, avatar: "👤" },
 ];
 </script>
 
 <template>
-    <PageTemplate title="Classement des Explorateurs" subtitle="Découvrez qui sont les meilleurs solveurs d'énigmes du Bénin.">
-        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
-            <table class="w-full text-left">
-                <thead class="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                        <th class="px-8 py-6 text-sm font-bold uppercase tracking-widest text-gray-400">Rang</th>
-                        <th class="px-8 py-6 text-sm font-bold uppercase tracking-widest text-gray-400">Explorateur</th>
-                        <th class="px-8 py-6 text-sm font-bold uppercase tracking-widest text-gray-400">Points</th>
-                        <th class="px-8 py-6 text-sm font-bold uppercase tracking-widest text-gray-400">Énigmes Résolues</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <tr v-for="player in players" :key="player.rank" class="hover:bg-gray-50 transition-colors">
-                        <td class="px-8 py-6">
-                            <span v-if="player.rank <= 3" class="h-8 w-8 rounded-full bg-[#FF9F1C] text-white flex items-center justify-center font-bold">{{ player.rank }}</span>
-                            <span v-else class="px-3 font-bold text-gray-400">{{ player.rank }}</span>
-                        </td>
-                        <td class="px-8 py-6 font-bold text-lg">{{ player.name }}</td>
-                        <td class="px-8 py-6">
-                            <span class="text-[#FF9F1C] font-black">{{ player.points }} pts</span>
-                        </td>
-                        <td class="px-8 py-6 text-gray-500">{{ player.solved }} énigmes</td>
-                    </tr>
-                </tbody>
-            </table>
+    <PageTemplate title="CLASSEMENT MONDIAL" subtitle="Les meilleurs explorateurs du Bénin. Serez-vous le prochain à dominer le classement ?">
+        <div class="bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-100">
+                            <th class="px-12 py-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center w-24">Rang</th>
+                            <th class="px-12 py-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Joueur</th>
+                            <th class="px-12 py-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Points</th>
+                            <th class="px-12 py-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Énigmes Résolues</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr v-for="player in players" :key="player.rank" class="hover:bg-gray-50 transition-colors group">
+                            <td class="px-12 py-8 text-center">
+                                <span class="text-2xl font-black italic tracking-tighter" :class="{'text-[#FF9F1C]': player.rank <= 3}">#{{ player.rank }}</span>
+                            </td>
+                            <td class="px-12 py-8">
+                                <div class="flex items-center gap-6">
+                                    <div class="h-14 w-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                        {{ player.avatar }}
+                                    </div>
+                                    <span class="text-xl font-bold italic tracking-tighter uppercase">{{ player.name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-12 py-8 text-right font-black text-[#FF9F1C] text-xl">
+                                {{ player.points.toLocaleString() }}
+                            </td>
+                            <td class="px-12 py-8 text-right font-bold text-gray-500 text-lg">
+                                {{ player.solved }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </PageTemplate>
 </template>

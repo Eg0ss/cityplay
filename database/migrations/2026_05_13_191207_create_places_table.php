@@ -8,14 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::dropIfExists('places');
         Schema::create('places', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('city');
-            $table->text('description')->nullable();
-            $table->decimal('latitude', 10, 8);
-            $table->decimal('longitude', 11, 8);
-            $table->boolean('is_active')->default(false);
+            $table->string('nom');
+            $table->string('ville');
+            $table->string('departement');
+            $table->decimal('lat', 10, 8);
+            $table->decimal('lng', 11, 8);
+            $table->integer('rayon_marge')->default(50); // en mètres
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

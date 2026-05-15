@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Place;
-use App\Models\Enigma;
+use App\Models\Riddle;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,8 +16,8 @@ class AdminController extends Controller
             'stats' => [
                 'users_count' => User::count(),
                 'places_count' => Place::count(),
-                'enigmas_count' => Enigma::count(),
-                'solved_count' => 0, // Placeholder until solved tracking is added
+                'riddles_count' => Riddle::count(),
+                'solved_count' => 0,
             ],
             'recent_places' => Place::latest()->take(5)->get(),
         ]);
@@ -26,18 +26,19 @@ class AdminController extends Controller
     public function places()
     {
         return Inertia::render('Admin/Places', [
-            'places' => Place::withCount('enigmas')->latest()->get(),
+            'places' => Place::withCount('riddles')->latest()->get(),
         ]);
     }
 
     public function storePlace(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'city' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
+            'nom' => 'required|string|max:255',
+            'ville' => 'required|string|max:255',
+            'departement' => 'required|string|max:255',
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+            'rayon_marge' => 'required|integer',
         ]);
 
         Place::create($validated);
@@ -51,25 +52,24 @@ class AdminController extends Controller
         return back();
     }
 
-    public function enigmas(Place $place)
+    public function riddles(Place $place)
     {
         return Inertia::render('Admin/Enigmas', [
             'place' => $place,
-            'enigmas' => $place->enigmas()->orderBy('level')->get(),
+            'enigmas' => $place->riddles()->orderBy('niveau')->get(),
         ]);
     }
 
-    public function storeEnigma(Request $request, Place $place)
+    public function storeRiddle(Request $request, Place $place)
     {
         $validated = $request->validate([
-            'level' => 'required|integer|between:1,3',
+            'niveau' => 'required|integer|between:1,3',
             'description' => 'required|string',
-            'answer' => 'required|string|max:255',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'reponse' => 'required|string|max:255',
+            'photos' => 'nullable|array',
         ]);
 
-        $place->enigmas()->create($validated);
+        $place->riddles()->create($validated);
 
         return back()->with('success', 'Énigme ajoutée.');
     }
