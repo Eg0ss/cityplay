@@ -1,40 +1,32 @@
 <script setup>
-// Importation du layout de base pour l'administration
 import AdminLayout from './AdminLayout.vue';
-// Importation des utilitaires Inertia pour la gestion du head, des liens et des formulaires
-import { Head, Link, useForm } from '@inertiajs/vue3';
-// Importation des hooks Vue pour la réactivité, les cycles de vie et le prochain tick
-import { ref, onMounted, nextTick, watch, computed } from 'vue';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
+
 import axios from 'axios';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 
-// Définition des propriétés reçues du contrôleur (Cité parente et liste des lieux)
 const props = defineProps({
-    city: Object,
-    places: Array,
+    places: {
+        type: Array,
+        default: () => []
+    },
+    cities: {
+        type: Array,
+        default: () => []
+    },
 });
 
 const toast = useToast();
 const confirm = useConfirm();
 const searchQuery = ref('');
-const isEditing = ref(false);
-const editingPlaceId = ref(null);
-
-const filteredPlaces = computed(() => {
-    if (!searchQuery.value) return props.places;
-    const query = searchQuery.value.toLowerCase();
-    return props.places.filter(place => 
-        place.nom.toLowerCase().includes(query) || 
-        (place.verified_description && place.verified_description.toLowerCase().includes(query))
-    );
-});
-
-// État pour afficher ou masquer le processus d'initialisation
+const selectedCityFilter = ref('');
 const showForm = ref(false);
 
 // Définition du formulaire avec Inertia useForm
 const form = useForm({
+    city_id: '',            // Cité parente
     nom: '',                  // Nom du lieu/secteur
     image: null,              // Image du lieu
     verified_description: '', // Description narrative
@@ -51,7 +43,9 @@ const isSearching = ref(false);
 
 // Gestion du changement de fichier image
 const onFileChange = (e) => {
-    form.image = e.target.files[0];
+    if (e.target.files && e.target.files.length > 0) {
+        form.image = e.target.files[0];
+    }
 };
 
 /**
@@ -69,15 +63,20 @@ const searchLocation = () => {
         
         isSearching.value = true;
         try {
-            const query = `${form.nom}, ${props.city.name}, Bénin`;
+            // On cherche dans la cité sélectionnée si possible
+            const selectedCity = props.cities.find(c => c.id == form.city_id);
+            const cityName = selectedCity ? selectedCity.name : '';
+            const query = `${form.nom}${cityName ? ', ' + cityName : ''}, Bénin`;
             const response = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
             
-            suggestions.value = response.data.map(item => ({
-                display_name: item.display_name,
-                name: item.name || item.display_name.split(',')[0],
-                lat: item.lat,
-                lon: item.lon
-            }));
+            if (response.data) {
+                suggestions.value = response.data.map(item => ({
+                    display_name: item.display_name,
+                    name: item.name || item.display_name.split(',')[0],
+                    lat: item.lat,
+                    lon: item.lon
+                }));
+            }
         } catch (error) {
             console.error('Erreur lors de la recherche de lieu:', error);
         } finally {
@@ -111,7 +110,6 @@ const reverseGeocode = async (lat, lng) => {
     try {
         const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
         if (response.data && response.data.display_name) {
-            // On prend le nom le plus précis possible
             const addr = response.data.address;
             form.nom = addr.amenity || addr.building || addr.shop || addr.tourism || addr.historic || addr.road || response.data.name || response.data.display_name.split(',')[0];
         }
@@ -122,14 +120,10 @@ const reverseGeocode = async (lat, lng) => {
 
 // Surveillance du nom pour la recherche
 watch(() => form.nom, (newVal, oldVal) => {
-    // Si le champ est vide, on vide les suggestions immédiatement
     if (!newVal) {
         suggestions.value = [];
         return;
     }
-    
-    // On ne lance la recherche que si le changement vient de l'utilisateur
-    // (pas d'une sélection de suggestion ou reverse geocode)
     if (showForm.value && newVal !== oldVal && suggestions.value.length === 0 && !isSearching.value) {
         searchLocation();
     }
@@ -141,7 +135,6 @@ watch([() => form.lat, () => form.lng], ([newLat, newLng]) => {
         const pos = [parseFloat(newLat), parseFloat(newLng)];
         if (!isNaN(pos[0]) && !isNaN(pos[1])) {
             marker.value.setLatLng(pos);
-            // On ne pan que si on est loin du centre actuel pour éviter les saccades
             const center = map.value.getCenter();
             const dist = Math.sqrt(Math.pow(center.lat - pos[0], 2) + Math.pow(center.lng - pos[1], 2));
             if (dist > 0.001) {
@@ -152,20 +145,19 @@ watch([() => form.lat, () => form.lng], ([newLat, newLng]) => {
 });
 
 /**
- * Initialisation de la carte interactive pour la sélection GPS
+ * Initialisation de la carte
  */
 const initMap = () => {
-    // S'assurer que Leaflet est chargé (via le CDN dans le template)
-    if (typeof L === 'undefined') {
+    // On utilise L de l'objet window (chargé via script tag dans app.blade.php)
+    const L = window.L;
+    if (!L) {
         setTimeout(initMap, 100);
         return;
     }
 
-    // S'assurer que l'élément DOM existe
     const mapContainer = document.getElementById('map-selector');
     if (!mapContainer) return;
 
-    // Éviter la ré-initialisation si la carte existe déjà
     if (map.value) {
         map.value.invalidateSize();
         return;
@@ -173,21 +165,17 @@ const initMap = () => {
 
     const initialPos = [parseFloat(form.lat), parseFloat(form.lng)];
 
-    // Création de l'instance Leaflet
     map.value = L.map('map-selector', {
         zoomControl: true,
         scrollWheelZoom: true
     }).setView(initialPos, 13);
 
-    // Ajout de la couche de tuiles OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map.value);
 
-    // Création du marqueur déplaçable
     marker.value = L.marker(initialPos, { draggable: true }).addTo(map.value);
 
-    // Mise à jour des coordonnées lors du déplacement du marqueur
     marker.value.on('dragend', async (e) => {
         const { lat, lng } = e.target.getLatLng();
         form.lat = parseFloat(lat).toFixed(6);
@@ -195,7 +183,6 @@ const initMap = () => {
         await reverseGeocode(lat, lng);
     });
 
-    // Mise à jour du marqueur lors d'un clic sur la carte
     map.value.on('click', async (e) => {
         const { lat, lng } = e.latlng;
         marker.value.setLatLng([lat, lng]);
@@ -204,13 +191,12 @@ const initMap = () => {
         await reverseGeocode(lat, lng);
     });
 
-    // Forcer le redimensionnement après un court délai
     setTimeout(() => {
         if (map.value) map.value.invalidateSize();
     }, 500);
 };
 
-// Surveillance de l'affichage du formulaire pour initialiser la carte au bon moment
+// Surveillance de l'affichage du formulaire pour initialiser la carte
 watch(showForm, (newVal) => {
     if (newVal) {
         nextTick(() => {
@@ -222,9 +208,6 @@ watch(showForm, (newVal) => {
     }
 });
 
-/**
- * Fermer les suggestions lors d'un clic à l'extérieur
- */
 const handleOutsideClick = (e) => {
     const searchContainer = document.querySelector('.search-container');
     if (searchContainer && !searchContainer.contains(e.target)) {
@@ -238,27 +221,8 @@ onMounted(() => {
     }
 });
 
-const openCreateForm = () => {
-    isEditing.value = false;
-    editingPlaceId.value = null;
-    form.reset();
-    showForm.value = true;
-};
-
-const openEditForm = (place) => {
-    isEditing.value = true;
-    editingPlaceId.value = place.id;
-    form.nom = place.nom;
-    form.verified_description = place.verified_description;
-    form.lat = place.lat;
-    form.lng = place.lng;
-    form.rayon_marge = place.rayon_marge;
-    form.image = null;
-    showForm.value = true;
-};
-
 /**
- * Soumission finale du lieu au serveur
+ * Soumission du formulaire
  */
 const submit = () => {
     if (isEditing.value) {
@@ -275,19 +239,42 @@ const submit = () => {
             },
         });
     } else {
-        form.post(route('admin.places.store', { city: props.city.id }), {
+        form.post(route('admin.places.store_global'), {
             onSuccess: () => {
                 showForm.value = false;
                 form.reset();
                 toast.add({ 
                     severity: 'success', 
                     summary: 'Balise Activée', 
-                    detail: 'Le nouveau lieu a été synchronisé avec la matrice.', 
+                    detail: 'Le nouveau lieu a été synchronisé avec la cité sélectionnée.', 
                     life: 3000 
                 });
             },
         });
     }
+};
+
+const isEditing = ref(false);
+const editingPlaceId = ref(null);
+
+const openCreateForm = () => {
+    isEditing.value = false;
+    editingPlaceId.value = null;
+    form.reset();
+    showForm.value = true;
+};
+
+const openEditForm = (place) => {
+    isEditing.value = true;
+    editingPlaceId.value = place.id;
+    form.city_id = place.city_id;
+    form.nom = place.nom;
+    form.verified_description = place.verified_description;
+    form.lat = place.lat;
+    form.lng = place.lng;
+    form.rayon_marge = place.rayon_marge;
+    form.image = null;
+    showForm.value = true;
 };
 
 const confirmDelete = (place) => {
@@ -299,7 +286,7 @@ const confirmDelete = (place) => {
         rejectLabel: 'ANNULER',
         acceptClass: 'p-button-danger',
         accept: () => {
-            form.delete(route('admin.places.delete', { place: place.id }), {
+            router.delete(route('admin.places.delete', { place: place.id }), {
                 onSuccess: () => {
                     toast.add({ 
                         severity: 'success', 
@@ -312,76 +299,116 @@ const confirmDelete = (place) => {
         }
     });
 };
+
+const filteredPlaces = computed(() => {
+    const places = props.places || [];
+    let result = [...places];
+
+    if (selectedCityFilter.value) {
+        result = result.filter(place => place && place.city_id == selectedCityFilter.value);
+    }
+
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        result = result.filter(place => {
+            if (!place) return false;
+            const nomMatch = place.nom && place.nom.toLowerCase().includes(query);
+            const cityMatch = place.city && place.city.name && place.city.name.toLowerCase().includes(query);
+            const deptMatch = place.departement && typeof place.departement === 'string' && place.departement.toLowerCase().includes(query);
+            const cityDeptMatch = !deptMatch && place.city && place.city.departement && place.city.departement.toLowerCase().includes(query);
+            
+            return nomMatch || cityMatch || deptMatch || cityDeptMatch;
+        });
+    }
+
+    return result;
+});
 </script>
 
 <template>
-    <Head title="Déploiement Géo-Spatial" />
+    <Head title="Répertoire des Balises" />
     
-    <!-- Assets Leaflet chargés via CDN pour la carte -->
-    <component :is="'style'">
-        @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-    </component>
-
     <AdminLayout>
         <div class="space-y-8 lg:space-y-12">
-            <!-- En-tête de la matrice -->
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
-                    <!-- Fil d'ariane style Terminal -->
-                    <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#FF9F1C] mb-4">
-                        <Link :href="route('admin.cities')" class="hover:underline flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                            MATRICE
-                        </Link>
-                        <span class="opacity-30">/</span>
-                        <span class="text-white">{{ city.name }}</span>
-                    </div>
                     <h1 class="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-none dark:text-white text-gray-900">
-                        RADAR <span class="text-[#FF9F1C]">GÉO-SPATIAL</span>
+                        RÉPERTOIRE <span class="text-[#FF9F1C]">GLOBAL</span>
                     </h1>
                     <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4">
-                        CONFIGURATION DES BALISES : UNITÉ {{ city.name.toUpperCase() }}
+                        LISTE INTÉGRALE DES BALISES DÉPLOYÉES SUR LE TERRITOIRE
                     </p>
                 </div>
 
-                <!-- Barre de recherche -->
-                <div class="relative w-full lg:w-96 group">
-                    <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FF9F1C] transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <div class="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
+                    <!-- Filtre par Cité -->
+                    <div class="w-full md:w-64">
+                        <select 
+                            v-model="selectedCityFilter" 
+                            class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-100 rounded-2xl py-4 px-6 text-[10px] md:text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all appearance-none cursor-pointer"
+                        >
+                            <option value="">TOUTES LES CITÉS</option>
+                            <option v-for="city in cities" :key="city.id" :value="city.id">
+                                {{ city.name.toUpperCase() }}
+                            </option>
+                        </select>
                     </div>
-                    <input 
-                        v-model="searchQuery"
-                        type="text" 
-                        placeholder="RECHERCHER UNE BALISE..." 
-                        class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-200 rounded-2xl py-5 pl-16 pr-8 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all placeholder:text-gray-500/50"
-                    />
-                </div>
 
-                <!-- Bouton d'action principale -->
-                <button @click="showForm ? (showForm = false) : openCreateForm()" 
-                    :class="showForm ? 'bg-red-500 shadow-lg text-white' : 'bg-[#FF9F1C] shadow-lg text-black'"
-                    class="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all hover:scale-105 active:scale-95">
-                    {{ showForm ? 'ANNULER L\'OPÉRATION' : 'creer un lieu' }}
-                </button>
+                    <!-- Barre de recherche stylisée -->
+                    <div class="relative w-full md:w-80 group">
+                        <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FF9F1C] transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        </div>
+                        <input 
+                            v-model="searchQuery"
+                            type="text" 
+                            placeholder="RECHERCHER..." 
+                            class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-100 rounded-2xl py-4 md:py-5 pl-14 md:pl-16 pr-8 text-[10px] md:text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all placeholder:text-gray-500/50"
+                        />
+                    </div>
+
+                    <!-- Bouton d'action principale -->
+                    <button @click="showForm ? (showForm = false) : openCreateForm()" 
+                        :class="showForm ? 'bg-red-500 shadow-lg text-white' : 'bg-[#FF9F1C] shadow-lg text-black'"
+                        class="w-full md:w-auto px-8 py-4 md:py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 whitespace-nowrap">
+                        {{ showForm ? 'ANNULER' : 'creer un lieu' }}
+                    </button>
+                </div>
             </div>
 
-            <!-- Interface de création de lieu (Formulaire Unique) -->
+            <!-- Interface de création de lieu (Formulaire Unique Global) -->
             <transition name="gaming-slide">
                 <div v-if="showForm" class="dark:bg-[#111113] bg-white p-6 lg:p-12 rounded-[2.5rem] border dark:border-white/5 border-gray-200 shadow-2xl relative overflow-hidden">
                     
                     <div class="relative z-10 space-y-12">
                         <div class="space-y-2">
-                            <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Initialisation</span>
-                            <h3 class="text-3xl font-black uppercase italic tracking-tighter">CONFIGURER LE <span class="text-[#FF9F1C]">NOUVEAU LIEU</span></h3>
+                            <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">{{ isEditing ? 'Mise à jour' : 'Initialisation Globale' }}</span>
+                            <h3 class="text-3xl font-black uppercase italic tracking-tighter">
+                                {{ isEditing ? 'ÉDITER LA' : 'CONFIGURER LE' }} <span class="text-[#FF9F1C]">{{ isEditing ? 'BALISE' : 'NOUVEAU LIEU' }}</span>
+                            </h3>
                         </div>
 
                         <div class="grid gap-12 lg:grid-cols-2">
                             <!-- Colonne Gauche : Identité & Description -->
                             <div class="space-y-8">
+                                <!-- Champ Select pour la Cité -->
+                                <div class="space-y-4">
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Assigner à une Cité</label>
+                                    <select 
+                                        v-model="form.city_id" 
+                                        class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-3xl py-6 px-8 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="" disabled>CHOISIR LA CITÉ DE DESTINATION</option>
+                                        <option v-for="city in cities" :key="city.id" :value="city.id">
+                                            {{ city.name.toUpperCase() }}
+                                        </option>
+                                    </select>
+                                </div>
+
                                 <div class="space-y-4 relative search-container">
                                     <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Nom du Lieu</label>
                                     <div class="relative">
-                                        <input v-model="form.nom" type="text" autofocus
+                                        <input v-model="form.nom" type="text" 
                                             class="w-full text-2xl lg:text-3xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-black italic tracking-tighter placeholder:opacity-20" 
                                             placeholder="EX: PLACE DES MARTYRS" />
                                         
@@ -412,8 +439,8 @@ const confirmDelete = (place) => {
                                 </div>
 
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Image du Lieu</label>
-                                    <div class="relative group h-[200px]">
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Image du Lieu (Optionnel)</label>
+                                    <div class="relative group h-[150px]">
                                         <input type="file" @change="onFileChange" 
                                             class="absolute inset-0 opacity-0 cursor-pointer z-20" accept="image/*" />
                                         <div class="h-full dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-3xl flex flex-col items-center justify-center p-4 group-hover:border-[#FF9F1C]/50 transition-all overflow-hidden">
@@ -430,8 +457,8 @@ const confirmDelete = (place) => {
                                 </div>
 
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Séquence Narrative</label>
-                                    <textarea v-model="form.verified_description" rows="4"
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Séquence Narrative (Optionnel)</label>
+                                    <textarea v-model="form.verified_description" rows="3"
                                         class="w-full text-xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-6 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-bold italic tracking-tight placeholder:opacity-20" 
                                         placeholder="L'HISTOIRE DE CE LIEU EST..."></textarea>
                                 </div>
@@ -441,7 +468,7 @@ const confirmDelete = (place) => {
                             <div class="space-y-8">
                                 <div class="space-y-4">
                                     <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Radar Satellite</label>
-                                    <div id="map-selector" class="w-full h-[350px] lg:h-[450px] rounded-[2rem] border-4 dark:border-white/5 border-gray-100 overflow-hidden shadow-inner"></div>
+                                    <div id="map-selector" class="w-full h-[400px] lg:h-[500px] rounded-[2rem] border-4 dark:border-white/5 border-gray-100 overflow-hidden shadow-inner"></div>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-4">
@@ -461,9 +488,9 @@ const confirmDelete = (place) => {
 
                         <!-- Bouton de validation finale -->
                         <div class="pt-8 border-t dark:border-white/5 border-gray-100">
-                            <button @click="submit" :disabled="form.processing || !form.nom" 
+                            <button @click="submit" :disabled="form.processing || !form.nom || !form.city_id" 
                                 class="w-full group flex items-center justify-center gap-4 bg-white text-black px-10 py-8 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm shadow-[0_0_50px_rgba(255,255,255,0.1)] hover:scale-[1.02] transition-all disabled:opacity-30">
-                                INITIALISER LE LIEU DANS LA MATRICE
+                                {{ isEditing ? 'METTRE À JOUR DANS LA MATRICE' : 'DÉPLOYER DANS LA CITÉ SÉLECTIONNÉE' }}
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
                             </button>
                         </div>
@@ -475,79 +502,87 @@ const confirmDelete = (place) => {
                 </div>
             </transition>
 
-            <!-- Liste des Balises (Lieux) déployées -->
-            <div v-if="filteredPlaces.length > 0" class="grid gap-6">
+            <!-- Liste des lieux -->
+            <div v-if="filteredPlaces.length > 0" class="grid gap-4 md:gap-6">
                 <div v-for="place in filteredPlaces" :key="place.id" 
-                    class="dark:bg-[#111113]/40 bg-white backdrop-blur-md border dark:border-white/5 border-gray-200 rounded-[2.5rem] p-6 lg:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 group hover:border-[#FF9F1C]/40 transition-all duration-500 shadow-xl">
-                    <div class="flex items-center gap-6 lg:gap-8">
-                        <!-- Badge d'identification Balise / Image -->
-                        <div class="h-20 w-20 dark:bg-black/60 bg-gray-50 rounded-[1.8rem] flex flex-col items-center justify-center border dark:border-white/5 border-gray-200 group-hover:border-[#FF9F1C]/30 transition-all duration-500 overflow-hidden relative">
+                    class="dark:bg-[#111113]/40 bg-white backdrop-blur-md border dark:border-white/5 border-gray-200 rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-4 md:gap-6 group hover:border-[#FF9F1C]/40 transition-all duration-500 shadow-xl">
+                    <div class="flex items-center gap-4 md:gap-8">
+                        <div class="h-16 w-16 md:h-20 md:w-20 dark:bg-black/60 bg-gray-50 rounded-[1.2rem] md:rounded-[1.8rem] flex flex-col items-center justify-center border dark:border-white/5 border-gray-200 group-hover:border-[#FF9F1C]/30 transition-all duration-500 overflow-hidden relative flex-shrink-0">
                             <template v-if="place.image">
                                 <img :src="'/storage/' + place.image" class="w-full h-full object-cover" alt="Lieu image" />
                                 <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
-                                <span class="absolute bottom-1 right-2 text-[8px] font-black text-white drop-shadow-lg font-mono tracking-tighter">{{ place.id.toString().padStart(3, '0') }}</span>
                             </template>
                             <template v-else>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                                <span class="text-[10px] font-black text-[#FF9F1C] font-mono tracking-tighter">{{ place.id.toString().padStart(3, '0') }}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 md:w-6 md:h-6 mb-1 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                             </template>
+                            <span class="absolute bottom-1 right-2 text-[6px] md:text-[8px] font-black text-white drop-shadow-lg font-mono tracking-tighter">{{ place.id.toString().padStart(3, '0') }}</span>
                         </div>
-                        <div>
-                            <div class="flex flex-wrap items-center gap-3 mb-2">
-                                <h3 class="text-2xl font-black uppercase italic tracking-tighter dark:text-white text-gray-900 group-hover:text-[#FF9F1C] transition-colors">{{ place.nom }}</h3>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2 md:gap-3 mb-1 md:mb-2">
+                                <h3 class="text-lg md:text-2xl font-black uppercase italic tracking-tighter dark:text-white text-gray-900 group-hover:text-[#FF9F1C] transition-colors truncate">{{ place.nom }}</h3>
                                 <span :class="place.is_active ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'" 
-                                    class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border">
-                                    {{ place.is_active ? 'Opérationnel' : 'Hors-Ligne' }}
+                                    class="px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[6px] md:text-[8px] font-black uppercase tracking-widest border">
+                                    {{ place.is_active ? 'En Ligne' : 'Off' }}
                                 </span>
                             </div>
-                            <div class="flex flex-wrap items-center gap-4 lg:gap-6 text-gray-500 font-bold text-[8px] lg:text-[10px] uppercase tracking-widest">
-                                <span class="flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                                    {{ city.name }}
+                            <div class="flex flex-wrap items-center gap-3 md:gap-6 text-gray-500 font-bold text-[7px] md:text-[10px] uppercase tracking-widest">
+                                <span class="flex items-center gap-1.5 md:gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 md:w-3 md:h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                                    {{ place.city ? place.city.name : 'N/A' }}
                                 </span>
-                                <span class="flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8Z"/><circle cx="12" cy="10" r="3"/></svg>
-                                    {{ place.departement || city.departement }}
+                                <span class="hidden xs:flex items-center gap-1.5 md:gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 md:w-3 md:h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    {{ place.departement || (place.city ? place.city.departement : 'N/A') }}
                                 </span>
-                                <span class="font-mono text-[#FF9F1C]/60 italic">{{ place.lat }}, {{ place.lng }}</span>
                             </div>
                         </div>
                     </div>
 
-                        <div class="flex items-center gap-4 w-full lg:w-auto">
+                    <div class="flex items-center gap-2 md:gap-4 w-full lg:w-auto">
+                        <Link :href="route('admin.enigmas', { place: place.id })" 
+                            class="group/btn flex-1 lg:flex-none flex items-center justify-center gap-2 md:gap-3 dark:bg-white/5 bg-gray-100 px-4 md:px-8 py-3 md:py-5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all hover:bg-[#FF9F1C] hover:text-black dark:text-white text-gray-700">
+                            ÉNIGMES
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 md:w-4 md:h-4 group-hover/btn:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                        </Link>
+
+                        <div class="flex items-center gap-2">
                             <!-- Modification -->
                             <button @click="openEditForm(place)" 
-                                class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-blue-500/50 hover:text-blue-500 transition-all group/btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                class="p-3 md:p-5 rounded-xl md:rounded-2xl border dark:border-white/5 border-gray-200 hover:border-blue-500/50 hover:text-blue-500 transition-all group/btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                             </button>
-                            <!-- Accès aux énigmes -->
-                            <Link :href="route('admin.enigmas', { place: place.id })" 
-                                class="group/btn flex-1 lg:flex-none flex items-center justify-center gap-3 dark:bg-white/5 bg-gray-100 px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-[#FF9F1C] hover:text-black dark:text-white text-gray-700">
-                                MATRICE ÉNIGMES
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                            </Link>
-                            <!-- Contrôles système -->
-                            <button @click="$inertia.post(route('admin.places.toggle', { place: place.id }))" 
-                                class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-[#FF9F1C]/50 hover:text-[#FF9F1C] transition-all group/btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 group-hover/btn:rotate-90 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></svg>
-                            </button>
+
                             <!-- Suppression -->
                             <button @click="confirmDelete(place)" 
-                                class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-red-500/50 hover:text-red-500 transition-all group/btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                class="p-3 md:p-5 rounded-xl md:rounded-2xl border dark:border-white/5 border-gray-200 hover:border-red-500/50 hover:text-red-500 transition-all group/btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                             </button>
                         </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- État vide pour la recherche -->
+            <!-- État vide -->
             <div v-else class="py-20 text-center space-y-6">
-                <div class="h-24 w-24 mx-auto dark:bg-white/5 bg-gray-50 rounded-full flex items-center justify-center text-gray-400">
+                <div class="h-24 w-24 mx-auto dark:bg-white/5 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 border dark:border-white/5 border-gray-100 shadow-inner">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 </div>
-                <div>
-                    <h3 class="text-xl font-black uppercase italic tracking-tighter">AUCUNE BALISE DÉTECTÉE</h3>
-                    <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">Ajustez les paramètres de recherche du radar</p>
+                <div class="max-w-md mx-auto">
+                    <h3 class="text-2xl font-black uppercase italic tracking-tighter">
+                        {{ props.places.length === 0 ? 'MATRICE VIDE' : 'AUCUN RÉSULTAT' }}
+                    </h3>
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2 leading-relaxed">
+                        {{ props.places.length === 0 
+                            ? 'AUCUNE BALISE N\'A ÉTÉ DÉPLOYÉE SUR LE RÉSEAU. INITIALISEZ VOTRE PREMIER LIEU DÈS MAINTENANT.' 
+                            : 'LE RADAR NE DÉTECTE AUCUNE CORRESPONDANCE. ESSAYEZ D\'AUTRES COORDONNÉES OU FILTRES.' }}
+                    </p>
+                    
+                    <div class="pt-8">
+                        <button @click="openCreateForm()" 
+                            class="bg-[#FF9F1C] text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(255,159,28,0.2)] hover:scale-105 active:scale-95 transition-all">
+                            {{ props.places.length === 0 ? 'DÉPLOYER UNE BALISE' : 'CRÉER UN NOUVEAU LIEU' }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -555,64 +590,34 @@ const confirmDelete = (place) => {
 </template>
 
 <style scoped>
-/* Animations Gaming Slide */
+
 .gaming-slide-enter-active, .gaming-slide-leave-active {
-    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .gaming-slide-enter-from, .gaming-slide-leave-to {
     opacity: 0;
-    transform: scale(0.95) translateY(30px);
+    transform: translateY(100px) scale(0.95);
+    filter: blur(10px);
 }
 
-/* Transitions entre phases */
 .step-fade-enter-active, .step-fade-leave-active {
     transition: all 0.4s ease;
 }
-.step-fade-enter-from {
+.step-fade-enter-from, .step-fade-leave-to {
     opacity: 0;
     transform: translateX(20px);
 }
-.step-fade-leave-to {
-    opacity: 0;
-    transform: translateX(-20px);
-}
 
-/* Personnalisation Dark Mode pour Leaflet */
+/* Custom styles for Leaflet to match gaming theme */
 :deep(.leaflet-container) {
-    background: #000 !important;
-    border-radius: 1.5rem;
-}
-:deep(.leaflet-tile) {
-    filter: brightness(0.8) contrast(1.2);
-}
-.dark :deep(.leaflet-tile) {
-    filter: invert(100%) hue-rotate(180deg) brightness(0.9) contrast(0.9);
-}
-:deep(.leaflet-control-attribution) {
-    display: none;
-}
-</style>
-
-<style scoped>
-.fade-enter-active, .fade-leave-active {
-    transition: all 0.5s ease;
-}
-.fade-enter-from, .fade-leave-to {
-    opacity: 0;
-    transform: translateY(-20px);
+    background: #0A0A0B;
+    font-family: inherit;
 }
 
-/* Custom Leaflet Dark Mode Adjustments */
-:deep(.leaflet-container) {
-    background: #000 !important;
-    border-radius: 2rem;
-}
 :deep(.leaflet-tile) {
-    filter: brightness(0.8) contrast(1.2);
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
-.dark :deep(.leaflet-tile) {
-    filter: invert(100%) hue-rotate(180deg) brightness(0.9) contrast(0.9);
-}
+
 :deep(.leaflet-control-attribution) {
     display: none;
 }

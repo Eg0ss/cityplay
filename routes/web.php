@@ -52,11 +52,21 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     // Cities Management
     Route::get('/cities', [AdminController::class, 'cities'])->name('cities');
     Route::post('/cities', [AdminController::class, 'storeCity'])->name('cities.store');
+    Route::post('/cities/{city}/update', [AdminController::class, 'updateCity'])->name('cities.update');
+    Route::delete('/cities/{city}', [AdminController::class, 'deleteCity'])->name('cities.delete');
     
-    // Places Management (linked to City)
+    // Places Management
+    Route::get('/places', [AdminController::class, 'allPlaces'])->name('places.all');
+    Route::post('/places', [AdminController::class, 'storeGlobalPlace'])->name('places.store_global');
+    Route::post('/places/{place}/update', [AdminController::class, 'updatePlace'])->name('places.update');
+    Route::delete('/places/{place}', [AdminController::class, 'deletePlace'])->name('places.delete');
     Route::get('/cities/{city}/places', [AdminController::class, 'places'])->name('cities.places');
     Route::post('/cities/{city}/places', [AdminController::class, 'storePlace'])->name('places.store');
     
+    // Enigmas Management
+    Route::get('/enigmas', [AdminController::class, 'allEnigmas'])->name('enigmas.all');
+    Route::post('/enigmas/{enigma}/update', [AdminController::class, 'updateRiddle'])->name('enigmas.update');
+    Route::delete('/enigmas/{enigma}', [AdminController::class, 'deleteEnigma'])->name('enigmas.delete');
     Route::post('/places/{place}/toggle', [AdminController::class, 'togglePlace'])->name('places.toggle');
     Route::get('/places/{place}/enigmas', [AdminController::class, 'riddles'])->name('enigmas');
     Route::post('/places/{place}/enigmas', [AdminController::class, 'storeRiddle'])->name('enigmas.store');

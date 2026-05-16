@@ -8,6 +8,7 @@ class Place extends Model
 {
     protected $fillable = [
         'nom', 
+        'image',
         'ville', 
         'city_id', 
         'departement', 

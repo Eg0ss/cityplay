@@ -31,6 +31,25 @@ class AdminController extends Controller
         ]);
     }
 
+    // Tous les lieux
+    public function allPlaces()
+    {
+        return Inertia::render('Admin/AllPlaces', [
+            'places' => Place::with('city')->withCount('riddles')->latest()->get(),
+            'cities' => City::orderBy('name')->get(),
+        ]);
+    }
+
+    // Toutes les énigmes
+    public function allEnigmas()
+    {
+        return Inertia::render('Admin/AllEnigmas', [
+            'enigmas' => Riddle::with('place.city', 'images')->latest()->get(),
+            'places' => Place::orderBy('nom')->get(),
+        ]);
+    }
+
+    // Ajouter une ville
     public function storeCity(Request $request)
     {
         $validated = $request->validate([
@@ -46,6 +65,30 @@ class AdminController extends Controller
         return back()->with('success', 'Ville ajoutée à la matrice.');
     }
 
+    // Modifier une ville
+    public function updateCity(Request $request, City $city)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'departement' => 'required|string|max:255',
+        ]);
+
+        $validated['slug'] = str()->slug($validated['name']);
+
+        $city->update($validated);
+
+        return back()->with('success', 'Ville mise à jour dans la matrice.');
+    }
+
+    // Supprimer une ville
+    public function deleteCity(City $city)
+    {
+        $city->delete();
+        return back()->with('success', 'Ville supprimée de la matrice.');
+    }
+
+    // Tous les lieux d'une ville
     public function places(City $city)
     {
         return Inertia::render('Admin/Places', [
@@ -54,6 +97,7 @@ class AdminController extends Controller
         ]);
     }
 
+    // Ajouter un lieu
     public function storePlace(Request $request, City $city)
     {
         $validated = $request->validate([
@@ -62,19 +106,83 @@ class AdminController extends Controller
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
             'rayon_marge' => 'required|integer',
+            'image' => 'nullable|image|max:2048',
         ]);
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('places', 'public');
+        }
 
         $city->places()->create($validated);
 
         return back()->with('success', 'Balise GPS déployée avec succès.');
     }
 
+    // Modifier un lieu
+    public function updatePlace(Request $request, Place $place)
+    {
+        $validated = $request->validate([
+            'nom' => 'required|string|max:255',
+            'verified_description' => 'nullable|string',
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+            'rayon_marge' => 'required|integer',
+            'image' => 'nullable|image|max:2048',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('places', 'public');
+        }
+
+        $place->update($validated);
+
+        return back()->with('success', 'Lieu mis à jour avec succès.');
+    }
+
+    // Supprimer un lieu
+    public function deletePlace(Place $place)
+    {
+        $place->delete();
+        return back()->with('success', 'Lieu supprimé avec succès.');
+    }
+
+    // Supprimer une énigme
+    public function deleteEnigma(Riddle $enigma)
+    {
+        $enigma->delete();
+        return back()->with('success', 'Énigme supprimée avec succès.');
+    }
+
+    // Ajouter un lieu depuis la vue globale
+    public function storeGlobalPlace(Request $request)
+    {
+        $validated = $request->validate([
+            'city_id' => 'required|exists:cities,id',
+            'nom' => 'required|string|max:255',
+            'verified_description' => 'nullable|string',
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+            'rayon_marge' => 'required|integer',
+            'image' => 'nullable|image|max:2048',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('places', 'public');
+        }
+
+        Place::create($validated);
+
+        return back()->with('success', 'Balise GPS déployée avec succès dans la cité sélectionnée.');
+    }
+
+    // Activer ou désactiver un lieu
     public function togglePlace(Place $place)
     {
         $place->update(['is_active' => !$place->is_active]);
         return back();
     }
 
+    // Toutes les énigmes d'un lieu
     public function riddles(Place $place)
     {
         return Inertia::render('Admin/Enigmas', [
@@ -83,6 +191,7 @@ class AdminController extends Controller
         ]);
     }
 
+    // Ajouter une énigme
     public function storeRiddle(Request $request, Place $place)
     {
         $validated = $request->validate([
@@ -92,6 +201,17 @@ class AdminController extends Controller
             'mcq_options' => 'nullable|array',
             'images.*' => 'nullable|image|max:2048',
         ]);
+
+        // Filtrer les options vides pour ne pas stocker de tableau de chaînes vides
+        if (isset($validated['mcq_options'])) {
+            $validated['mcq_options'] = array_values(array_filter($validated['mcq_options'], function($val) {
+                return !is_null($val) && trim($val) !== '';
+            }));
+            
+            if (empty($validated['mcq_options'])) {
+                $validated['mcq_options'] = null;
+            }
+        }
 
         $riddle = $place->riddles()->create([
             'niveau' => $validated['niveau'],
@@ -108,5 +228,43 @@ class AdminController extends Controller
         }
 
         return back()->with('success', 'Énigme ajoutée à la matrice.');
+    }
+
+    // Modifier une énigme
+    public function updateRiddle(Request $request, Riddle $enigma)
+    {
+        $validated = $request->validate([
+            'niveau' => 'required|integer|between:1,3',
+            'description' => 'required|string',
+            'reponse' => 'required|string|max:255',
+            'mcq_options' => 'nullable|array',
+            'images.*' => 'nullable|image|max:2048',
+        ]);
+
+        if (isset($validated['mcq_options'])) {
+            $validated['mcq_options'] = array_values(array_filter($validated['mcq_options'], function($val) {
+                return !is_null($val) && trim($val) !== '';
+            }));
+            
+            if (empty($validated['mcq_options'])) {
+                $validated['mcq_options'] = null;
+            }
+        }
+
+        $enigma->update([
+            'niveau' => $validated['niveau'],
+            'description' => $validated['description'],
+            'reponse' => $validated['reponse'],
+            'mcq_options' => $validated['mcq_options'] ?? null,
+        ]);
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('riddles', 'public');
+                $enigma->images()->create(['image_path' => $path]);
+            }
+        }
+
+        return back()->with('success', 'Énigme mise à jour avec succès.');
     }
 }
