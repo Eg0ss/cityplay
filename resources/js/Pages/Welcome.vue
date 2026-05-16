@@ -111,9 +111,9 @@ const toggleFaq = (index) => {
         <section class="relative min-h-screen flex items-center justify-center pt-32 pb-20 overflow-hidden">
             <!-- Map Background -->
             <div class="absolute inset-0 z-0 scale-110 lg:scale-100">
-                <img src="/images/logo.png" alt="Background" class="h-full w-full object-cover" />
+                <img src="/images/image.png" alt="Background" class="h-full w-full object-cover" />
                 <div class="absolute inset-0 transition-colors"
-                     :class="isDark ? 'bg-gradient-to-b from-[#0A0A0B]/50 via-[#0A0A0B]/30 to-[#0A0A0B]/50' : 'bg-gradient-to-b from-white/50 via-white/30 to-white/50'"></div>
+                     :class="isDark ? 'bg-gradient-to-b from-[#0A0A0B]/2 via-[#0A0A0B]/2 to-[#0A0A0B]/2' : 'bg-gradient-to-b from-white/2 via-white/2 to-white/2'"></div>
             </div>
 
             <div class="relative z-10 w-full max-w-7xl px-6 flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
@@ -139,13 +139,13 @@ const toggleFaq = (index) => {
 
                 <!-- Floating Card -->
                 <div class="w-full max-w-md dark:bg-[#111113]/80 bg-white/80 backdrop-blur-xl p-8 lg:p-10 rounded-[2.5rem] shadow-2xl border dark:border-white/5 border-gray-100">
-                    <h3 class="text-xl font-black uppercase italic mb-8 text-[#FF9F1C] text-center tracking-tighter">Accès Terminal</h3>
+                    <h3 class="text-xl font-black uppercase italic mb-8 text-[#FF9F1C] text-center tracking-tighter">Accès à l'venture</h3>
                     <div class="space-y-4">
                         <button class="w-full flex items-center justify-center gap-4 dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-200 py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] transition-all">
                             Continuer avec Google
                         </button>
                         <button class="w-full flex items-center justify-center gap-4 dark:bg-white bg-gray-900 dark:text-black text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] transition-all shadow-xl">
-                            Continuer avec l'Email
+                            Continuer avec facebook
                         </button>
                     </div>
                     <div class="relative my-10 flex items-center">
