@@ -109,17 +109,17 @@ onMounted(() => {
         <!-- Hero Section -->
         <section class="relative min-h-screen flex items-center justify-center pt-32 pb-20 overflow-hidden">
             <!-- Immersive GSAP Animated Video Background -->
-            <div class="bg-video-container absolute inset-0 z-0 scale-110 lg:scale-100 opacity-25">
+            <div class="bg-video-container absolute inset-0 -z-10 scale-110 lg:scale-100 opacity-45">
                 <video 
                     autoplay 
                     loop 
                     muted 
                     playsinline 
-                    class="h-full w-full object-cover filter brightness-[0.5] contrast-[1.2]"
+                    class="h-full w-full object-cover filter brightness-[0.9] contrast-[1.2]"
                 >
-                    <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-glowing-world-map-42861-large.mp4" type="video/mp4" />
+                    <source src="/videos/glowing-map.mp4" type="video/mp4" />
                 </video>
-                <div class="absolute inset-0 bg-[#171235]/40 mix-blend-multiply"></div>
+                <div class="absolute inset-0 bg-[#171235]/20"></div>
             </div>
 
             <!-- Floating Bobbing Emojis around the page (Drifting gamified feel) -->
@@ -151,7 +151,7 @@ onMounted(() => {
 
                 <!-- FLOATING CARD (Access Panel Modal - Strictly Agenced Color Scheme) -->
                 <!-- Uses #10101c base, #7751de purple outline & glow, #ffc628 gold headers, #4769b0 & #7751de buttons, #171235 shadows -->
-                <div class="w-full max-w-md bg-[#10101c] p-6 sm:p-8 lg:p-10 rounded-[2.5rem] border-2 border-[#7751de] shadow-[0_0_35px_rgba(119,81,222,0.4)] relative hover-lift card-reveal">
+                <div class="w-full max-w-md bg-[#10101c] p-5 sm:p-8 lg:p-10 rounded-[2.5rem] border-2 border-[#7751de] shadow-[0_0_35px_rgba(119,81,222,0.4)] relative hover-lift card-reveal mx-auto lg:mx-0">
                     <div class="absolute -top-10 -left-10 w-32 h-32 bg-[#7751de]/10 rounded-full blur-3xl pointer-events-none"></div>
                     
                     <h3 class="text-xl font-black uppercase italic mb-8 text-[#ffc628] text-glow-yellow text-center tracking-tighter">
@@ -160,12 +160,12 @@ onMounted(() => {
                     
                     <div class="space-y-4">
                         <!-- Google Link agenced in 3D Blue (#4769b0) -->
-                        <button class="w-full btn-3d btn-3d-blue py-4.5 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-[0_4px_0_#2b3f6b] flex items-center justify-center gap-2">
+                        <button class="w-full btn-3d btn-3d-blue py-4 px-3 sm:px-4 rounded-2xl font-black uppercase text-[9px] min-[375px]:text-[10px] sm:text-xs tracking-wider sm:tracking-widest shadow-[0_4px_0_#2b3f6b] flex items-center justify-center gap-2">
                             🔵 Continuer via Session Bleue
                         </button>
                         
                         <!-- Direct Link agenced in 3D Purple (#7751de) -->
-                        <button class="w-full btn-3d btn-3d-purple py-4.5 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-[0_4px_0_#4d2f94] flex items-center justify-center gap-2">
+                        <button class="w-full btn-3d btn-3d-purple py-4 px-3 sm:px-4 rounded-2xl font-black uppercase text-[9px] min-[375px]:text-[10px] sm:text-xs tracking-wider sm:tracking-widest shadow-[0_4px_0_#4d2f94] flex items-center justify-center gap-2">
                             🟣 Continuer par Session Directe
                         </button>
                     </div>
@@ -177,10 +177,10 @@ onMounted(() => {
                         <div class="flex-grow border-t border-[#2a245c]"></div>
                     </div>
                     
-                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link :href="route('login')" class="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-[#ffc628] transition-colors">Connexion</Link>
-                        <div class="hidden sm:block h-1.5 w-1.5 bg-[#2a245c] rounded-full"></div>
-                        <Link :href="route('register')" class="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-[#87d74e] transition-colors">Créer un compte</Link>
+                    <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+                        <Link :href="route('login')" class="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400 hover:text-[#ffc628] transition-colors">Connexion</Link>
+                        <div class="h-1.5 w-1.5 bg-[#2a245c] rounded-full"></div>
+                        <Link :href="route('register')" class="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400 hover:text-[#87d74e] transition-colors">Créer un compte</Link>
                     </div>
                 </div>
             </div>

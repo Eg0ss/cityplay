@@ -18,18 +18,16 @@ const submit = () => {
 };
 
 onMounted(() => {
-    // 🎥 Slow, continuous drift & zoom on background video container
-    gsap.fromTo('.bg-video-container', 
-        { scale: 1.0, rotation: 0 },
-        { 
-            scale: 1.15, 
-            rotation: 1.5, 
-            duration: 35, 
-            repeat: -1, 
-            yoyo: true, 
-            ease: 'sine.inOut' 
-        }
-    );
+    if (!gsap) return;
+
+    // 🎥 Subtle brightness pulse on background video
+    gsap.to('.bg-video-container video', {
+        opacity: 0.55,
+        duration: 6,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut'
+    });
 
     // ⚡ Left Side panel elements stagger reveal
     gsap.from('.left-panel-reveal', {
@@ -55,26 +53,26 @@ onMounted(() => {
 
     <div class="min-h-screen font-sans flex flex-col lg:flex-row bg-[#171235] text-white overflow-hidden relative">
         
-        <!-- Ambient Background glow spots (GeoGuessr arcade neon feel) -->
-        <div class="absolute top-0 left-1/4 w-96 h-96 bg-[#87d74e]/5 rounded-full blur-[150px] pointer-events-none -z-10"></div>
-        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-[#7751de]/10 rounded-full blur-[150px] pointer-events-none -z-10"></div>
+        <!-- Ambient Background glow spots -->
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-[#87d74e]/5 rounded-full blur-[150px] pointer-events-none z-10"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-[#7751de]/10 rounded-full blur-[150px] pointer-events-none z-10"></div>
 
-        <!-- Global background video for mobile / under-form feel -->
-        <div class="bg-video-container absolute inset-0 w-full h-full overflow-hidden pointer-events-none -z-20">
+        <!-- Global background video -->
+        <div class="bg-video-container absolute inset-0 z-0 w-full h-full overflow-hidden">
             <video 
                 autoplay 
                 loop 
                 muted 
                 playsinline 
-                class="w-full h-full object-cover opacity-15 filter brightness-[0.4] contrast-[1.2]"
+                class="w-full h-full object-cover opacity-40 filter brightness-[0.85] contrast-[1.2]"
             >
-                <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-glowing-world-map-42861-large.mp4" type="video/mp4" />
+                <source src="/videos/glowing-map.mp4" type="video/mp4" />
             </video>
-            <div class="absolute inset-0 bg-gradient-to-b from-[#10101c]/30 to-[#171235]"></div>
+            <div class="absolute inset-0 bg-gradient-to-br from-[#10101c]/60 via-[#171235]/50 to-[#171235]/90"></div>
         </div>
 
-        <!-- Left Side: Branding/Map Image (Desktop Only) -->
-        <div class="hidden lg:flex lg:w-1/2 bg-[#10101c] relative overflow-hidden p-12 lg:p-20 flex-col justify-between border-r border-[#2a245c]">
+        <!-- Left Side: Branding (Desktop Only) -->
+        <div class="hidden lg:flex lg:w-1/2 bg-[#10101c]/80 relative overflow-hidden p-12 lg:p-20 flex-col justify-between border-r border-[#2a245c]">
             <!-- World Map Vignette background -->
             <div class="absolute inset-0 z-0">
                 <video 
@@ -82,11 +80,11 @@ onMounted(() => {
                     loop 
                     muted 
                     playsinline 
-                    class="h-full w-full object-cover opacity-35 filter brightness-[0.6] contrast-[1.1]"
+                    class="h-full w-full object-cover opacity-50 filter brightness-[0.9] contrast-[1.1]"
                 >
-                    <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-glowing-world-map-42861-large.mp4" type="video/mp4" />
+                    <source src="/videos/glowing-map.mp4" type="video/mp4" />
                 </video>
-                <div class="absolute inset-0 bg-gradient-to-b from-[#10101c]/30 to-[#171235]"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-[#10101c]/30 to-[#171235]/60"></div>
             </div>
 
             <!-- Floating Bobbing Emojis on Left Side -->
