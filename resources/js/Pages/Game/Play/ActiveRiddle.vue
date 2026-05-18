@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { useToast } from 'primevue/usetoast';
@@ -26,8 +26,46 @@ const isPaused = ref(false);
 const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
 
-// État de décision intermédiaire ('win' ou 'lose' ou null)
+// État de décision intermédiaire ('win', 'lose', 'already_solved' ou null)
 const decisionState = ref(null);
+const alreadySolvedMessage = ref('');
+
+// Classement de la session en direct
+const sessionLeaderboard = computed(() => {
+    return props.session.players?.map(player => {
+        const sessionPoints = props.session.attempts
+            ?.filter(att => att.user_id === player.user_id && att.status === 'gagne')
+            ?.reduce((sum, att) => sum + (att.points_earned || 0), 0) || 0;
+            
+        return {
+            id: player.id,
+            user_id: player.user_id,
+            name: player.user?.name || 'Joueur',
+            points: sessionPoints
+        };
+    }).sort((a, b) => b.points - a.points);
+});
+
+// Trouver la première énigme non tentée dans le mode participants
+const selectFirstUnattemptedRiddle = () => {
+    if (props.session.type !== 'participants') return;
+    
+    for (let pIdx = 0; pIdx < props.placesWithRiddles.length; pIdx++) {
+        const place = props.placesWithRiddles[pIdx];
+        for (let rIdx = 0; rIdx < (place.riddles?.length || 0); rIdx++) {
+            const riddle = place.riddles[rIdx];
+            const attempted = props.session.attempts?.some(att => att.game_riddle?.riddle_id === riddle.id);
+            if (!attempted) {
+                currentPlaceIndex.value = pIdx;
+                currentRiddleInPlaceIndex.value = rIdx;
+                return;
+            }
+        }
+    }
+    
+    // Si toutes les énigmes ont été tentées, on affiche l'écran de fin
+    currentPlaceIndex.value = props.placesWithRiddles.length;
+};
 
 const currentPlace = computed(() => {
     return props.placesWithRiddles?.[currentPlaceIndex.value];
@@ -88,7 +126,7 @@ const compassRotation = computed(() => {
 // Enregistrement des résultats en DB via route Laravel
 const recordAttemptOnBackend = async (status, pointsEarned) => {
     try {
-        await axios.post('/game/play/record', {
+        const response = await axios.post('/game/play/record', {
             session_id: props.session.id,
             riddle_id: currentRiddle.value.id,
             status: status,
@@ -96,14 +134,44 @@ const recordAttemptOnBackend = async (status, pointsEarned) => {
             mode_choisi: modeChoisi.value || 'gaming',
             temps_resolution: totalTime.value - timeLeft.value
         });
+        
+        if (response.data && response.data.already_solved) {
+            toast.add({ 
+                severity: 'warn', 
+                summary: 'Énigme déjà clôturée ⚠️', 
+                detail: response.data.message, 
+                life: 6000 
+            });
+            decisionState.value = 'already_solved'; 
+            alreadySolvedMessage.value = response.data.message;
+            return false;
+        }
+        return true;
     } catch (e) {
         console.error("Erreur d'enregistrement backend:", e);
+        return false;
     }
 };
 
 // Géolocalisation en temps réel pour le mode découverte
 let watchId = null;
+let syncInterval = null;
+
 onMounted(() => {
+    // Dans le mode participants, se positionner sur la première énigme non tentée
+    if (props.session.type === 'participants') {
+        selectFirstUnattemptedRiddle();
+        
+        // Polling de synchronisation temps réel des participants
+        syncInterval = setInterval(() => {
+            router.reload({ 
+                only: ['session'],
+                preserveState: true,
+                preserveScroll: true
+            });
+        }, 4000);
+    }
+
     // Tenter de récupérer le mode global du joueur
     const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
     if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
@@ -125,7 +193,33 @@ onMounted(() => {
 onUnmounted(() => {
     if (watchId) navigator.geolocation.clearWatch(watchId);
     clearInterval(timerInterval);
+    if (syncInterval) clearInterval(syncInterval);
 });
+
+// Détecter si l'énigme active actuelle (currentRiddle) a été clôturée par un autre joueur
+watch(() => props.session.attempts, (newAttempts) => {
+    if (props.session.type === 'participants' && newAttempts && currentRiddle.value) {
+        const hasAttempt = newAttempts.some(att => 
+            att.game_riddle?.riddle_id === currentRiddle.value.id
+        );
+        
+        // Si l'énigme active a été clôturée par un autre joueur et que le joueur local n'a pas encore fini
+        if (hasAttempt && !decisionState.value) {
+            const attempt = newAttempts.find(att => att.game_riddle?.riddle_id === currentRiddle.value.id);
+            if (attempt && attempt.user_id !== page.props.auth.user.id) {
+                clearInterval(timerInterval);
+                decisionState.value = 'already_solved';
+                alreadySolvedMessage.value = `Désolé, cette énigme a déjà été clôturée par ${attempt.user?.name || 'un autre participant'} !`;
+                toast.add({ 
+                    severity: 'warn', 
+                    summary: 'Énigme déjà résolue ⚠️', 
+                    detail: `Cette énigme a été clôturée par ${attempt.user?.name || 'un autre joueur'}.`, 
+                    life: 5000 
+                });
+            }
+        }
+    }
+}, { deep: true });
 
 // Calcul de distance à vol d'oiseau (Haversine)
 const distanceToPlace = computed(() => {
@@ -256,9 +350,8 @@ const submitGaming = async () => {
 
 // Choix : Passer au lieu suivant
 const goToNextPlace = () => {
-    if (hasNextPlace.value) {
-        currentPlaceIndex.value++;
-        currentRiddleInPlaceIndex.value = 0;
+    if (props.session.type === 'participants') {
+        selectFirstUnattemptedRiddle();
         decisionState.value = null;
         isPlaying.value = false;
         
@@ -267,11 +360,32 @@ const goToNextPlace = () => {
         if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
             startRiddle(player.global_mode);
         }
+        
+        // Si toutes les énigmes ont été complétées/clôturées
+        if (currentPlaceIndex.value >= props.placesWithRiddles.length) {
+            toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 6000 });
+            setTimeout(() => {
+                router.get(route('game.dashboard'));
+            }, 3000);
+        }
     } else {
-        toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 6000 });
-        setTimeout(() => {
-            router.get(route('game.dashboard'));
-        }, 3000);
+        if (hasNextPlace.value) {
+            currentPlaceIndex.value++;
+            currentRiddleInPlaceIndex.value = 0;
+            decisionState.value = null;
+            isPlaying.value = false;
+            
+            // Si le mode global n'est pas mixte, relancer automatiquement le mode correct
+            const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
+            if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
+                startRiddle(player.global_mode);
+            }
+        } else {
+            toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 6000 });
+            setTimeout(() => {
+                router.get(route('game.dashboard'));
+            }, 3000);
+        }
     }
 };
 
@@ -321,6 +435,30 @@ const formatTime = (seconds) => {
             <main class="relative z-10 flex-1 flex flex-col items-center justify-center p-4">
                 <div class="max-w-3xl w-full">
                     
+                    <!-- Tableau des scores live (Mode Participants / Challengers) -->
+                    <div v-if="session.type !== 'solo'" class="mb-6 bg-gray-800/60 border border-gray-700/50 backdrop-blur-xl p-4 rounded-2xl shadow-xl animate-fade-in-up">
+                        <div class="flex items-center justify-between mb-3 border-b border-gray-700/50 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🏆</span>
+                                <h3 class="text-sm font-black uppercase tracking-wider text-gray-300">Classement de la Session</h3>
+                            </div>
+                            <span class="text-[10px] bg-blue-900/40 text-blue-300 px-2 py-0.5 rounded border border-blue-500/20 font-bold uppercase tracking-widest animate-pulse">En Direct</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div v-for="(p, idx) in sessionLeaderboard" :key="p.id" 
+                                class="flex items-center gap-3 bg-gray-900/40 p-2 rounded-xl border border-gray-800"
+                                :class="p.user_id === page.props.auth.user.id ? 'border-yellow-500/30 bg-yellow-500/5' : ''">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-xs">
+                                    {{ idx + 1 }}
+                                </div>
+                                <div class="overflow-hidden">
+                                    <p class="text-xs font-black truncate" :class="p.user_id === page.props.auth.user.id ? 'text-yellow-400' : 'text-white'">{{ p.name }}</p>
+                                    <p class="text-[10px] font-bold text-gray-400">{{ p.points }} XP</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Sélection du mode (Si mixte et pas encore choisi) -->
                     <div v-if="!isPlaying" class="text-center animate-fade-in-up">
                         <h2 class="text-3xl font-bold mb-8">Choisissez votre mode pour cette énigme</h2>
@@ -341,7 +479,7 @@ const formatTime = (seconds) => {
                     <!-- L'Énigme -->
                     <div v-if="isPlaying && currentRiddle" class="bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl border border-gray-700 shadow-2xl relative overflow-hidden animate-fade-in-up">
                         
-                        <!-- Modal Intermédiaire en cas de Victoire / Défaite -->
+                        <!-- Modal Intermédiaire en cas de Victoire / Défaite / Déjà Résolue -->
                         <div v-if="decisionState" class="absolute inset-0 bg-gray-900/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-8 text-center">
                             <template v-if="decisionState === 'win'">
                                 <div class="text-6xl mb-4 animate-bounce">🎉</div>
@@ -372,6 +510,18 @@ const formatTime = (seconds) => {
                                     </button>
                                     <button @click="forfeitSession" class="py-3 bg-red-950/40 hover:bg-red-950 border border-red-800/30 text-red-400 rounded-xl font-semibold transition-all">
                                         💀 Perdre la session carrément
+                                    </button>
+                                </div>
+                            </template>
+
+                            <template v-if="decisionState === 'already_solved'">
+                                <div class="text-6xl mb-4 animate-bounce">⚠️</div>
+                                <h2 class="text-3xl font-black text-yellow-400 mb-2">Énigme Déjà Clôturée</h2>
+                                <p class="text-gray-300 mb-8 max-w-md">{{ alreadySolvedMessage || 'Désolé, un autre participant a déjà clôturé cette énigme !' }}</p>
+                                
+                                <div class="flex flex-col gap-4 w-full max-w-sm">
+                                    <button @click="goToNextPlace" class="py-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 rounded-xl font-bold text-lg shadow-lg transition-transform transform hover:-translate-y-0.5">
+                                        👉 Passer à l'énigme / lieu suivant
                                     </button>
                                 </div>
                             </template>

@@ -151,6 +151,22 @@ class GameEngineController extends Controller
             ]);
         }
 
+        // Vérification de verrouillage en mode 'participants'
+        $session = GameSession::findOrFail($validated['session_id']);
+        if ($session->type === 'participants') {
+            $alreadyAttempted = GamePlayerRiddleAttempt::where('game_session_id', $session->id)
+                ->where('game_riddle_id', $gameRiddle->id)
+                ->exists();
+                
+            if ($alreadyAttempted) {
+                return response()->json([
+                    'success' => false,
+                    'already_solved' => true,
+                    'message' => "Désolé ! Un autre participant de la session a déjà clôturé cette énigme !"
+                ]);
+            }
+        }
+
         GamePlayerRiddleAttempt::create([
             'game_session_id' => $validated['session_id'],
             'user_id' => auth()->id(),
@@ -191,11 +207,14 @@ class GameEngineController extends Controller
         if (!$currentPlayer) {
             // Si la session n'est pas pleine, ajouter le joueur
             if ($session->players->count() < $session->max_joueurs) {
+                $creatorPlayer = $session->players->first();
+                $globalMode = $creatorPlayer ? $creatorPlayer->global_mode : 'gaming';
+
                 GamePlayer::create([
                     'session_id' => $session->id,
                     'user_id' => auth()->id(),
                     'statut' => 'pret',
-                    'global_mode' => 'gaming' // Mode par défaut
+                    'global_mode' => $globalMode
                 ]);
                 
                 // Recharger la session avec le nouveau joueur
@@ -222,7 +241,7 @@ class GameEngineController extends Controller
     // Affiche l'interface de jeu dynamique
     public function play($token)
     {
-        $session = GameSession::with(['gameRiddles.riddle.place', 'players.user'])
+        $session = GameSession::with(['gameRiddles.riddle.place', 'players.user', 'attempts.gameRiddle', 'attempts.user'])
             ->where('lien_token', $token)
             ->firstOrFail();
 

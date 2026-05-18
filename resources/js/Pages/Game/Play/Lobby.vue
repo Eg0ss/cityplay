@@ -19,7 +19,12 @@ const copyLink = () => {
 };
 
 const startGame = () => {
-    router.post(`/game/lobby/${props.session.lien_token}/start`);
+    router.post(`/game/lobby/${props.session.lien_token}/start`, {}, {
+        onSuccess: () => {
+            clearInterval(pollInterval);
+            router.get(`/game/play/${props.session.lien_token}`);
+        }
+    });
 };
 
 // Polling simulation for new players (Normally done via Echo/Pusher)
@@ -56,7 +61,7 @@ watch(() => props.session.players, (newPlayers, oldPlayers) => {
 
 // Rediriger automatiquement le participant si la partie est lancée
 watch(() => props.session, (newSession) => {
-    if (newSession?.statut === 'en_cours') {
+    if (newSession?.statut === 'en_cours' && !isCreator.value) {
         clearInterval(pollInterval);
         router.get(`/game/play/${newSession.lien_token}`);
     }
