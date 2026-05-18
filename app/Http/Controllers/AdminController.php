@@ -11,6 +11,7 @@ use Inertia\Inertia;
 
 class AdminController extends Controller
 {
+    //dashboard admin
     public function dashboard()
     {
         return Inertia::render('Admin/Dashboard', [
@@ -213,6 +214,7 @@ class AdminController extends Controller
             }
         }
 
+        // Créer l'énigme
         $riddle = $place->riddles()->create([
             'niveau' => $validated['niveau'],
             'description' => $validated['description'],
@@ -220,6 +222,7 @@ class AdminController extends Controller
             'mcq_options' => $validated['mcq_options'] ?? null,
         ]);
 
+        // Stocker les images
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $path = $image->store('riddles', 'public');
