@@ -59,7 +59,6 @@ const startSubmission = () => {
 };
 
 const submitForm = () => {
-    // If it's solo, max_joueurs is forced to 1 on backend, but let's be clean
     if (form.type === 'solo') form.max_joueurs = 1;
     
     router.post(route('game.create'), form, {
@@ -70,190 +69,201 @@ const submitForm = () => {
 
 <template>
     <AuthenticatedLayout title="Configuration de la Partie">
-        <div class="min-h-screen bg-gray-900 text-gray-100 font-sans py-12 px-4">
+        <div class="min-h-screen text-white font-sans py-8 px-4 relative">
             <div class="max-w-3xl mx-auto">
-                <!-- Header -->
+                
+                <!-- Header (Arcade Mode Creation Title) -->
                 <div class="text-center mb-10">
-                    <h1 class="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
-                        Création de Partie
+                    <h1 class="text-4xl font-black tracking-tighter uppercase italic text-white mb-2">
+                        CRÉATION DE <span class="text-[#2fc276] text-glow-green">PARTIE</span>
                     </h1>
-                    <p class="text-gray-400">Configurez votre prochaine aventure</p>
+                    <p class="text-gray-400 font-semibold">Configurez les paramètres de votre prochaine aventure</p>
                 </div>
 
-                <!-- Stepper Progress -->
-                <div class="mb-12 relative">
-                    <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-800">
-                        <div :style="`width: ${((currentStep - 1) / 3) * 100}%`" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"></div>
+                <!-- Stepper Progress Tracker (Vibrant Neon Line) -->
+                <div class="mb-12 relative px-4">
+                    <div class="overflow-hidden h-3 mb-4 text-xs flex rounded-full bg-[#1C1D24] border border-[#26272F]">
+                        <div :style="`width: ${((currentStep - 1) / 3) * 100}%`" 
+                             class="shadow-[0_0_15px_rgba(47,194,118,0.5)] rounded-full bg-[#2fc276] transition-all duration-500 ease-out"></div>
                     </div>
-                    <div class="flex justify-between text-xs font-semibold text-gray-500">
-                        <span :class="{'text-blue-400': currentStep >= 1}">Lieu & Niveau</span>
-                        <span :class="{'text-blue-400': currentStep >= 2}">Multijoueur</span>
-                        <span :class="{'text-blue-400': currentStep >= 3}">Mode de Jeu</span>
-                        <span :class="{'text-blue-400': currentStep >= 4}">Résumé</span>
+                    <div class="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-500">
+                        <span :class="currentStep >= 1 ? 'text-[#2fc276] text-glow-green' : ''">1. Niveau</span>
+                        <span :class="currentStep >= 2 ? 'text-[#2fc276] text-glow-green' : ''">2. Joueurs</span>
+                        <span :class="currentStep >= 3 ? 'text-[#2fc276] text-glow-green' : ''">3. Mode</span>
+                        <span :class="currentStep >= 4 ? 'text-[#2fc276] text-glow-green' : ''">4. Résumé</span>
                     </div>
                 </div>
 
-                <!-- Form Card -->
-                <div class="bg-gray-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-gray-700 p-8 relative overflow-hidden">
-                    <!-- Deco elements -->
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                <!-- Main Form Card Console -->
+                <div class="panel-glass p-5 sm:p-8 border border-[#26272F] relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-[#2fc276]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                     
                     <!-- STEP 1: Lieu et Niveau -->
-                    <div v-show="currentStep === 1" class="space-y-8 relative z-10 animate-fade-in-up">
-                        <h2 class="text-2xl font-bold border-b border-gray-700 pb-2">Où voulez-vous jouer ?</h2>
+                    <div v-show="currentStep === 1" class="space-y-8 animate-fade-in-up">
+                        <h2 class="text-2xl font-black uppercase italic tracking-tighter border-b border-[#26272F] pb-3 mb-6">Où voulez-vous jouer ?</h2>
                         
+                        <!-- Difficulty Grid Selections (Tactile Tiles) -->
                         <div class="space-y-4">
-                            <label class="block text-sm font-medium text-gray-400">Niveau de Difficulté</label>
-                            <div class="grid grid-cols-3 gap-4">
+                            <label class="block text-xs font-black uppercase tracking-widest text-gray-400">Niveau de Difficulté</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <label v-for="lvl in ['facile', 'intermediaire', 'difficile']" :key="lvl" 
-                                    class="cursor-pointer relative rounded-xl border-2 transition-all duration-200 p-4 text-center"
-                                    :class="form.level === lvl ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700 bg-gray-900 hover:border-gray-500'">
+                                    class="cursor-pointer relative rounded-2xl border-2 p-5 text-center flex flex-col items-center justify-center transition-all duration-200 bg-[#1C1D24] border-[#26272F]"
+                                    :class="form.level === lvl ? 'border-[#2fc276] bg-[#2fc276]/5 shadow-[0_0_15px_rgba(47,194,118,0.15)]' : 'hover:border-gray-500'">
                                     <input type="radio" v-model="form.level" :value="lvl" class="sr-only">
-                                    <span class="capitalize font-bold block" :class="form.level === lvl ? 'text-blue-400' : 'text-gray-300'">{{ lvl }}</span>
+                                    <span class="capitalize font-black text-sm tracking-wider" :class="form.level === lvl ? 'text-[#2fc276]' : 'text-gray-400'">{{ lvl }}</span>
                                 </label>
                             </div>
                         </div>
 
-                        <div class="space-y-4">
-                            <label class="block text-sm font-medium text-gray-400">Nombre d'énigmes</label>
-                            <input type="range" v-model="form.riddles_count" min="1" max="20" class="w-full accent-purple-500">
-                            <div class="text-center text-3xl font-black text-purple-400">{{ form.riddles_count }}</div>
+                        <!-- Riddle Count Range Slider -->
+                        <div class="space-y-4 pt-4">
+                            <label class="block text-xs font-black uppercase tracking-widest text-gray-400">Nombre d'énigmes</label>
+                            <input type="range" v-model="form.riddles_count" min="1" max="20" class="w-full accent-[#2fc276] bg-[#1C1D24] h-2 rounded-full cursor-pointer">
+                            <div class="text-center text-4xl font-black text-[#2fc276] text-glow-green tabular-nums">{{ form.riddles_count }}</div>
                         </div>
                     </div>
 
                     <!-- STEP 2: Multijoueur -->
-                    <div v-show="currentStep === 2" class="space-y-8 relative z-10 animate-fade-in-up">
-                        <h2 class="text-2xl font-bold border-b border-gray-700 pb-2">Avec qui ?</h2>
+                    <div v-show="currentStep === 2" class="space-y-8 animate-fade-in-up">
+                        <h2 class="text-2xl font-black uppercase italic tracking-tighter border-b border-[#26272F] pb-3 mb-6">Avec qui jouer ?</h2>
                         
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <!-- Solo -->
-                            <label class="cursor-pointer rounded-xl border-2 p-4 flex flex-col items-center transition-all"
-                                :class="form.type === 'solo' ? 'border-green-500 bg-green-500/10' : 'border-gray-700 bg-gray-900'">
+                            <!-- Solo Mode Tile -->
+                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex flex-col items-center justify-center text-center transition-all bg-[#1C1D24] border-[#26272F]"
+                                :class="form.type === 'solo' ? 'border-[#2fc276] bg-[#2fc276]/5 shadow-[0_0_15px_rgba(47,194,118,0.15)]' : 'hover:border-gray-500'">
                                 <input type="radio" v-model="form.type" value="solo" class="sr-only">
-                                <span class="text-3xl mb-2">👤</span>
-                                <span class="font-bold">Solo</span>
+                                <span class="text-4xl mb-3">👤</span>
+                                <span class="font-black uppercase text-xs tracking-widest" :class="form.type === 'solo' ? 'text-[#2fc276]' : 'text-white'">Solo</span>
                             </label>
                             
-                            <!-- Participants -->
-                            <label class="cursor-pointer rounded-xl border-2 p-4 flex flex-col items-center transition-all"
-                                :class="form.type === 'participants' ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700 bg-gray-900'">
+                            <!-- Participants Mode Tile -->
+                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex flex-col items-center justify-center text-center transition-all bg-[#1C1D24] border-[#26272F]"
+                                :class="form.type === 'participants' ? 'border-[#2c72f6] bg-[#2c72f6]/5 shadow-[0_0_15px_rgba(44,114,246,0.15)]' : 'hover:border-gray-500'">
                                 <input type="radio" v-model="form.type" value="participants" class="sr-only">
-                                <span class="text-3xl mb-2">🤝</span>
-                                <span class="font-bold">Participants</span>
-                                <span class="text-xs text-center mt-2 text-gray-400">Coopération. On gagne ou perd ensemble.</span>
+                                <span class="text-4xl mb-3">🤝</span>
+                                <span class="font-black uppercase text-xs tracking-widest" :class="form.type === 'participants' ? 'text-[#2c72f6]' : 'text-white'">Coopération</span>
+                                <span class="text-[9px] text-center mt-2 text-gray-500 font-bold leading-normal">On résout ensemble</span>
                             </label>
 
-                            <!-- Challengers -->
-                            <label class="cursor-pointer rounded-xl border-2 p-4 flex flex-col items-center transition-all"
-                                :class="form.type === 'challengers' ? 'border-red-500 bg-red-500/10' : 'border-gray-700 bg-gray-900'">
+                            <!-- Challengers Mode Tile -->
+                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex flex-col items-center justify-center text-center transition-all bg-[#1C1D24] border-[#26272F]"
+                                :class="form.type === 'challengers' ? 'border-[#ea4335] bg-[#ea4335]/5 shadow-[0_0_15px_rgba(234,67,53,0.15)]' : 'hover:border-gray-500'">
                                 <input type="radio" v-model="form.type" value="challengers" class="sr-only">
-                                <span class="text-3xl mb-2">⚔️</span>
-                                <span class="font-bold">Challengers</span>
-                                <span class="text-xs text-center mt-2 text-gray-400">Compétition. Que le meilleur gagne.</span>
+                                <span class="text-4xl mb-3">⚔️</span>
+                                <span class="font-black uppercase text-xs tracking-widest" :class="form.type === 'challengers' ? 'text-[#ea4335]' : 'text-white'">Challengers</span>
+                                <span class="text-[9px] text-center mt-2 text-gray-500 font-bold leading-normal">Chacun pour soi</span>
                             </label>
                         </div>
 
-                        <div v-if="form.type !== 'solo'" class="space-y-4 animate-fade-in">
-                            <label class="block text-sm font-medium text-gray-400">Nombre de Joueurs (Max)</label>
-                            <input type="number" v-model="form.max_joueurs" min="2" max="50" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:ring-blue-500 focus:border-blue-500">
+                        <!-- Co-op Max Players Widget -->
+                        <div v-if="form.type !== 'solo'" class="space-y-3 pt-4 animate-fade-in">
+                            <label class="block text-xs font-black uppercase tracking-widest text-gray-400">Nombre de Joueurs (Max)</label>
+                            <input type="number" v-model="form.max_joueurs" min="2" max="50" class="w-full bg-[#1C1D24] border border-[#26272F] rounded-xl p-3.5 text-white font-black focus:border-[#2fc276] focus:ring-0">
                         </div>
 
-                        <div v-if="form.type === 'challengers'" class="space-y-4 animate-fade-in p-4 bg-gray-900 rounded-lg border border-gray-700">
-                            <label class="block text-sm font-medium text-gray-400 mb-2">Mode de Compétition</label>
-                            <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer">
-                                <input type="radio" v-model="form.challenger_mode" value="reponse_par_membre" class="text-red-500 focus:ring-red-500 bg-gray-800 border-gray-600">
+                        <!-- Challengers Settings Widget -->
+                        <div v-if="form.type === 'challengers'" class="space-y-4 animate-fade-in p-5 bg-[#14151B] rounded-2xl border border-[#26272F]">
+                            <label class="block text-xs font-black uppercase tracking-widest text-[#ea4335] mb-2">Options de Compétition</label>
+                            
+                            <label class="flex items-center gap-4 p-3.5 rounded-xl hover:bg-[#1C1D24] cursor-pointer transition-colors border border-transparent"
+                                   :class="form.challenger_mode === 'reponse_par_membre' ? 'border-red-500/20 bg-red-500/5' : ''">
+                                <input type="radio" v-model="form.challenger_mode" value="reponse_par_membre" class="text-[#ea4335] focus:ring-0 bg-[#1C1D24] border-[#26272F]">
                                 <div>
-                                    <span class="block font-bold">Rapide (Le premier rafle tout)</span>
-                                    <span class="text-xs text-gray-400">L'énigme se verrouille dès qu'un joueur trouve la réponse.</span>
+                                    <span class="block font-black text-sm text-white">Rapide (Le premier rafle tout)</span>
+                                    <span class="text-[10px] text-gray-500 font-bold">L'énigme se verrouille dès qu'un joueur trouve la réponse.</span>
                                 </div>
                             </label>
-                            <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer">
-                                <input type="radio" v-model="form.challenger_mode" value="reponse_par_tous" class="text-red-500 focus:ring-red-500 bg-gray-800 border-gray-600">
+                            
+                            <label class="flex items-center gap-4 p-3.5 rounded-xl hover:bg-[#1C1D24] cursor-pointer transition-colors border border-transparent"
+                                   :class="form.challenger_mode === 'reponse_par_tous' ? 'border-red-500/20 bg-red-500/5' : ''">
+                                <input type="radio" v-model="form.challenger_mode" value="reponse_par_tous" class="text-[#ea4335] focus:ring-0 bg-[#1C1D24] border-[#26272F]">
                                 <div>
-                                    <span class="block font-bold">Complet (Chacun pour soi)</span>
-                                    <span class="text-xs text-gray-400">Tout le monde doit répondre à chaque énigme.</span>
+                                    <span class="block font-black text-sm text-white">Complet (Chacun pour soi)</span>
+                                    <span class="text-[10px] text-gray-500 font-bold">Tout le monde doit répondre individuellement.</span>
                                 </div>
                             </label>
                         </div>
                     </div>
 
                     <!-- STEP 3: Mode de Jeu -->
-                    <div v-show="currentStep === 3" class="space-y-8 relative z-10 animate-fade-in-up">
-                        <h2 class="text-2xl font-bold border-b border-gray-700 pb-2">Comment voulez-vous jouer ?</h2>
-                        <p class="text-sm text-gray-400">Choisissez la façon dont vous allez résoudre les énigmes.</p>
-
+                    <div v-show="currentStep === 3" class="space-y-8 animate-fade-in-up">
+                        <h2 class="text-2xl font-black uppercase italic tracking-tighter border-b border-[#26272F] pb-3 mb-6">Comment résoudre ?</h2>
+                        
                         <div class="grid grid-cols-1 gap-4">
-                            <label class="cursor-pointer rounded-xl border-2 p-5 flex items-center gap-4 transition-all"
-                                :class="form.global_mode === 'decouverte' ? 'border-yellow-500 bg-yellow-500/10' : 'border-gray-700 bg-gray-900'">
+                            <!-- Découverte Mode -->
+                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex items-center gap-5 transition-all bg-[#1C1D24] border-[#26272F]"
+                                :class="form.global_mode === 'decouverte' ? 'border-[#f3a900] bg-[#f3a900]/5 shadow-[0_0_15px_rgba(243,169,0,0.15)]' : 'hover:border-gray-500'">
                                 <input type="radio" v-model="form.global_mode" value="decouverte" class="sr-only">
                                 <div class="text-4xl">🗺️</div>
                                 <div>
-                                    <span class="block font-bold text-lg text-yellow-400">Découverte & Voyage</span>
-                                    <span class="text-sm text-gray-400">Déplacez-vous physiquement sur les lieux pour valider avec votre GPS. Temps chronométré selon votre moyen de transport !</span>
+                                    <span class="block font-black text-base" :class="form.global_mode === 'decouverte' ? 'text-[#f3a900]' : 'text-white'">Découverte & Voyage</span>
+                                    <span class="text-[10px] text-gray-500 font-bold block mt-1">Marchez vers le lieu réel et validez par coordonnées GPS en extérieur.</span>
                                 </div>
                             </label>
 
-                            <label class="cursor-pointer rounded-xl border-2 p-5 flex items-center gap-4 transition-all"
-                                :class="form.global_mode === 'gaming' ? 'border-purple-500 bg-purple-500/10' : 'border-gray-700 bg-gray-900'">
+                            <!-- Gaming Mode -->
+                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex items-center gap-5 transition-all bg-[#1C1D24] border-[#26272F]"
+                                :class="form.global_mode === 'gaming' ? 'border-[#2c72f6] bg-[#2c72f6]/5 shadow-[0_0_15px_rgba(44,114,246,0.15)]' : 'hover:border-gray-500'">
                                 <input type="radio" v-model="form.global_mode" value="gaming" class="sr-only">
                                 <div class="text-4xl">🎮</div>
                                 <div>
-                                    <span class="block font-bold text-lg text-purple-400">Pure Gaming</span>
-                                    <span class="text-sm text-gray-400">Trouvez le nom du lieu depuis votre canapé. Pas de déplacement physique requis.</span>
+                                    <span class="block font-black text-base" :class="form.global_mode === 'gaming' ? 'text-[#2c72f6]' : 'text-white'">Pure Gaming (Canapé)</span>
+                                    <span class="text-[10px] text-gray-500 font-bold block mt-1">Trouvez le nom exact du lieu géographique depuis chez vous.</span>
                                 </div>
                             </label>
 
-                            <label class="cursor-pointer rounded-xl border-2 p-5 flex items-center gap-4 transition-all"
-                                :class="form.global_mode === 'mixte' ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700 bg-gray-900'">
+                            <!-- Mixte Mode -->
+                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex items-center gap-5 transition-all bg-[#1C1D24] border-[#26272F]"
+                                :class="form.global_mode === 'mixte' ? 'border-[#2fc276] bg-[#2fc276]/5 shadow-[0_0_15px_rgba(47,194,118,0.15)]' : 'hover:border-gray-500'">
                                 <input type="radio" v-model="form.global_mode" value="mixte" class="sr-only">
                                 <div class="text-4xl">☯️</div>
                                 <div>
-                                    <span class="block font-bold text-lg text-blue-400">Les Deux (Choix à chaque énigme)</span>
-                                    <span class="text-sm text-gray-400">Le jeu vous demandera de choisir votre mode avant de dévoiler chaque énigme.</span>
+                                    <span class="block font-black text-base" :class="form.global_mode === 'mixte' ? 'text-[#2fc276]' : 'text-white'">Les Deux (Choix libre)</span>
+                                    <span class="text-[10px] text-gray-500 font-bold block mt-1">Le jeu vous demandera de choisir à chaque énigme selon vos envies.</span>
                                 </div>
                             </label>
                         </div>
                     </div>
 
                     <!-- STEP 4: Résumé -->
-                    <div v-show="currentStep === 4" class="space-y-8 relative z-10 animate-fade-in-up">
-                        <h2 class="text-2xl font-bold border-b border-gray-700 pb-2">Prêt pour l'aventure ?</h2>
+                    <div v-show="currentStep === 4" class="space-y-8 animate-fade-in-up">
+                        <h2 class="text-2xl font-black uppercase italic tracking-tighter border-b border-[#26272F] pb-3 mb-6">Prêt pour l'exploration ?</h2>
                         
-                        <div class="bg-gray-900 p-6 rounded-xl border border-gray-700 space-y-4">
-                            <div class="flex justify-between border-b border-gray-800 pb-2">
-                                <span class="text-gray-400">Niveau</span>
-                                <span class="font-bold capitalize text-white">{{ form.level }}</span>
+                        <div class="bg-[#14151B] p-6 rounded-2xl border border-[#26272F] space-y-4">
+                            <div class="flex justify-between border-b border-[#26272F] pb-3">
+                                <span class="text-xs font-black uppercase text-gray-500">Niveau de difficulté</span>
+                                <span class="font-black text-sm capitalize text-white">{{ form.level }}</span>
                             </div>
-                            <div class="flex justify-between border-b border-gray-800 pb-2">
-                                <span class="text-gray-400">Énigmes</span>
-                                <span class="font-bold text-white">{{ form.riddles_count }}</span>
+                            <div class="flex justify-between border-b border-[#26272F] pb-3">
+                                <span class="text-xs font-black uppercase text-gray-500">Nombre d'énigmes</span>
+                                <span class="font-black text-sm text-[#2fc276] text-glow-green">{{ form.riddles_count }}</span>
                             </div>
-                            <div class="flex justify-between border-b border-gray-800 pb-2">
-                                <span class="text-gray-400">Type de Partie</span>
-                                <span class="font-bold capitalize" :class="{
-                                    'text-green-400': form.type === 'solo',
-                                    'text-blue-400': form.type === 'participants',
-                                    'text-red-400': form.type === 'challengers'
+                            <div class="flex justify-between border-b border-[#26272F] pb-3">
+                                <span class="text-xs font-black uppercase text-gray-500">Type d'aventure</span>
+                                <span class="font-black text-sm capitalize" :class="{
+                                    'text-[#2fc276]': form.type === 'solo',
+                                    'text-[#2c72f6]': form.type === 'participants',
+                                    'text-[#ea4335]': form.type === 'challengers'
                                 }">{{ form.type }} <span v-if="form.type !== 'solo'">({{ form.max_joueurs }} max)</span></span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-400">Mode de Résolution</span>
-                                <span class="font-bold capitalize text-white">{{ form.global_mode }}</span>
+                                <span class="text-xs font-black uppercase text-gray-500">Mode de Résolution</span>
+                                <span class="font-black text-sm capitalize text-white">{{ form.global_mode }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Navigation Buttons -->
-                    <div class="mt-10 flex justify-between pt-6 border-t border-gray-700 relative z-10">
+                    <!-- Navigation Action Buttons (Bouncy 3D Controls) -->
+                    <div class="mt-10 flex justify-between pt-6 border-t border-[#26272F] relative z-10">
                         <button v-if="currentStep > 1" @click="prevStep" 
-                            class="px-6 py-3 rounded-lg font-bold text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">
+                            class="px-6 py-3.5 btn-3d btn-3d-blue text-xs font-black uppercase">
                             Retour
                         </button>
-                        <div v-else></div> <!-- Spacer -->
+                        <div v-else></div>
 
                         <button @click="nextStep" :disabled="isLocating"
-                            class="px-8 py-3 rounded-lg font-bold text-white shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                            :class="currentStep === 4 ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]'">
+                            class="px-8 py-3.5 btn-3d btn-3d-green text-xs font-black uppercase"
+                            :class="currentStep === 4 ? 'shadow-[0_5px_0_#1e7d4b]' : 'shadow-[0_5px_0_#1e7d4b]'">
                             <span v-if="isLocating">LOCALISATION... 📍</span>
                             <span v-else>{{ currentStep === 4 ? 'CRÉER LA PARTIE 🚀' : 'Suivant' }}</span>
                         </button>

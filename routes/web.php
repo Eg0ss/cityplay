@@ -41,6 +41,7 @@ use App\Http\Controllers\GameEngineController;
 Route::middleware(['auth', 'verified'])->prefix('game')->name('game.')->group(function () {
     Route::get('/dashboard', [GameEngineController::class, 'dashboard'])->name('dashboard');
     Route::get('/setup', [GameEngineController::class, 'setup'])->name('setup');
+    Route::get('/progression', [GameEngineController::class, 'progression'])->name('progression');
     Route::post('/sessions', [GameEngineController::class, 'createSession'])->name('create');
     Route::get('/lobby/{token}', [GameEngineController::class, 'lobby'])->name('lobby');
     Route::post('/lobby/{token}/start', [GameEngineController::class, 'startGame'])->name('start');

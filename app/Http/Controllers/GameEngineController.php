@@ -39,6 +39,110 @@ class GameEngineController extends Controller
         ]);
     }
 
+    // Affiche le profil de progression détaillé du joueur
+    public function progression()
+    {
+        $userId = auth()->id();
+
+        // 1. Nombre total de sessions jouées
+        $totalGames = GamePlayer::where('user_id', $userId)->count();
+
+        // 2. Répartition des tentatives
+        $attempts = GamePlayerRiddleAttempt::where('user_id', $userId)->get();
+        $solvedCount = $attempts->where('status', 'gagne')->count();
+        $failedCount = $attempts->where('status', 'perdu')->count();
+
+        // 3. Score global cumulé (XP)
+        $totalPoints = \App\Models\Score::where('user_id', $userId)->sum('points');
+
+        // 4. Historique détaillé des tentatives récentes
+        $recentAttempts = GamePlayerRiddleAttempt::with(['gameRiddle.riddle.place', 'session'])
+            ->where('user_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->limit(8)
+            ->get()
+            ->map(function ($attempt) {
+                return [
+                    'id' => $attempt->id,
+                    'status' => $attempt->status,
+                    'points_earned' => $attempt->points_earned,
+                    'time_spent' => $attempt->time_limit,
+                    'riddle_title' => $attempt->gameRiddle->riddle->question ?? 'Énigme sans titre',
+                    'place_name' => $attempt->gameRiddle->riddle->place->nom ?? 'Lieu inconnu',
+                    'date' => $attempt->created_at->format('d/m/Y H:i'),
+                ];
+            });
+
+        // 5. Calcul des paliers d'XP et niveaux de grade
+        $levelName = "Aspirant";
+        $nextLevelName = "Explorateur 🦁";
+        $xpMin = 0;
+        $xpMax = 200;
+
+        if ($totalPoints >= 1000) {
+            $levelName = "Légende du Bénin 👑";
+            $nextLevelName = "Niveau Maximum";
+            $xpMin = 1000;
+            $xpMax = 1000;
+        } elseif ($totalPoints >= 500) {
+            $levelName = "Guide Aventure 🧙‍♂️";
+            $nextLevelName = "Légende du Bénin 👑";
+            $xpMin = 500;
+            $xpMax = 1000;
+        } elseif ($totalPoints >= 200) {
+            $levelName = "Explorateur 🦁";
+            $nextLevelName = "Guide Aventure 🧙‍♂️";
+            $xpMin = 200;
+            $xpMax = 500;
+        }
+
+        $progressPercent = $xpMax > $xpMin ? min(100, round((($totalPoints - $xpMin) / ($xpMax - $xpMin)) * 100)) : 100;
+
+        // 6. Succès & Badges
+        $badges = [
+            [
+                'id' => 'first_step',
+                'title' => 'Premier Pas 🗺️',
+                'description' => 'A terminé sa première session de jeu.',
+                'unlocked' => $totalGames >= 1,
+            ],
+            [
+                'id' => 'riddle_hunter',
+                'title' => 'Chasseur d\'Énigmes 🕵️‍♂️',
+                'description' => 'A résolu au moins 5 énigmes.',
+                'unlocked' => $solvedCount >= 5,
+            ],
+            [
+                'id' => 'xp_enthusiast',
+                'title' => 'Passionné d\'XP ⚡',
+                'description' => 'A franchi le cap des 500 points cumulés.',
+                'unlocked' => $totalPoints >= 500,
+            ],
+            [
+                'id' => 'benin_legend',
+                'title' => 'Légende Locale 👑',
+                'description' => 'Devenu une véritable légende du Bénin avec 1000+ XP.',
+                'unlocked' => $totalPoints >= 1000,
+            ],
+        ];
+
+        return Inertia::render('Game/Progression', [
+            'levelName' => $levelName,
+            'nextLevelName' => $nextLevelName,
+            'totalPoints' => (int) $totalPoints,
+            'xpMin' => $xpMin,
+            'xpMax' => $xpMax,
+            'progressPercent' => $progressPercent,
+            'stats' => [
+                'total_games' => $totalGames,
+                'solved_count' => $solvedCount,
+                'failed_count' => $failedCount,
+            ],
+            'recentAttempts' => $recentAttempts,
+            'badges' => $badges,
+        ]);
+    }
+
     // Affiche le processus de configuration de partie
     public function setup()
     {

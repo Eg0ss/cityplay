@@ -7,20 +7,6 @@ defineProps({
     status: { type: String },
 });
 
-const isDark = ref(true);
-
-onMounted(() => {
-    const savedTheme = localStorage.getItem('cityplay-theme');
-    if (savedTheme) {
-        isDark.value = savedTheme === 'dark';
-    }
-    if (isDark.value) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
-});
-
 const form = useForm({
     email: '',
     password: '',
@@ -35,67 +21,77 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Connexion - Cityplay Bénin" />
+    <Head title="Connexion - Cityplay" />
 
-    <div class="min-h-screen font-sans flex flex-col lg:flex-row transition-colors duration-300 relative"
-         :class="isDark ? 'bg-[#0A0A0B] text-white' : 'bg-white text-gray-900'">
+    <div class="min-h-screen font-sans flex flex-col lg:flex-row bg-[#171235] text-white overflow-hidden relative animate-slide-up">
         
-        <!-- Mobile Background (Visible only on mobile) -->
-        <div class="lg:hidden absolute inset-0 z-0">
-            <img src="/images/logo.png" alt="Background" class="h-full w-full object-cover" />
-            <div class="absolute inset-0 transition-colors"
-                 :class="isDark ? 'bg-[#0A0A0B]/60' : 'bg-white/40'"></div>
-        </div>
+        <!-- Ambient Background glow spots (GeoGuessr arcade neon feel) -->
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-[#87d74e]/5 rounded-full blur-[150px] pointer-events-none -z-10"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-[#7751de]/10 rounded-full blur-[150px] pointer-events-none -z-10"></div>
 
-        <!-- Left Side: Branding/Image (Desktop Only) -->
-        <div class="hidden lg:flex lg:w-1/2 bg-[#1A1A1A] relative overflow-hidden p-12 lg:p-20 flex-col justify-between border-r dark:border-white/5 border-gray-100">
+        <!-- Left Side: Branding/Map Image (Desktop Only) -->
+        <div class="hidden lg:flex lg:w-1/2 bg-[#10101c] relative overflow-hidden p-12 lg:p-20 flex-col justify-between border-r border-[#2a245c]">
+            <!-- World Map Vignette background -->
             <div class="absolute inset-0 z-0">
-                <img src="/images/logo.png" alt="Background" class="h-full w-full object-cover" />
-                <div class="absolute inset-0 transition-colors"
-                     :class="isDark ? 'bg-[#0A0A0B]/40' : 'bg-white/30'"></div>
+                <img src="/images/image.png" alt="Background" class="h-full w-full object-cover opacity-60 filter brightness-[0.7] contrast-[1.1]" />
+                <div class="absolute inset-0 bg-gradient-to-b from-[#10101c]/30 to-[#171235]"></div>
             </div>
+
+            <!-- Floating Bobbing Emojis on Left Side -->
+            <div class="absolute top-1/4 left-1/4 text-6xl animate-float opacity-30 select-none pointer-events-none">🧭</div>
+            <div class="absolute bottom-1/4 right-1/4 text-6xl animate-float opacity-30 select-none pointer-events-none" style="animation-delay: 1.5s;">🗺️</div>
             
-            <Link href="/" class="relative z-10 flex items-center gap-3">
-                <div class="bg-[#FF9F1C] p-2 rounded-lg">
-                    <span class="text-white font-black text-xl">CP</span>
+            <Link href="/" class="relative z-10 flex items-center gap-3 group">
+                <div class="bg-[#87d74e] p-2.5 rounded-xl shadow-[0_0_15px_rgba(135,215,78,0.4)] transition-all group-hover:scale-110 duration-200">
+                    <span class="text-[#10101c] font-black text-xl">CP</span>
                 </div>
-                <span class="text-3xl font-black tracking-tighter uppercase italic text-white">Cityplay</span>
+                <span class="text-3xl font-black tracking-tighter uppercase italic text-white text-glow-green">Cityplay</span>
             </Link>
 
             <div class="relative z-10 space-y-6">
-                <h1 class="text-6xl lg:text-8xl font-black text-white leading-none tracking-tighter italic uppercase">BON <br />RETOUR !</h1>
-                <p class="text-xl text-gray-300 max-w-md font-medium leading-relaxed">Reprenez votre quête là où vous l'avez laissée et dominez le classement.</p>
+                <span class="inline-block text-[#87d74e] text-glow-green font-black text-xs tracking-[0.4em] uppercase italic">Console d'accès</span>
+                <h1 class="text-6xl lg:text-7xl font-black text-white leading-none tracking-tighter italic uppercase">
+                    PRÊT À <br />RÉSOUDRE ?
+                </h1>
+                <p class="text-lg text-gray-400 max-w-md font-medium leading-relaxed">
+                    Connectez-vous pour rejoindre vos amis, valider vos énigmes géolocalisées et revendiquer le haut du podium.
+                </p>
             </div>
 
             <div class="relative z-10 text-gray-500 text-[10px] font-black uppercase tracking-[0.4em]">
-                System Status: Online
+                👾 SYSTEM STATUS: READY
             </div>
         </div>
 
         <!-- Right Side: Login Form -->
-        <div class="flex-1 flex items-center justify-center p-8 lg:p-20 relative z-10 overflow-y-auto">
+        <div class="flex-1 flex items-center justify-center p-6 sm:p-12 lg:p-20 relative z-10 overflow-y-auto">
             <!-- Back Button -->
-            <Link href="/" class="absolute top-8 right-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#FF9F1C] transition-all">
+            <Link href="/" class="absolute top-8 right-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#87d74e] transition-all">
                 <span>←</span>
                 <span>Retour à l'accueil</span>
             </Link>
 
-            <div class="w-full max-w-md space-y-12 lg:bg-transparent dark:bg-[#111113]/80 bg-white/80 backdrop-blur-xl p-8 lg:p-0 rounded-[2.5rem] lg:rounded-none shadow-2xl lg:shadow-none border lg:border-none dark:border-white/5 border-gray-100">
-                <div class="lg:hidden flex justify-center mb-12">
+            <!-- Gaming Panel Card -->
+            <div class="w-full max-w-md space-y-10 panel-glass p-8 sm:p-10 rounded-[2.5rem] border border-[#2a245c] shadow-2xl relative hover-lift">
+                <div class="absolute -top-10 -left-10 w-32 h-32 bg-[#87d74e]/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="lg:hidden flex justify-center mb-6">
                     <Link href="/" class="flex items-center gap-2">
-                        <div class="bg-[#FF9F1C] p-2 rounded-lg">
-                            <span class="text-white font-black text-xl">CP</span>
+                        <div class="bg-[#87d74e] p-2.5 rounded-xl shadow-[0_0_15px_rgba(135,215,78,0.4)]">
+                            <span class="text-[#10101c] font-black text-xl">CP</span>
                         </div>
-                        <span class="text-3xl font-black tracking-tighter uppercase italic">Cityplay</span>
+                        <span class="text-2xl font-black tracking-tighter uppercase italic text-glow-green text-white">Cityplay</span>
                     </Link>
                 </div>
 
-                <div class="space-y-4">
-                    <h2 class="text-4xl lg:text-5xl font-black uppercase italic tracking-tighter">Accès <span class="text-[#FF9F1C]">Terminal</span></h2>
-                    <p class="text-gray-500 font-medium">Entrez vos identifiants pour synchroniser vos données.</p>
+                <div class="space-y-3">
+                    <h2 class="text-3xl lg:text-4xl font-black uppercase italic tracking-tighter">
+                        Accès <span class="text-[#87d74e]">Explorateur</span>
+                    </h2>
+                    <p class="text-gray-400 text-sm font-medium">Entrez vos identifiants pour démarrer la session.</p>
                 </div>
 
-                <div v-if="status" class="bg-[#4CAF50]/10 border border-[#4CAF50]/20 p-5 rounded-2xl text-[#4CAF50] text-xs font-black uppercase tracking-widest">
+                <div v-if="status" class="bg-[#87d74e]/10 border border-[#87d74e]/20 p-5 rounded-2xl text-[#87d74e] text-xs font-black uppercase tracking-widest">
                     {{ status }}
                 </div>
 
@@ -106,7 +102,7 @@ const submit = () => {
                             v-model="form.email"
                             type="email" 
                             required
-                            class="w-full dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-100 rounded-2xl py-5 px-6 focus:ring-2 focus:ring-[#FF9F1C] transition-all font-bold dark:text-white text-gray-900"
+                            class="w-full bg-[#10101c] border border-[#2a245c] rounded-2xl py-4.5 px-6 focus:ring-2 focus:ring-[#87d74e] focus:border-[#87d74e] transition-all font-bold text-white placeholder-gray-500"
                             placeholder="votre@email.com"
                         />
                         <div v-if="form.errors.email" class="text-red-500 text-[10px] font-black uppercase mt-2 tracking-widest">{{ form.errors.email }}</div>
@@ -114,47 +110,42 @@ const submit = () => {
 
                     <div class="space-y-2">
                         <div class="flex justify-between">
-                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Code d'Accès</label>
-                            <Link v-if="canResetPassword" :href="route('password.request')" class="text-[10px] font-black uppercase tracking-widest text-[#FF9F1C] hover:underline">Oublié ?</Link>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Mot de passe</label>
+                            <Link v-if="canResetPassword" :href="route('password.request')" class="text-[10px] font-black uppercase tracking-widest text-[#ffc628] hover:underline">Oublié ?</Link>
                         </div>
                         <input 
                             v-model="form.password"
                             type="password" 
                             required
-                            class="w-full dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-100 rounded-2xl py-5 px-6 focus:ring-2 focus:ring-[#FF9F1C] transition-all font-bold dark:text-white text-gray-900"
+                            class="w-full bg-[#10101c] border border-[#2a245c] rounded-2xl py-4.5 px-6 focus:ring-2 focus:ring-[#87d74e] focus:border-[#87d74e] transition-all font-bold text-white placeholder-gray-500"
                             placeholder="••••••••"
                         />
                         <div v-if="form.errors.password" class="text-red-500 text-[10px] font-black uppercase mt-2 tracking-widest">{{ form.errors.password }}</div>
                     </div>
 
                     <div class="flex items-center">
-                        <input v-model="form.remember" type="checkbox" class="rounded-lg border-gray-300 text-[#FF9F1C] focus:ring-[#FF9F1C] dark:bg-white/5" />
+                        <input v-model="form.remember" type="checkbox" class="rounded-lg border-[#2a245c] text-[#87d74e] focus:ring-[#87d74e] bg-[#10101c]" />
                         <span class="ms-3 text-xs font-black uppercase tracking-widest text-gray-400">Maintenir la Session</span>
                     </div>
 
                     <button 
                         type="submit" 
                         :disabled="form.processing"
-                        class="w-full rounded-2xl dark:bg-white bg-gray-900 dark:text-black text-white py-6 text-xs font-black uppercase tracking-[0.3em] shadow-2xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                        class="w-full btn-3d btn-3d-green py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_5px_0_#5d9933] flex items-center justify-center gap-2"
                     >
-                        Initialiser la Connexion
+                        🎮 Initialiser la Connexion
                     </button>
                 </form>
 
-                <div class="text-center pt-8 border-t dark:border-white/5 border-gray-100">
-                    <p class="text-gray-500 font-medium">Nouveau sujet ? 
-                        <Link :href="route('register')" class="text-[#FF9F1C] font-black uppercase tracking-widest hover:underline">Créer un profil</Link>
+                <div class="text-center pt-8 border-t border-[#2a245c]">
+                    <p class="text-gray-400 font-medium text-sm">Nouveau joueur ? 
+                        <Link :href="route('register')" class="text-[#ffc628] font-black uppercase tracking-widest hover:underline ml-1">Créer un compte</Link>
                     </p>
                 </div>
             </div>
         </div>
     </div>
 </template>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
-.font-sans { font-family: 'Outfit', sans-serif; }
-</style>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
