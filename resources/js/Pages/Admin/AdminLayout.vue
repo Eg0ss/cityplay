@@ -73,7 +73,7 @@ onMounted(() => {
                     </div>
                     <div class="flex flex-col">
                         <span class="text-2xl font-black uppercase italic tracking-tighter leading-none dark:text-white text-gray-900 group-hover:text-[#FF9F1C] transition-colors">Cityplay</span>
-                        <span class="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF9F1C] mt-1">Control Center</span>
+                        <!-- <span class="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF9F1C] mt-1">Control Center</span> -->
                     </div>
                 </Link>
             </div>
@@ -135,7 +135,7 @@ onMounted(() => {
                         <span class="text-xl">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                         </span>
-                        <span class="font-bold uppercase text-xs tracking-wider">Site Public</span>
+                        <span class="font-bold uppercase text-xs tracking-wider">Page accueil</span>
                     </Link>
                 </div>
             </nav>

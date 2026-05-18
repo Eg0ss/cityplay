@@ -55,8 +55,8 @@ let debounceTimeout = null;
 const searchLocation = () => {
     if (debounceTimeout) clearTimeout(debounceTimeout);
     
-    debounceTimeout = setTimeout(async () => {
-        if (!form.nom || form.nom.length < 3) {
+    debounceTimeout = setTimeout(async () => { 
+        if (!form.nom || form.nom.length < 3) { 
             suggestions.value = [];
             return;
         }

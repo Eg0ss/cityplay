@@ -19,6 +19,7 @@ const searchQuery = ref('');
 const isEditing = ref(false);
 const editingCityId = ref(null);
 
+//Filtrage des cités en fonction de la requête de recherche
 const filteredCities = computed(() => {
     if (!searchQuery.value) return props.cities;
     const query = searchQuery.value.toLowerCase();
@@ -50,7 +51,7 @@ const nextStep = () => {
 const prevStep = () => {
     if (currentStep.value > 1) currentStep.value--;
 };
-
+// Fonction pour ouvrir le formulaire de création d'une nouvelle cité
 const openCreateForm = () => {
     isEditing.value = false;
     editingCityId.value = null;
@@ -185,7 +186,7 @@ const progressWidth = computed(() => {
                             <div v-if="currentStep === 1" key="step1" class="space-y-8 py-4">
                                 <div class="space-y-2">
                                     <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 01</span>
-                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">IDENTIFICATION DE LA <span class="text-[#FF9F1C]">CIBLE</span></h3>
+                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">INITIALISATION DE LA <span class="text-[#FF9F1C]">CITE</span></h3>
                                 </div>
                                 <div class="space-y-4">
                                     <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Désignation de la Cité</label>
@@ -207,10 +208,10 @@ const progressWidth = computed(() => {
                             <div v-else-if="currentStep === 2" key="step2" class="space-y-8 py-4">
                                 <div class="space-y-2">
                                     <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 02</span>
-                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">COORDONNÉES <span class="text-[#FF9F1C]">GÉOGRAPHIQUES</span></h3>
+                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">DEPARTEMENT <span class="text-[#FF9F1C]">RATACHE</span></h3>
                                 </div>
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Département de rattachement</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Département</label>
                                     <input 
                                         v-model="form.departement" 
                                         type="text" 
@@ -222,7 +223,7 @@ const progressWidth = computed(() => {
                                 <div class="flex gap-4">
                                     <button @click="prevStep" class="px-8 py-6 rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
                                     <button @click="nextStep" :disabled="!form.departement" class="group flex-1 flex items-center justify-center gap-4 bg-[#FF9F1C] text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-all disabled:opacity-30">
-                                        VERROUILLER LA ZONE
+                                        CONFIRMER LE DEPARTEMENT
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:translate-x-2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                                     </button>
                                 </div>
@@ -232,7 +233,7 @@ const progressWidth = computed(() => {
                             <div v-else-if="currentStep === 3" key="step3" class="space-y-8 py-4">
                                 <div class="space-y-2">
                                     <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 03</span>
-                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">NARRATIF DE LA <span class="text-[#FF9F1C]">CITÉ</span></h3>
+                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">DESCRIPTION DE LA <span class="text-[#FF9F1C]">CITÉ</span></h3>
                                 </div>
                                 <div class="space-y-4">
                                     <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Séquence d'introduction (Description)</label>
@@ -247,7 +248,7 @@ const progressWidth = computed(() => {
                                 <div class="flex gap-4">
                                     <button @click="prevStep" class="px-8 py-6 rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
                                     <button @click="submit" :disabled="form.processing || !form.description" class="group flex-1 flex items-center justify-center gap-4 bg-white text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 transition-all disabled:opacity-30">
-                                        INITIALISER LA MATRICE
+                                        INITIALISER DE LA CITE
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
                                     </button>
                                 </div>
@@ -256,7 +257,7 @@ const progressWidth = computed(() => {
                     </div>
 
                     <!-- Éléments décoratifs style "HUD" -->
-                    <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em] animate-pulse">System Link: Stable</div>
+                    <!-- <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em] animate-pulse">System Link: Stable</div> -->
                     <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Step {{ currentStep }} / 03</div>
                 </div>
             </transition>
@@ -296,7 +297,7 @@ const progressWidth = computed(() => {
                     <div class="p-2">
                         <Link :href="route('admin.cities.places', { city: city.id })" 
                             class="w-full flex items-center justify-center gap-3 bg-gray-100 dark:bg-white/5 dark:text-white text-gray-700 py-6 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest hover:bg-[#FF9F1C] hover:text-black transition-all group-hover:shadow-[0_0_20px_rgba(255,159,28,0.2)]">
-                            ACCÉDER AUX SECTEURS
+                            ACCÉDER AUX LIEUX
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                         </Link>
                     </div>
@@ -310,7 +311,7 @@ const progressWidth = computed(() => {
                 </div>
                 <div>
                     <h3 class="text-xl font-black uppercase italic tracking-tighter">AUCUNE CITÉ DÉTECTÉE</h3>
-                    <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">Ajustez les paramètres de recherche du radar</p>
+                    <!-- <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">Ajustez les paramètres de recherche du radar</p> -->
                 </div>
             </div>
         </div>

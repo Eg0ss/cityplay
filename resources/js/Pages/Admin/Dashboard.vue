@@ -20,7 +20,7 @@ defineProps({
                     </h1>
                     <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4 flex items-center gap-2">
                         <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                        Système Opérationnel • Cityplay Bénin
+                         Cityplay Bénin
                     </p>
                 </div>
                 <div class="text-left lg:text-right">
