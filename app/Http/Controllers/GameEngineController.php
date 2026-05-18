@@ -187,6 +187,9 @@ class GameEngineController extends Controller
             ]);
         }
 
+        // Déclencher l'événement de mise à jour du jeu en temps réel !
+        event(new \App\Events\GameUpdated($session));
+
         return response()->json(['success' => true]);
     }
 
@@ -219,6 +222,9 @@ class GameEngineController extends Controller
                 
                 // Recharger la session avec le nouveau joueur
                 $session = GameSession::with('players.user')->where('lien_token', $token)->firstOrFail();
+
+                // Déclencher l'événement de mise à jour du lobby en temps réel !
+                event(new \App\Events\LobbyUpdated($session));
             } else {
                 // Session pleine, rediriger vers le dashboard avec un message
                 return redirect()->route('game.dashboard')->with('error', 'Désolé, cette session de jeu est déjà complète.');
@@ -235,6 +241,10 @@ class GameEngineController extends Controller
     {
         $session = GameSession::where('lien_token', $token)->firstOrFail();
         $session->update(['statut' => 'en_cours']);
+        
+        // Déclencher l'événement de démarrage de partie pour rediriger les participants !
+        event(new \App\Events\LobbyUpdated($session));
+
         return redirect()->route('game.play', ['token' => $token]);
     }
 

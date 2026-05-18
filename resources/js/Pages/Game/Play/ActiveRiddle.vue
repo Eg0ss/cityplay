@@ -155,21 +155,36 @@ const recordAttemptOnBackend = async (status, pointsEarned) => {
 
 // Géolocalisation en temps réel pour le mode découverte
 let watchId = null;
-let syncInterval = null;
+let unsubscribeBefore = null;
 
 onMounted(() => {
-    // Dans le mode participants, se positionner sur la première énigme non tentée
-    if (props.session.type === 'participants') {
-        selectFirstUnattemptedRiddle();
-        
-        // Polling de synchronisation temps réel des participants
-        syncInterval = setInterval(() => {
+    // Écouter le canal du jeu via Laravel Echo pour synchroniser la partie en temps réel
+    window.Echo.channel(`game.${props.session.lien_token}`)
+        .listen('GameUpdated', (e) => {
+            // Recharger la session pour obtenir le classement et les tentatives les plus récentes
             router.reload({ 
                 only: ['session'],
                 preserveState: true,
                 preserveScroll: true
             });
-        }, 4000);
+        });
+
+    // Nettoyer tous les canaux, observateurs et timers dès qu'une navigation démarre
+    unsubscribeBefore = router.on('before', () => {
+        window.Echo.leave(`game.${props.session.lien_token}`);
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+    });
+
+    // Dans le mode participants, se positionner sur la première énigme non tentée
+    if (props.session.type === 'participants') {
+        selectFirstUnattemptedRiddle();
     }
 
     // Tenter de récupérer le mode global du joueur
@@ -191,9 +206,12 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    if (unsubscribeBefore) {
+        unsubscribeBefore();
+    }
+    window.Echo.leave(`game.${props.session.lien_token}`);
     if (watchId) navigator.geolocation.clearWatch(watchId);
     clearInterval(timerInterval);
-    if (syncInterval) clearInterval(syncInterval);
 });
 
 // Détecter si l'énigme active actuelle (currentRiddle) a été clôturée par un autre joueur

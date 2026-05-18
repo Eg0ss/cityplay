@@ -21,31 +21,29 @@ const copyLink = () => {
 const startGame = () => {
     router.post(`/game/lobby/${props.session.lien_token}/start`, {}, {
         onSuccess: () => {
-            clearInterval(pollInterval);
             router.get(`/game/play/${props.session.lien_token}`);
         }
     });
 };
 
-// Polling simulation for new players (Normally done via Echo/Pusher)
-let pollInterval;
+let unsubscribeBefore = null;
 onMounted(() => {
-    pollInterval = setInterval(() => {
-        router.reload({ 
-            only: ['session'],
-            onSuccess: (page) => {
-                // Double vérification de sécurité : redirection immédiate si la partie a commencé
-                if (page.props.session?.statut === 'en_cours' && !isCreator.value) {
-                    clearInterval(pollInterval);
-                    router.get(`/game/play/${props.session.lien_token}`);
-                }
-            }
+    // Écouter le canal du lobby via Laravel Echo pour synchroniser les joueurs en temps réel
+    window.Echo.channel(`lobby.${props.session.lien_token}`)
+        .listen('LobbyUpdated', (e) => {
+            // Recharger la session pour mettre à jour la liste des joueurs connectés
+            router.reload({ only: ['session'] });
         });
-    }, 4000); // Polling un peu plus rapide (4s) pour plus de dynamisme
+
+    // Nettoyer le canal dès qu'une navigation commence (ex: déconnexion ou début du jeu)
+    unsubscribeBefore = router.on('before', () => {
+        window.Echo.leave(`lobby.${props.session.lien_token}`);
+    });
 });
 
 onUnmounted(() => {
-    clearInterval(pollInterval);
+    if (unsubscribeBefore) unsubscribeBefore();
+    window.Echo.leave(`lobby.${props.session.lien_token}`);
 });
 
 // Le créateur est le premier joueur enregistré de la session (l'hôte)
@@ -71,7 +69,6 @@ watch(() => props.session.players, (newPlayers, oldPlayers) => {
 // Rediriger automatiquement le participant si la partie est lancée
 watch(() => props.session?.statut, (newStatus) => {
     if (newStatus === 'en_cours' && !isCreator.value) {
-        clearInterval(pollInterval);
         router.get(`/game/play/${props.session.lien_token}`);
     }
 }, { immediate: true });
