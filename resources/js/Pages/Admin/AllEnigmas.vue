@@ -20,6 +20,20 @@ const toast = useToast();
 const confirm = useConfirm();
 const searchQuery = ref('');
 const selectedPlaceFilter = ref('');
+const showCreateModal = ref(false);
+
+const openCreateForPlace = () => {
+    if (!selectedPlaceFilter.value) {
+        toast.add({ 
+            severity: 'warn', 
+            summary: 'Lieu non sélectionné', 
+            detail: 'Veuillez sélectionner un lieu pour forger une énigme.', 
+            life: 3000 
+        });
+        return;
+    }
+    router.visit(route('admin.enigmas', { place: selectedPlaceFilter.value }));
+};
 
 const filteredEnigmas = computed(() => {
     let result = [...props.enigmas];
@@ -80,6 +94,12 @@ const confirmDelete = (enigma) => {
                 </div>
 
                 <div class="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
+                    <!-- Bouton Créer une énigme -->
+                    <button @click="showCreateModal = true" 
+                        class="w-full md:w-auto bg-[#FF9F1C] text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg hover:scale-105 active:scale-95 transition-all">
+                        FORGER UNE ÉNIGME
+                    </button>
+
                     <!-- Filtre par Lieu -->
                     <div class="w-full md:w-64">
                         <select 
@@ -107,6 +127,41 @@ const confirmDelete = (enigma) => {
                     </div>
                 </div>
             </div>
+
+            <!-- Modal de sélection de lieu pour création -->
+            <transition name="step-fade">
+                <div v-if="showCreateModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+                    <div class="w-full max-w-xl dark:bg-[#111113] bg-white rounded-[2.5rem] p-10 border dark:border-white/5 border-gray-100 shadow-2xl relative">
+                        <button @click="showCreateModal = false" class="absolute top-8 right-8 text-gray-500 hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                        
+                        <div class="space-y-8">
+                            <div class="space-y-2">
+                                <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Initialisation</span>
+                                <h3 class="text-3xl font-black uppercase italic tracking-tighter">CIBLER UNE <span class="text-[#FF9F1C]">UNITÉ</span></h3>
+                                <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Sélectionnez le lieu où déployer ce nouveau défi.</p>
+                            </div>
+
+                            <div class="space-y-4">
+                                <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Lieu de Déploiement</label>
+                                <select v-model="selectedPlaceFilter"
+                                    class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-6 px-8 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all cursor-pointer appearance-none">
+                                    <option value="" disabled>SÉLECTIONNEZ UN LIEU...</option>
+                                    <option v-for="place in places" :key="place.id" :value="place.id">
+                                        {{ place.nom.toUpperCase() }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <button @click="openCreateForPlace" :disabled="!selectedPlaceFilter"
+                                class="w-full bg-white text-black py-6 rounded-2xl font-black uppercase tracking-[0.3em] text-xs shadow-xl hover:scale-[1.02] transition-all disabled:opacity-30">
+                                OUVRIR L'ATELIER DE FORGE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
 
             <!-- Liste des énigmes -->
             <div v-if="filteredEnigmas.length > 0" class="grid gap-6">

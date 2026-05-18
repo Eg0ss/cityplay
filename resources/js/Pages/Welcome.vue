@@ -59,15 +59,15 @@ const toggleFaq = (index) => {
             <div class="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-4 lg:py-3">
                 <div class="flex items-center gap-8">
                     <Link href="/" class="flex items-center gap-2">
-                        <div class="bg-[#FF9F1C] p-2 rounded-lg shadow-lg shadow-[#FF9F1C]/20">
-                            <span class="text-white font-black text-xl">CP</span>
+                        <div class="h-10 w-10 flex items-center justify-center">
+                            <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                         </div>
                         <span class="text-xl font-black tracking-tighter uppercase italic dark:text-white text-gray-900">Cityplay</span>
                     </Link>
                     <nav class="hidden lg:flex items-center gap-6">
                         <Link :href="route('how-to-play')" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Comment jouer</Link>
                         <Link href="#" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Rejoindre via un code</Link>
-                        <Link :href="route('explore')" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer des villes</Link>
+                        <Link :href="$page.props.auth.user?.role === 'admin' ? route('admin.cities') : route('explore')" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer des villes</Link>
                     </nav>
                 </div>
 
@@ -98,7 +98,7 @@ const toggleFaq = (index) => {
                 <nav class="flex flex-col gap-6">
                     <Link :href="route('how-to-play')" class="text-xs font-black uppercase tracking-widest">Comment jouer</Link>
                     <Link href="#" class="text-xs font-black uppercase tracking-widest">Rejoindre via un code</Link>
-                    <Link :href="route('explore')" class="text-xs font-black uppercase tracking-widest">Explorer des villes</Link>
+                    <Link :href="$page.props.auth.user?.role === 'admin' ? route('admin.cities') : route('explore')" class="text-xs font-black uppercase tracking-widest">Explorer des villes</Link>
                 </nav>
                 <div class="pt-6 border-t dark:border-white/5 border-gray-100 flex flex-col gap-4">
                     <Link :href="route('login')" class="text-center py-4 text-xs font-black uppercase tracking-widest">Connexion</Link>
@@ -216,8 +216,8 @@ const toggleFaq = (index) => {
             <div class="mx-auto max-w-7xl flex flex-col lg:flex-row justify-between items-center gap-12">
                 <div class="text-center lg:text-left">
                     <div class="flex items-center justify-center lg:justify-start gap-2 mb-6">
-                        <div class="bg-[#FF9F1C] p-2 rounded-lg">
-                            <span class="text-white font-black text-xl">CP</span>
+                        <div class="h-10 w-10 flex items-center justify-center">
+                            <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                         </div>
                         <span class="text-xl font-black tracking-tighter uppercase italic">Cityplay</span>
                     </div>

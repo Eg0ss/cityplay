@@ -40,8 +40,8 @@ onMounted(() => {
                     <div class="flex items-center gap-8">
                         <!-- Logo -->
                         <Link href="/dashboard" class="flex items-center gap-2">
-                            <div class="bg-[#FF9F1C] p-2 rounded-lg shadow-lg">
-                                <span class="text-white font-black text-lg">CP</span>
+                            <div class="h-10 w-10 flex items-center justify-center">
+                                <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                             </div>
                             <span class="text-lg font-black tracking-tighter uppercase italic hidden sm:block">Cityplay</span>
                         </Link>

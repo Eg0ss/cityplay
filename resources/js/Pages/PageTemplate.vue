@@ -15,22 +15,22 @@ defineProps({
         <header class="fixed top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-gray-100">
             <div class="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-3">
                 <div class="flex items-center gap-8">
-                    <Link href="/" class="flex items-center gap-2">
-                        <div class="bg-[#FF9F1C] p-2 rounded-lg">
-                            <span class="text-white font-black text-xl">CP</span>
+                    <Link href="/" class="flex items-center gap-3">
+                        <div class="h-10 w-10 flex items-center justify-center">
+                            <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                         </div>
-                        <span class="text-xl font-bold tracking-tighter uppercase italic">Cityplay</span>
+                        <span class="text-2xl font-black tracking-tighter uppercase italic">Cityplay</span>
                     </Link>
                     <nav class="hidden items-center gap-6 lg:flex">
                         <Link :href="route('how-to-play')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Championnat</Link>
-                        <Link :href="route('explore')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer</Link>
+                        <Link :href="$page.props.auth.user?.role === 'admin' ? route('admin.cities') : route('explore')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer</Link>
                         <Link :href="route('leaderboard')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Classement</Link>
                     </nav>
                 </div>
 
                 <div class="flex items-center gap-4">
                     <template v-if="$page.props.auth.user">
-                        <Link v-if="$page.props.auth.user.is_admin" :href="route('admin.dashboard')" class="text-xs font-black uppercase tracking-widest text-[#FF9F1C] hover:underline">Admin</Link>
+                        <Link v-if="$page.props.auth.user.role === 'admin'" :href="route('admin.dashboard')" class="text-xs font-black uppercase tracking-widest text-[#FF9F1C] hover:underline">Admin</Link>
                         <Link :href="route('dashboard')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C]">Mon Profil</Link>
                     </template>
                     <template v-else>
@@ -61,8 +61,8 @@ defineProps({
         <footer class="bg-gray-50 py-12 px-6 border-t border-gray-100">
             <div class="mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-8">
                 <div class="flex items-center gap-2">
-                    <div class="bg-[#FF9F1C] p-2 rounded-lg">
-                        <span class="text-white font-black text-xl">CP</span>
+                    <div class="h-10 w-10 flex items-center justify-center">
+                        <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                     </div>
                     <span class="text-xl font-bold tracking-tighter uppercase italic">Cityplay</span>
                 </div>

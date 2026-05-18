@@ -40,8 +40,8 @@ onMounted(() => {
         <header class="lg:hidden fixed top-0 w-full z-[60] px-6 py-4 flex justify-between items-center border-b backdrop-blur-md"
                 :class="isDark ? 'bg-[#0A0A0B]/80 border-white/5' : 'bg-white/80 border-gray-200'">
             <div class="flex items-center gap-3">
-                <div class="h-10 w-10 bg-gradient-to-tr from-[#FF9F1C] to-[#FFBF69] rounded-xl flex items-center justify-center shadow-lg">
-                    <span class="font-black text-black text-xs">CP</span>
+                <div class="h-10 w-10 flex items-center justify-center">
+                    <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                 </div>
                 <div class="flex flex-col">
                     <span class="font-black uppercase italic text-sm tracking-tighter leading-none">Cityplay</span>
@@ -66,14 +66,16 @@ onMounted(() => {
                 ]"
                class="w-72 border-r flex flex-col fixed h-full z-[70] transition-transform duration-500 ease-in-out lg:z-20 shadow-2xl lg:shadow-none">
             
-            <div class="p-8 flex flex-col items-center gap-4">
-                <div class="h-16 w-16 bg-gradient-to-tr from-[#FF9F1C] to-[#FFBF69] rounded-2xl flex items-center justify-center shadow-lg rotate-3">
-                    <span class="text-3xl font-black text-black">CP</span>
-                </div>
-                <div class="text-center">
-                    <span class="text-xl font-black tracking-tighter uppercase italic block">Cityplay</span>
-                    <span class="text-[10px] text-[#FF9F1C] font-bold tracking-[0.3em] uppercase opacity-80">Admin Terminal</span>
-                </div>
+            <div class="px-8 py-10">
+                <Link href="/" class="flex items-center gap-4 group">
+                    <div class="h-16 w-16 flex items-center justify-center">
+                        <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-2xl font-black uppercase italic tracking-tighter leading-none dark:text-white text-gray-900 group-hover:text-[#FF9F1C] transition-colors">Cityplay</span>
+                        <span class="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF9F1C] mt-1">Control Center</span>
+                    </div>
+                </Link>
             </div>
 
             <nav class="flex-1 px-6 py-8 space-y-3">

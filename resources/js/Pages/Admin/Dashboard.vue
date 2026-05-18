@@ -34,7 +34,7 @@ defineProps({
                 <div class="dark:bg-[#111113]/50 bg-white backdrop-blur-xl p-6 lg:p-8 rounded-[2rem] border dark:border-white/5 border-gray-200 group hover:border-[#FF9F1C]/30 transition-all duration-500 shadow-sm dark:shadow-none">
                     <div class="flex justify-between items-start mb-6">
                         <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-hover:text-[#FF9F1C] transition-colors">Joueurs</span>
-                        <span class="text-xl">👥</span>
+                        <!-- <span class="text-xl">👥</span> -->
                     </div>
                     <div class="text-4xl lg:text-5xl font-black tracking-tighter dark:text-white text-gray-900">{{ stats.users_count }}</div>
                     <div class="mt-4 h-1 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -45,7 +45,7 @@ defineProps({
                 <div class="dark:bg-[#111113]/50 bg-white backdrop-blur-xl p-6 lg:p-8 rounded-[2rem] border dark:border-white/5 border-gray-200 group hover:border-blue-500/30 transition-all duration-500 shadow-sm dark:shadow-none">
                     <div class="flex justify-between items-start mb-6">
                         <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-hover:text-blue-500 transition-colors">Lieux</span>
-                        <span class="text-xl">📍</span>
+                        <!-- <span class="text-xl">📍</span> -->
                     </div>
                     <div class="text-4xl lg:text-5xl font-black tracking-tighter text-blue-500">{{ stats.places_count }}</div>
                     <div class="mt-4 h-1 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -56,7 +56,7 @@ defineProps({
                 <div class="dark:bg-[#111113]/50 bg-white backdrop-blur-xl p-6 lg:p-8 rounded-[2rem] border dark:border-white/5 border-gray-200 group hover:border-purple-500/30 transition-all duration-500 shadow-sm dark:shadow-none">
                     <div class="flex justify-between items-start mb-6">
                         <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-hover:text-purple-500 transition-colors">Énigmes</span>
-                        <span class="text-xl">🧩</span>
+                        <!-- <span class="text-xl">🧩</span> -->
                     </div>
                     <div class="text-4xl lg:text-5xl font-black tracking-tighter text-purple-500">{{ stats.riddles_count }}</div>
                     <div class="mt-4 h-1 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -67,7 +67,7 @@ defineProps({
                 <div class="dark:bg-[#111113]/50 bg-white backdrop-blur-xl p-6 lg:p-8 rounded-[2rem] border dark:border-white/5 border-gray-200 group hover:border-green-500/30 transition-all duration-500 shadow-sm dark:shadow-none">
                     <div class="flex justify-between items-start mb-6">
                         <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-hover:text-green-500 transition-colors">Succès</span>
-                        <span class="text-xl">🏆</span>
+                        <!-- <span class="text-xl">🏆</span> -->
                     </div>
                     <div class="text-4xl lg:text-5xl font-black tracking-tighter text-green-500">{{ stats.solved_count }}%</div>
                     <div class="mt-4 h-1 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -104,9 +104,8 @@ defineProps({
                 <!-- Action Shortcut -->
                 <div class="bg-gradient-to-br from-[#FF9F1C] to-[#FFBF69] p-1 rounded-[2.5rem] group shadow-xl">
                     <div class="dark:bg-[#0A0A0B] bg-white h-full w-full rounded-[2.3rem] p-8 lg:p-10 flex flex-col justify-center items-center text-center">
-                        <div class="h-20 w-20 lg:h-24 lg:w-24 bg-[#FF9F1C] rounded-[2rem] flex items-center justify-center text-3xl lg:text-4xl mb-6 lg:mb-8 shadow-xl group-hover:scale-110 transition-transform duration-500">
-                            🚀
-                        </div>
+                        <!-- <div class="h-20 w-20 lg:h-24 lg:w-24 bg-[#FF9F1C] rounded-[2rem] flex items-center justify-center text-3xl lg:text-4xl mb-6 lg:mb-8 shadow-xl group-hover:scale-110 transition-transform duration-500">
+                        </div> -->
                         <h3 class="text-2xl lg:text-3xl font-black uppercase italic tracking-tighter mb-4 dark:text-white text-gray-900">Nouveau Secteur</h3>
                         <p class="text-gray-500 dark:text-gray-400 font-medium text-sm max-w-xs mb-8 lg:mb-10">Étendez la matrice en ajoutant une nouvelle destination stratégique.</p>
                         <Link :href="route('admin.cities')" class="bg-gray-900 dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs lg:text-sm hover:scale-105 transition-all shadow-lg">

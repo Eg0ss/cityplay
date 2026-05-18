@@ -29,8 +29,8 @@ onMounted(() => {
 
         <div class="relative z-10 mb-8">
             <Link href="/" class="flex flex-col items-center gap-4">
-                <div class="bg-[#FF9F1C] p-4 rounded-[1.5rem] shadow-2xl shadow-[#FF9F1C]/20 hover:scale-110 transition-transform">
-                    <span class="text-white font-black text-3xl">CP</span>
+                <div class="h-20 w-20 flex items-center justify-center hover:scale-110 transition-transform">
+                    <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                 </div>
                 <h1 class="text-2xl font-black tracking-tighter uppercase italic dark:text-white text-gray-900">Cityplay <span class="text-[#FF9F1C]">Terminal</span></h1>
             </Link>

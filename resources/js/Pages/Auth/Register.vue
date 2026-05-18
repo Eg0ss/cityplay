@@ -52,8 +52,8 @@ const submit = () => {
             </div>
             
             <Link href="/" class="relative z-10 flex items-center gap-3">
-                <div class="bg-[#FF9F1C] p-2 rounded-lg">
-                    <span class="text-white font-black text-xl">CP</span>
+                <div class="h-10 w-10 flex items-center justify-center">
+                    <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                 </div>
                 <span class="text-3xl font-black tracking-tighter uppercase italic text-white">Cityplay</span>
             </Link>
@@ -79,8 +79,8 @@ const submit = () => {
             <div class="w-full max-w-md space-y-12 my-12 lg:bg-transparent dark:bg-[#111113]/80 bg-white/80 backdrop-blur-xl p-8 lg:p-0 rounded-[2.5rem] lg:rounded-none shadow-2xl lg:shadow-none border lg:border-none dark:border-white/5 border-gray-100">
                 <div class="lg:hidden flex justify-center mb-12">
                     <Link href="/" class="flex items-center gap-2">
-                        <div class="bg-[#FF9F1C] p-2 rounded-lg">
-                            <span class="text-white font-black text-xl">CP</span>
+                        <div class="h-10 w-10 flex items-center justify-center">
+                            <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                         </div>
                         <span class="text-3xl font-black tracking-tighter uppercase italic">Cityplay</span>
                     </Link>
