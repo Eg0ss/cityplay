@@ -30,7 +30,7 @@ let unsubscribeBefore = null;
 onMounted(() => {
     // Écouter le canal du lobby via Laravel Echo pour synchroniser les joueurs en temps réel
     window.Echo.channel(`lobby.${props.session.lien_token}`)
-        .listen('LobbyUpdated', (e) => {
+        .listen('.App\\Events\\LobbyUpdated', (e) => {
             // Recharger la session pour mettre à jour la liste des joueurs connectés
             router.reload({ only: ['session'] });
         });

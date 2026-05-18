@@ -123,9 +123,9 @@ onMounted(() => {
                         </button>
 
                         <!-- Bouton Déconnexion (Bouncy 3D Red) -->
-                        <button @click="confirmLogout" class="btn-3d btn-3d-red px-5 py-2.5 text-xs text-white">
+                        <!-- <button @click="confirmLogout" class="btn-3d btn-3d-red px-5 py-2.5 text-xs text-white">
                             🚪 Quitter
-                        </button>
+                        </button> -->
 
                         <!-- User Profile Dropdown (Desktop) -->
                         <div class="hidden sm:flex items-center gap-3 border-l border-[#2a245c] pl-6">

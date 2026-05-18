@@ -56,7 +56,10 @@ const selectFirstUnattemptedRiddle = () => {
         const place = props.placesWithRiddles[pIdx];
         for (let rIdx = 0; rIdx < (place.riddles?.length || 0); rIdx++) {
             const riddle = place.riddles[rIdx];
-            const attempted = props.session.attempts?.some(att => att.game_riddle?.riddle_id === riddle.id);
+            const attempted = props.session.attempts?.some(att => {
+                const gameRiddle = att.game_riddle || att.gameRiddle;
+                return gameRiddle?.riddle_id === riddle.id;
+            });
             if (!attempted) {
                 currentPlaceIndex.value = pIdx;
                 currentRiddleInPlaceIndex.value = rIdx;
@@ -111,6 +114,19 @@ const totalGamePlacesCount = computed(() => {
     return props.placesWithRiddles?.length || 0;
 });
 
+const currentRiddleNumber = computed(() => {
+    if (props.session.type !== 'participants') {
+        return Math.min(currentPlaceIndex.value + 1, totalGamePlacesCount.value);
+    }
+    const attemptedRiddleIds = new Set(
+        props.session.attempts?.map(att => {
+            const gameRiddle = att.game_riddle || att.gameRiddle;
+            return gameRiddle?.riddle_id;
+        }).filter(Boolean) || []
+    );
+    return Math.min(attemptedRiddleIds.size + 1, totalGamePlacesCount.value);
+});
+
 // Propriétés de la boussole
 const strokeDasharray = 402.12;
 const strokeDashoffset = computed(() => {
@@ -148,6 +164,9 @@ const recordAttemptOnBackend = async (status, pointsEarned) => {
             alreadySolvedMessage.value = response.data.message;
             return false;
         }
+        
+        // Force Inertia to update the local session state immediately!
+        await router.reload({ only: ['session'] });
         return true;
     } catch (e) {
         console.error("Erreur d'enregistrement backend:", e);
@@ -162,7 +181,7 @@ let unsubscribeBefore = null;
 onMounted(() => {
     // Écouter le canal du jeu via Laravel Echo pour synchroniser la partie en temps réel
     window.Echo.channel(`game.${props.session.lien_token}`)
-        .listen('GameUpdated', (e) => {
+        .listen('.App\\Events\\GameUpdated', (e) => {
             // Recharger la session pour obtenir le classement et les tentatives les plus récentes
             router.reload({ 
                 only: ['session'],
@@ -219,24 +238,26 @@ onUnmounted(() => {
 // Détecter si l'énigme active actuelle (currentRiddle) a été clôturée par un autre joueur
 watch(() => props.session.attempts, (newAttempts) => {
     if (props.session.type === 'participants' && newAttempts && currentRiddle.value) {
-        const hasAttempt = newAttempts.some(att => 
-            att.game_riddle?.riddle_id === currentRiddle.value.id
-        );
+        // Rechercher une tentative pour l'énigme active
+        const activeAttempt = newAttempts.find(att => {
+            const gameRiddle = att.game_riddle || att.gameRiddle;
+            return gameRiddle?.riddle_id === currentRiddle.value.id;
+        });
         
-        if (hasAttempt && !decisionState.value) {
-            // Re-vérifier s'il y a un gagnant
-            const winningAttempt = newAttempts.find(att => 
-                att.game_riddle?.riddle_id === currentRiddle.value.id && att.status === 'gagne'
-            );
+        if (activeAttempt && !decisionState.value) {
+            // Ignorer si c'est la tentative locale (déjà gérée par les handlers de QCM / GPS)
+            if (activeAttempt.user_id === page.props.auth.user.id) {
+                return;
+            }
             
-            if (winningAttempt) {
-                if (winningAttempt.user_id === page.props.auth.user.id) {
-                    decisionState.value = 'win';
-                } else {
-                    decisionState.value = 'already_solved';
-                    alreadySolvedMessage.value = `${winningAttempt.user?.name || 'Un participant'} a résolu cette énigme ! Progression partagée.`;
-                }
-                clearInterval(timerInterval);
+            // Si c'est une tentative faite par un autre participant
+            decisionState.value = 'already_solved';
+            clearInterval(timerInterval);
+            
+            if (activeAttempt.status === 'gagne') {
+                alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un participant'} a résolu cette énigme ! Progression partagée. 🟢`;
+            } else {
+                alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un participant'} a tenté et échoué sur cette énigme. 🔴`;
             }
         }
     }
@@ -296,7 +317,7 @@ const startRiddle = (mode) => {
 
     if (mode === 'gaming') {
         const riddleLevel = props.session.level;
-        totalTime.value = riddleLevel === 'facile' ? 60 : riddleLevel === 'intermediaire' ? 45 : 30;
+        totalTime.value = riddleLevel === 'facile' ? 60 : riddleLevel === 'intermediaire' ? 30 : 20;
     } else {
         totalTime.value = calculateChronoTimeForDiscovery();
     }
@@ -539,9 +560,6 @@ const formatTime = (seconds) => {
                                     <button @click="goToNextPlace" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
                                         {{ hasNextPlace ? 'Passer au lieu suivant 👉' : 'Terminer l\'aventure ! 🏁' }}
                                     </button>
-                                    <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="btn-3d btn-3d-blue w-full py-3 text-xs shadow-[0_4px_0_#1344a1]">
-                                        💡 Autre énigme pour ce lieu
-                                    </button>
                                 </div>
                             </template>
 
@@ -591,7 +609,7 @@ const formatTime = (seconds) => {
                                 <span class="text-[8px] font-black uppercase tracking-widest text-gray-500">Progression</span>
                                 <div class="flex items-center justify-center sm:justify-start gap-2">
                                     <span class="text-sm font-black text-white">
-                                        Lieu {{ currentPlaceIndex + 1 }} / {{ totalGamePlacesCount }}
+                                        Lieu {{ currentRiddleNumber }} / {{ totalGamePlacesCount }}
                                     </span>
                                     <span class="text-[9px] font-black bg-[#2fc276]/10 border border-[#2fc276]/20 text-[#2fc276] px-2.5 py-0.5 rounded-lg tracking-wider text-glow-green uppercase">
                                         {{ currentPlace?.nom }}
@@ -725,6 +743,22 @@ const formatTime = (seconds) => {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* Custom Responsive Toast Notification styles */
+:global(.p-toast) {
+    max-width: calc(100vw - 2rem) !important;
+}
+@media (max-width: 480px) {
+    :global(.p-toast) {
+        width: calc(100vw - 2rem) !important;
+        left: 1rem !important;
+        right: 1rem !important;
+        top: 1rem !important;
+    }
+    :global(.p-toast-message) {
+        margin: 0 0 1rem 0 !important;
     }
 }
 </style>

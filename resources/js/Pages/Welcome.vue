@@ -1,6 +1,8 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+
+const gsap = window.gsap;
 
 defineProps({
     canLogin: Boolean,
@@ -19,6 +21,39 @@ const faqs = ref([
 const toggleFaq = (index) => {
     faqs.value[index].open = !faqs.value[index].open;
 };
+
+onMounted(() => {
+    // 🎥 Slow, continuous drift & zoom on background video container
+    gsap.fromTo('.bg-video-container', 
+        { scale: 1.0, rotation: 0 },
+        { 
+            scale: 1.15, 
+            rotation: 1.5, 
+            duration: 40, 
+            repeat: -1, 
+            yoyo: true, 
+            ease: 'sine.inOut' 
+        }
+    );
+
+    // ✨ Stagger reveal animation for the Hero items and Access panel card
+    gsap.from('.hero-reveal', {
+        y: 50,
+        opacity: 0,
+        duration: 1.2,
+        stagger: 0.15,
+        ease: 'power3.out'
+    });
+
+    // 🚀 Special float / slide-in from right for the Floating Access card
+    gsap.from('.card-reveal', {
+        x: 60,
+        opacity: 0,
+        duration: 1.5,
+        delay: 0.4,
+        ease: 'back.out(1.2)'
+    });
+});
 </script>
 
 <template>
@@ -73,10 +108,18 @@ const toggleFaq = (index) => {
 
         <!-- Hero Section -->
         <section class="relative min-h-screen flex items-center justify-center pt-32 pb-20 overflow-hidden">
-            <!-- Map Background -->
-            <div class="absolute inset-0 z-0 scale-110 lg:scale-100 opacity-20">
-                <img src="/images/image.png" alt="Background" class="h-full w-full object-cover" />
-                <div class="absolute inset-0 bg-[#171235]"></div>
+            <!-- Immersive GSAP Animated Video Background -->
+            <div class="bg-video-container absolute inset-0 z-0 scale-110 lg:scale-100 opacity-25">
+                <video 
+                    autoplay 
+                    loop 
+                    muted 
+                    playsinline 
+                    class="h-full w-full object-cover filter brightness-[0.5] contrast-[1.2]"
+                >
+                    <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-glowing-world-map-42861-large.mp4" type="video/mp4" />
+                </video>
+                <div class="absolute inset-0 bg-[#171235]/40 mix-blend-multiply"></div>
             </div>
 
             <!-- Floating Bobbing Emojis around the page (Drifting gamified feel) -->
@@ -86,7 +129,7 @@ const toggleFaq = (index) => {
             <div class="absolute bottom-1/3 right-1/4 text-5xl animate-float opacity-30 select-none pointer-events-none hidden md:block" style="animation-delay: 2.2s;">🏆</div>
 
             <div class="relative z-10 w-full max-w-7xl px-6 flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
-                <div class="flex-1 text-center lg:text-left space-y-8 lg:space-y-12">
+                <div class="flex-1 text-center lg:text-left space-y-8 lg:space-y-12 hero-reveal">
                     <div class="space-y-4">
                         <span class="inline-block text-[#87d74e] text-glow-green font-black text-xs lg:text-sm tracking-[0.4em] uppercase italic">Plateforme de Jeu & Énigmes</span>
                         <h1 class="text-4xl sm:text-6xl md:text-7xl lg:text-9xl font-black uppercase italic tracking-tighter leading-none">
@@ -108,7 +151,7 @@ const toggleFaq = (index) => {
 
                 <!-- FLOATING CARD (Access Panel Modal - Strictly Agenced Color Scheme) -->
                 <!-- Uses #10101c base, #7751de purple outline & glow, #ffc628 gold headers, #4769b0 & #7751de buttons, #171235 shadows -->
-                <div class="w-full max-w-md bg-[#10101c] p-6 sm:p-8 lg:p-10 rounded-[2.5rem] border-2 border-[#7751de] shadow-[0_0_35px_rgba(119,81,222,0.4)] relative hover-lift">
+                <div class="w-full max-w-md bg-[#10101c] p-6 sm:p-8 lg:p-10 rounded-[2.5rem] border-2 border-[#7751de] shadow-[0_0_35px_rgba(119,81,222,0.4)] relative hover-lift card-reveal">
                     <div class="absolute -top-10 -left-10 w-32 h-32 bg-[#7751de]/10 rounded-full blur-3xl pointer-events-none"></div>
                     
                     <h3 class="text-xl font-black uppercase italic mb-8 text-[#ffc628] text-glow-yellow text-center tracking-tighter">

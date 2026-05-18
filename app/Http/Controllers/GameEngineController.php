@@ -143,10 +143,22 @@ class GameEngineController extends Controller
         ]);
     }
 
-    // Affiche le processus de configuration de partie
+    // Affiche le processus de configuration de partie avec la liste des villes
     public function setup()
     {
-        return Inertia::render('Game/Setup/Index');
+        $cities = \App\Models\City::orderBy('name', 'asc')->get()->map(function ($city) {
+            $riddlesCount = \App\Models\Riddle::whereIn('place_id', $city->places->pluck('id'))->count();
+            return [
+                'id' => $city->id,
+                'name' => $city->name,
+                'departement' => $city->departement,
+                'riddles_count' => $riddlesCount,
+            ];
+        });
+
+        return Inertia::render('Game/Setup/Index', [
+            'cities' => $cities
+        ]);
     }
 
     // Gère la création de la session de jeu
@@ -165,6 +177,35 @@ class GameEngineController extends Controller
             'user_lng' => 'required|numeric',
         ]);
 
+        $levelMapping = [
+            'facile' => 1,
+            'intermediaire' => 2,
+            'difficile' => 3
+        ];
+        $niveauInt = $levelMapping[$validated['level']];
+
+        // 1. Trouver les lieux les plus proches qui APPARTIENNENT STRICTEMENT à la ville choisie et qui ONT des énigmes de ce niveau
+        $lat = $validated['user_lat'];
+        $lng = $validated['user_lng'];
+
+        $closestPlaces = \App\Models\Place::select('places.*')
+            ->selectRaw(
+                '(6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance',
+                [$lat, $lng, $lat]
+            )
+            ->where('city_id', $validated['location_id'])
+            ->whereHas('riddles', function($query) use ($niveauInt) {
+                $query->where('niveau', $niveauInt);
+            })
+            ->orderBy('distance', 'asc')
+            ->limit($validated['riddles_count'])
+            ->get();
+
+        // S'il n'y a pas de lieux avec énigmes pour cette ville et ce niveau
+        if ($closestPlaces->isEmpty()) {
+            return redirect()->back()->with('error', "Il n'y a pas d'énigme disponible pour le niveau " . $validated['level'] . " dans cette ville. La mairie se hâtera d'y ajouter des énigmes palpitantes ! 🏛️");
+        }
+
         $token = Str::random(10);
         $session = GameSession::create([
             'statut' => 'en_attente',
@@ -173,7 +214,7 @@ class GameEngineController extends Controller
             'level' => $validated['level'],
             'location_type' => $validated['location_type'],
             'location_id' => $validated['location_id'],
-            'riddles_count' => $validated['riddles_count'],
+            'riddles_count' => min($validated['riddles_count'], $closestPlaces->count()),
             'type' => $validated['type'],
             'challenger_mode' => $validated['challenger_mode'],
         ]);
@@ -185,29 +226,6 @@ class GameEngineController extends Controller
             'statut' => 'pret',
             'global_mode' => $validated['global_mode']
         ]);
-
-        $levelMapping = [
-            'facile' => 1,
-            'intermediaire' => 2,
-            'difficile' => 3
-        ];
-        $niveauInt = $levelMapping[$validated['level']];
-
-        // 1. Trouver les $riddles_count lieux les plus proches qui ONT des énigmes de ce niveau
-        $lat = $validated['user_lat'];
-        $lng = $validated['user_lng'];
-
-        $closestPlaces = \App\Models\Place::select('places.*')
-            ->selectRaw(
-                '(6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance',
-                [$lat, $lng, $lat]
-            )
-            ->whereHas('riddles', function($query) use ($niveauInt) {
-                $query->where('niveau', $niveauInt);
-            })
-            ->orderBy('distance', 'asc')
-            ->limit($validated['riddles_count'])
-            ->get();
 
         // 2. Pour chaque lieu proche, sélectionner aléatoirement 1 énigme du bon niveau
         $riddles = collect();
