@@ -31,5 +31,9 @@ class DatabaseSeeder extends Seeder
                 'role' => 'player',
             ]);
         }
+
+        $this->call([
+            GameDataSeeder::class,
+        ]);
     }
 }

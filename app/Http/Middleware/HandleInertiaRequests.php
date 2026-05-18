@@ -29,10 +29,28 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        if ($user) {
+            // Calculer les points totaux du joueur
+            $totalPoints = \App\Models\Score::where('user_id', $user->id)->sum('points');
+            $user->total_points = $totalPoints;
+            
+            // Calculer le niveau dynamique
+            if ($totalPoints < 500) {
+                $user->level_name = 'BRONZE I';
+            } elseif ($totalPoints < 1500) {
+                $user->level_name = 'BRONZE II';
+            } elseif ($totalPoints < 3000) {
+                $user->level_name = 'ARGENT I';
+            } else {
+                $user->level_name = 'OR I';
+            }
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
         ];
     }

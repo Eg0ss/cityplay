@@ -1,9 +1,14 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { useConfirm } from 'primevue/useconfirm';
+import ConfirmDialog from 'primevue/confirmdialog';
+import { userStatsStore } from '../store.js';
 
 const isMobileMenuOpen = ref(false);
 const isDark = ref(true);
+const confirm = useConfirm();
+const page = usePage();
 
 const toggleTheme = () => {
     isDark.value = !isDark.value;
@@ -19,12 +24,33 @@ const updateTheme = () => {
     }
 };
 
+const confirmLogout = () => {
+    confirm.require({
+        message: 'Êtes-vous sûr de vouloir vous déconnecter ? La partie en cours sera perdue.',
+        header: 'Quitter la session',
+        icon: 'pi pi-exclamation-triangle',
+        rejectLabel: 'Rester',
+        acceptLabel: 'Quitter',
+        rejectClass: 'p-button-secondary p-button-outlined text-gray-300 border-gray-600 hover:bg-gray-800 px-4 py-2 rounded-lg mr-2',
+        acceptClass: 'p-button-danger bg-red-600 border-red-600 text-white hover:bg-red-500 px-4 py-2 rounded-lg',
+        accept: () => {
+            router.post(route('logout'));
+        }
+    });
+};
+
 onMounted(() => {
     const savedTheme = localStorage.getItem('cityplay-theme');
     if (savedTheme) {
         isDark.value = savedTheme === 'dark';
     }
     updateTheme();
+
+    // Initialiser les statistiques réactives du joueur
+    const pageUser = page.props.auth?.user;
+    if (pageUser) {
+        userStatsStore.initialize(pageUser.total_points, pageUser.level_name);
+    }
 });
 </script>
 
@@ -32,6 +58,8 @@ onMounted(() => {
     <div class="min-h-screen font-sans transition-colors duration-300"
          :class="isDark ? 'bg-[#0A0A0B] text-white' : 'bg-gray-50 text-gray-900'">
         
+        <ConfirmDialog />
+
         <!-- Top Navigation -->
         <nav class="fixed top-0 z-50 w-full border-b backdrop-blur-md transition-colors"
              :class="isDark ? 'bg-black/80 border-white/5' : 'bg-white/80 border-gray-200'">
@@ -47,15 +75,15 @@ onMounted(() => {
                         </Link>
 
                         <!-- Player Stats (Desktop) -->
-                        <div class="hidden lg:flex items-center gap-6">
+                        <div class="hidden lg:flex items-center gap-6 animate-pulse">
                             <div class="flex flex-col">
                                 <span class="text-[8px] font-black uppercase text-gray-500 tracking-widest">Niveau</span>
-                                <span class="text-xs font-black dark:text-[#FF9F1C] text-gray-900">BRONZE II</span>
+                                <span class="text-xs font-black dark:text-[#FF9F1C] text-gray-900">{{ userStatsStore.levelName }}</span>
                             </div>
                             <div class="h-8 w-[1px] dark:bg-white/5 bg-gray-200"></div>
                             <div class="flex flex-col">
                                 <span class="text-[8px] font-black uppercase text-gray-500 tracking-widest">XP Actuel</span>
-                                <span class="text-xs font-black dark:text-white text-gray-900">1,240 XP</span>
+                                <span class="text-xs font-black dark:text-white text-gray-900">{{ userStatsStore.points }} XP</span>
                             </div>
                         </div>
                     </div>
@@ -64,6 +92,11 @@ onMounted(() => {
                         <!-- Theme Toggle -->
                         <button @click="toggleTheme" class="p-2 rounded-xl dark:bg-white/5 bg-gray-100 text-xl hover:scale-110 transition-all">
                             {{ isDark ? '🌙' : '☀️' }}
+                        </button>
+
+                        <!-- Bouton Déconnexion -->
+                        <button @click="confirmLogout" class="px-4 py-2 rounded-xl bg-red-600/10 hover:bg-red-600 border border-red-500/20 text-red-500 hover:text-white text-sm font-black transition-all focus:outline-none focus:ring-2 focus:ring-red-500">
+                            🚪 Quitter
                         </button>
 
                         <!-- User Profile Dropdown (Desktop) -->
@@ -91,11 +124,11 @@ onMounted(() => {
                     <div class="grid grid-cols-2 gap-4">
                         <div class="p-4 rounded-2xl dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-100">
                             <p class="text-[8px] font-black text-gray-500 uppercase tracking-widest">Points</p>
-                            <p class="text-lg font-black dark:text-[#FF9F1C] text-gray-900">4,500</p>
+                            <p class="text-lg font-black dark:text-[#FF9F1C] text-gray-900">{{ userStatsStore.points }}</p>
                         </div>
                         <div class="p-4 rounded-2xl dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-100">
                             <p class="text-[8px] font-black text-gray-500 uppercase tracking-widest">Niveau</p>
-                            <p class="text-lg font-black dark:text-blue-500 text-gray-900">12</p>
+                            <p class="text-lg font-black dark:text-blue-500 text-gray-900">{{ userStatsStore.levelName }}</p>
                         </div>
                     </div>
                     <nav class="flex flex-col gap-4">

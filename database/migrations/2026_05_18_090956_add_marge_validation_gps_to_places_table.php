@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('riddles', function (Blueprint $table) {
-            $table->dropUnique(['place_id', 'niveau']);
+        Schema::table('places', function (Blueprint $table) {
+            $table->integer('marge_validation_gps')->nullable()->default(10)->comment('Marge en mètres pour la validation GPS');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('riddles', function (Blueprint $table) {
-            $table->unique(['place_id', 'niveau']);
+        Schema::table('places', function (Blueprint $table) {
+            $table->dropColumn('marge_validation_gps');
         });
     }
 };

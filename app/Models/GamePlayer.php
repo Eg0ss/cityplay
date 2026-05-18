@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class GamePlayer extends Model
 {
-    protected $fillable = ['session_id', 'user_id', 'mode_choisi', 'statut'];
+    protected $fillable = ['session_id', 'user_id', 'mode_choisi', 'statut', 'global_mode'];
 
     public function session()
     {

@@ -31,18 +31,21 @@ Route::get('/dashboard', function (Request $request) {
     if ($request->user()->role === 'admin') {
         return redirect()->route('admin.dashboard');
     }
-    return Inertia::render('Dashboard');
+    // Rediriger les joueurs vers le nouveau tableau de bord Gaming
+    return redirect()->route('game.dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-use App\Http\Controllers\GameController;
+use App\Http\Controllers\GameEngineController;
 
-// ...
-
-// Game Routes
+// Game Engine Routes (Pure Gaming Mode)
 Route::middleware(['auth', 'verified'])->prefix('game')->name('game.')->group(function () {
-    Route::post('/sessions', [GameController::class, 'createSession'])->name('create');
-    Route::get('/sessions/{token}', [GameController::class, 'showSession'])->name('session');
-    Route::post('/sessions/{session}/riddles/{riddle}', [GameController::class, 'submitAnswer'])->name('submit');
+    Route::get('/dashboard', [GameEngineController::class, 'dashboard'])->name('dashboard');
+    Route::get('/setup', [GameEngineController::class, 'setup'])->name('setup');
+    Route::post('/sessions', [GameEngineController::class, 'createSession'])->name('create');
+    Route::get('/lobby/{token}', [GameEngineController::class, 'lobby'])->name('lobby');
+    Route::post('/lobby/{token}/start', [GameEngineController::class, 'startGame'])->name('start');
+    Route::get('/play/{token}', [GameEngineController::class, 'play'])->name('play');
+    Route::post('/play/record', [GameEngineController::class, 'recordResult'])->name('record');
 });
 
 // Admin Routes
