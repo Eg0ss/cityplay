@@ -1,20 +1,25 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { useToast } from 'primevue/usetoast';
+import Toast from 'primevue/toast';
 
 const props = defineProps({
     session: Object
 });
 
+const page = usePage();
+const toast = useToast();
+
 const copyLink = () => {
     const link = `${window.location.origin}/game/lobby/${props.session.lien_token}`;
     navigator.clipboard.writeText(link);
-    alert('Lien copié dans le presse-papier ! Partagez-le avec vos amis.');
+    toast.add({ severity: 'success', summary: 'Lien copié ! 📋', detail: 'Partagez-le avec vos amis.', life: 3000 });
 };
 
 const startGame = () => {
-    router.post(route('game.start', { token: props.session.lien_token }));
+    router.post(`/game/lobby/${props.session.lien_token}/start`);
 };
 
 // Polling simulation for new players (Normally done via Echo/Pusher)
@@ -22,18 +27,45 @@ let pollInterval;
 onMounted(() => {
     pollInterval = setInterval(() => {
         router.reload({ only: ['session'] });
-    }, 5000);
+    }, 4000); // Polling un peu plus rapide (4s) pour plus de dynamisme
 });
 
 onUnmounted(() => {
     clearInterval(pollInterval);
 });
 
-const isCreator = true; // In reality, check if auth user is the creator
+// Le créateur est le premier joueur enregistré de la session (l'hôte)
+const isCreator = computed(() => {
+    return props.session.players?.[0]?.user_id === page.props.auth.user.id;
+});
+
+// Alerte/Toast quand un nouveau joueur rejoint la salle d'attente
+watch(() => props.session.players, (newPlayers, oldPlayers) => {
+    if (oldPlayers && newPlayers && newPlayers.length > oldPlayers.length) {
+        const newPlayer = newPlayers.find(np => !oldPlayers.some(op => op.id === np.id));
+        if (newPlayer && newPlayer.user_id !== page.props.auth.user.id) {
+            toast.add({ 
+                severity: 'info', 
+                summary: 'Nouveau joueur ! 👤', 
+                detail: `${newPlayer.user.name} a rejoint la salle d'attente.`, 
+                life: 4000 
+            });
+        }
+    }
+}, { deep: true });
+
+// Rediriger automatiquement le participant si la partie est lancée
+watch(() => props.session, (newSession) => {
+    if (newSession?.statut === 'en_cours') {
+        clearInterval(pollInterval);
+        router.get(`/game/play/${newSession.lien_token}`);
+    }
+}, { deep: true, immediate: true });
 </script>
 
 <template>
     <AuthenticatedLayout title="Salle d'attente">
+        <Toast position="top-right" />
         <div class="min-h-screen bg-gray-900 text-white font-sans py-12 px-4 flex items-center justify-center">
             <div class="max-w-2xl w-full bg-gray-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.6)] border border-gray-700 p-8 relative overflow-hidden">
                 <!-- Background animations -->
@@ -89,12 +121,12 @@ const isCreator = true; // In reality, check if auth user is the creator
 
                     <!-- Action Button -->
                     <button v-if="isCreator" @click="startGame" 
-                        :disabled="session.players.length < 2 && session.type !== 'solo'"
+                        :disabled="session.players.length < session.max_joueurs && session.type !== 'solo'"
                         class="w-full py-4 rounded-xl font-black text-lg transition-all duration-300 transform shadow-lg relative overflow-hidden group"
-                        :class="session.players.length >= 2 || session.type === 'solo' 
+                        :class="session.players.length >= session.max_joueurs || session.type === 'solo' 
                             ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:scale-105 hover:shadow-[0_0_20px_rgba(16,185,129,0.5)]' 
                             : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'">
-                        <span class="relative z-10">{{ session.players.length >= session.max_joueurs ? 'LANCER LA PARTIE !' : 'ATTENDRE D\'AUTRES JOUEURS...' }}</span>
+                        <span class="relative z-10">{{ session.players.length >= session.max_joueurs || session.type === 'solo' ? 'LANCER LA PARTIE !' : 'ATTENDRE D\'AUTRES JOUEURS...' }}</span>
                         <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
                     </button>
                     <p v-else class="text-gray-400 italic">En attente de l'hôte pour démarrer la partie...</p>

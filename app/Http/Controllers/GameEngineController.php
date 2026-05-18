@@ -185,9 +185,38 @@ class GameEngineController extends Controller
             return redirect()->route('game.play', ['token' => $token]);
         }
 
+        // Vérifier si l'utilisateur actuel est déjà inscrit dans cette session
+        $currentPlayer = $session->players->firstWhere('user_id', auth()->id());
+        
+        if (!$currentPlayer) {
+            // Si la session n'est pas pleine, ajouter le joueur
+            if ($session->players->count() < $session->max_joueurs) {
+                GamePlayer::create([
+                    'session_id' => $session->id,
+                    'user_id' => auth()->id(),
+                    'statut' => 'pret',
+                    'global_mode' => 'gaming' // Mode par défaut
+                ]);
+                
+                // Recharger la session avec le nouveau joueur
+                $session = GameSession::with('players.user')->where('lien_token', $token)->firstOrFail();
+            } else {
+                // Session pleine, rediriger vers le dashboard avec un message
+                return redirect()->route('game.dashboard')->with('error', 'Désolé, cette session de jeu est déjà complète.');
+            }
+        }
+
         return Inertia::render('Game/Play/Lobby', [
             'session' => $session
         ]);
+    }
+
+    // Démarre la session multijoueur (Host uniquement)
+    public function startGame($token)
+    {
+        $session = GameSession::where('lien_token', $token)->firstOrFail();
+        $session->update(['statut' => 'en_cours']);
+        return redirect()->route('game.play', ['token' => $token]);
     }
 
     // Affiche l'interface de jeu dynamique

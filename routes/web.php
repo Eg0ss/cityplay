@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->prefix('game')->name('game.')->group(fu
     Route::get('/setup', [GameEngineController::class, 'setup'])->name('setup');
     Route::post('/sessions', [GameEngineController::class, 'createSession'])->name('create');
     Route::get('/lobby/{token}', [GameEngineController::class, 'lobby'])->name('lobby');
+    Route::post('/lobby/{token}/start', [GameEngineController::class, 'startGame'])->name('start');
     Route::get('/play/{token}', [GameEngineController::class, 'play'])->name('play');
     Route::post('/play/record', [GameEngineController::class, 'recordResult'])->name('record');
 });
