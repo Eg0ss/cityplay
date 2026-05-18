@@ -6,11 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class GameSession extends Model
 {
-    protected $fillable = ['mode', 'statut', 'lien_token', 'max_joueurs'];
+    protected $fillable = [
+        'statut', 'lien_token', 'max_joueurs', 
+        'level', 'location_type', 'location_id', 
+        'riddles_count', 'type', 'challenger_mode'
+    ];
 
     public function players()
     {
         return $this->hasMany(GamePlayer::class, 'session_id');
+    }
+
+    public function attempts()
+    {
+        return $this->hasMany(GamePlayerRiddleAttempt::class, 'game_session_id');
     }
 
     public function users()

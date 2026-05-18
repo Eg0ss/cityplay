@@ -15,6 +15,7 @@ class Place extends Model
         'lat', 
         'lng', 
         'rayon_marge', 
+        'marge_validation_gps',
         'is_active',
         'verified_description'
     ];
