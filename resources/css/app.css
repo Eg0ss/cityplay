@@ -12,3 +12,33 @@
     }
 }
 
+/* Style de la barre de progression Inertia (NProgress) */
+#nprogress .bar {
+    height: 4px !important;
+    background-color: #1A1A1A !important; /* Noir/sombre en mode clair */
+    transition: background-color 0.3s ease !important;
+}
+
+#nprogress .peg {
+    box-shadow: 0 0 10px #1A1A1A, 0 0 5px #1A1A1A !important;
+}
+
+/* En mode sombre, la barre devient blanche */
+html.dark #nprogress .bar {
+    background-color: #FFFFFF !important; /* Blanc en mode sombre */
+}
+
+html.dark #nprogress .peg {
+    box-shadow: 0 0 10px #FFFFFF, 0 0 5px #FFFFFF !important;
+}
+
+/* Règle de fallback pour Inertia Progress classique */
+.inertia-progress-bar {
+    height: 4px !important;
+    background-color: #1A1A1A !important;
+}
+
+html.dark .inertia-progress-bar {
+    background-color: #FFFFFF !important;
+}
+

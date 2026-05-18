@@ -4,16 +4,20 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
+import axios from 'axios';
+import { userStatsStore } from '@/store.js';
 
 const props = defineProps({
-    session: Object
+    session: Object,
+    placesWithRiddles: Array
 });
 
 const page = usePage();
 const toast = useToast();
 
 // État local du jeu
-const currentRiddleIndex = ref(0);
+const currentPlaceIndex = ref(0);
+const currentRiddleInPlaceIndex = ref(0);
 const modeChoisi = ref(null); // Pour le mode 'mixte'
 const isPlaying = ref(false);
 const timeLeft = ref(0);
@@ -22,12 +26,15 @@ const isPaused = ref(false);
 const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
 
-const gameRiddles = computed(() => {
-    return props.session.game_riddles || props.session.gameRiddles || [];
+// État de décision intermédiaire ('win' ou 'lose' ou null)
+const decisionState = ref(null);
+
+const currentPlace = computed(() => {
+    return props.placesWithRiddles?.[currentPlaceIndex.value];
 });
 
 const currentRiddle = computed(() => {
-    return gameRiddles.value[currentRiddleIndex.value]?.riddle;
+    return currentPlace.value?.riddles?.[currentRiddleInPlaceIndex.value];
 });
 
 const parsedMcqOptions = computed(() => {
@@ -39,6 +46,29 @@ const parsedMcqOptions = computed(() => {
     } catch (e) {
         return [];
     }
+});
+
+// Points à gagner selon le niveau de difficulté
+const riddlePoints = computed(() => {
+    const level = props.session.level;
+    if (level === 'facile') return 100;
+    if (level === 'intermediaire') return 200;
+    return 300;
+});
+
+// Vérification de la disponibilité d'autres énigmes pour ce lieu
+const hasMoreRiddlesForPlace = computed(() => {
+    return currentPlace.value?.riddles?.length > currentRiddleInPlaceIndex.value + 1;
+});
+
+// Vérification de la présence d'un lieu suivant
+const hasNextPlace = computed(() => {
+    return props.placesWithRiddles?.length > currentPlaceIndex.value + 1;
+});
+
+// Total des énigmes (nombre de lieux)
+const totalGamePlacesCount = computed(() => {
+    return props.placesWithRiddles?.length || 0;
 });
 
 // Propriétés de la boussole
@@ -54,6 +84,22 @@ const compassRotation = computed(() => {
     const ratio = timeLeft.value / totalTime.value;
     return ratio * 360;
 });
+
+// Enregistrement des résultats en DB via route Laravel
+const recordAttemptOnBackend = async (status, pointsEarned) => {
+    try {
+        await axios.post('/game/play/record', {
+            session_id: props.session.id,
+            riddle_id: currentRiddle.value.id,
+            status: status,
+            points: pointsEarned,
+            mode_choisi: modeChoisi.value || 'gaming',
+            temps_resolution: totalTime.value - timeLeft.value
+        });
+    } catch (e) {
+        console.error("Erreur d'enregistrement backend:", e);
+    }
+};
 
 // Géolocalisation en temps réel pour le mode découverte
 let watchId = null;
@@ -83,11 +129,11 @@ onUnmounted(() => {
 
 // Calcul de distance à vol d'oiseau (Haversine)
 const distanceToPlace = computed(() => {
-    if (!userCoords.value.lat || !currentRiddle.value?.place) return null;
+    if (!userCoords.value.lat || !currentPlace.value) return null;
     const lat1 = userCoords.value.lat;
     const lon1 = userCoords.value.lng;
-    const lat2 = currentRiddle.value.place.lat;
-    const lon2 = currentRiddle.value.place.lng;
+    const lat2 = currentPlace.value.lat;
+    const lon2 = currentPlace.value.lng;
     
     const R = 6371; // km
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -110,6 +156,10 @@ const recommendedTransport = computed(() => {
 const startRiddle = (mode) => {
     modeChoisi.value = mode;
     isPlaying.value = true;
+    decisionState.value = null;
+    isPaused.value = false;
+    userAnswer.value = '';
+    
     if (mode === 'decouverte') {
         timeLeft.value = 1200; // 20 min découverte
         totalTime.value = 1200;
@@ -138,8 +188,7 @@ const startTimer = () => {
             timeLeft.value--;
         } else if (timeLeft.value <= 0) {
             clearInterval(timerInterval);
-            toast.add({ severity: 'error', summary: 'Temps écoulé', detail: 'Vous n\'avez pas résolu l\'énigme à temps !', life: 5000 });
-            nextRiddle();
+            handleLose();
         }
     }, 1000);
 };
@@ -153,18 +202,32 @@ const togglePause = () => {
     }
 };
 
-const submitDiscovery = () => {
+const handleWin = async () => {
+    clearInterval(timerInterval);
+    decisionState.value = 'win';
+    toast.add({ severity: 'success', summary: 'Bonne réponse ! 🎯', detail: `La réponse était bien : ${currentRiddle.value.reponse}`, life: 4000 });
+    userStatsStore.addPoints(riddlePoints.value);
+    await recordAttemptOnBackend('gagne', riddlePoints.value);
+};
+
+const handleLose = async () => {
+    clearInterval(timerInterval);
+    decisionState.value = 'lose';
+    toast.add({ severity: 'error', summary: 'Échec sur cette énigme', detail: 'Votre choix ou le temps écoulé a mené à un échec.', life: 5000 });
+    await recordAttemptOnBackend('perdu', 0);
+};
+
+const submitDiscovery = async () => {
     if (!distanceToPlace.value) {
         toast.add({ severity: 'warn', summary: 'Signal GPS faible', detail: 'Impossible de valider sans votre position GPS.', life: 4000 });
         return;
     }
 
-    const margin = currentRiddle.value?.place?.marge_validation_gps || currentRiddle.value?.place?.rayon_marge || 50;
+    const margin = currentPlace.value?.marge_validation_gps || currentPlace.value?.rayon_marge || 50;
     const distanceInMeters = distanceToPlace.value * 1000;
 
     if (distanceInMeters <= margin) {
-        toast.add({ severity: 'success', summary: 'Félicitations ! 🎉', detail: 'Vous êtes bien sur le lieu recherché !', life: 5000 });
-        nextRiddle();
+        await handleWin();
     } else {
         toast.add({ 
             severity: 'error', 
@@ -180,26 +243,24 @@ const submitQcm = (option) => {
     submitGaming();
 };
 
-const submitGaming = () => {
+const submitGaming = async () => {
     const answer = userAnswer.value.trim().toLowerCase();
     const correctAnswer = currentRiddle.value.reponse.trim().toLowerCase();
 
     if (answer === correctAnswer) {
-        toast.add({ severity: 'success', summary: 'Bonne réponse ! 🎯', detail: `La réponse était bien : ${currentRiddle.value.reponse}`, life: 4000 });
-        nextRiddle();
+        await handleWin();
     } else {
-        toast.add({ severity: 'error', summary: 'Mauvaise réponse', detail: 'Essayez encore !', life: 3000 });
-        userAnswer.value = '';
+        await handleLose();
     }
 };
 
-const nextRiddle = () => {
-    clearInterval(timerInterval);
-    if (currentRiddleIndex.value < gameRiddles.value.length - 1) {
-        currentRiddleIndex.value++;
-        userAnswer.value = '';
+// Choix : Passer au lieu suivant
+const goToNextPlace = () => {
+    if (hasNextPlace.value) {
+        currentPlaceIndex.value++;
+        currentRiddleInPlaceIndex.value = 0;
+        decisionState.value = null;
         isPlaying.value = false;
-        modeChoisi.value = null;
         
         // Si le mode global n'est pas mixte, relancer automatiquement le mode correct
         const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
@@ -207,11 +268,36 @@ const nextRiddle = () => {
             startRiddle(player.global_mode);
         }
     } else {
-        toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez terminé toutes les énigmes !', life: 6000 });
+        toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 6000 });
         setTimeout(() => {
             router.get(route('game.dashboard'));
         }, 3000);
     }
+};
+
+// Choix : Autre énigme pour le même lieu
+const loadAnotherRiddle = () => {
+    if (hasMoreRiddlesForPlace.value) {
+        currentRiddleInPlaceIndex.value++;
+        decisionState.value = null;
+        isPlaying.value = false;
+        
+        // Si le mode global n'est pas mixte, relancer automatiquement le mode correct
+        const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
+        if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
+            startRiddle(player.global_mode);
+        }
+    } else {
+        toast.add({ severity: 'warn', summary: 'Énigmes épuisées', detail: 'Plus d\'énigmes de ce niveau pour ce lieu.', life: 4000 });
+    }
+};
+
+// Choix : Perdre la session carrément
+const forfeitSession = () => {
+    toast.add({ severity: 'info', summary: 'Session abandonnée', detail: 'Retour au tableau de bord...', life: 3000 });
+    setTimeout(() => {
+        router.get(route('game.dashboard'));
+    }, 2000);
 };
 
 const formatTime = (seconds) => {
@@ -219,7 +305,6 @@ const formatTime = (seconds) => {
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
 };
-
 </script>
 
 <template>
@@ -231,30 +316,6 @@ const formatTime = (seconds) => {
                 <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[100px]"></div>
                 <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-900/20 rounded-full blur-[100px]"></div>
             </div>
-
-            <!-- Header -->
-            <header class="relative z-10 flex items-center justify-between p-4 bg-gray-900/80 backdrop-blur border-b border-gray-800">
-                <div class="flex items-center gap-4">
-                    <div class="text-xs uppercase tracking-widest text-gray-500 font-bold">Énigme</div>
-                    <div class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                        {{ currentRiddleIndex + 1 }} / {{ gameRiddles.length }}
-                    </div>
-                </div>
-                
-                <div v-if="isPlaying" class="flex items-center gap-6">
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full animate-ping" :class="timeLeft < 30 ? 'bg-red-500' : 'bg-green-500'"></span>
-                        <span class="text-3xl font-mono font-black tabular-nums" :class="timeLeft < 30 ? 'text-red-400' : 'text-white'">
-                            {{ formatTime(timeLeft) }}
-                        </span>
-                    </div>
-                    <button v-if="modeChoisi === 'decouverte'" @click="togglePause" 
-                        class="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors border border-gray-700 text-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                        <svg v-if="!isPaused" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                        <svg v-else class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-                    </button>
-                </div>
-            </header>
 
             <!-- Main Content -->
             <main class="relative z-10 flex-1 flex flex-col items-center justify-center p-4">
@@ -278,11 +339,78 @@ const formatTime = (seconds) => {
                     </div>
 
                     <!-- L'Énigme -->
-                    <div v-if="isPlaying && currentRiddle" class="bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl border border-gray-700 shadow-2xl relative animate-fade-in-up">
+                    <div v-if="isPlaying && currentRiddle" class="bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl border border-gray-700 shadow-2xl relative overflow-hidden animate-fade-in-up">
+                        
+                        <!-- Modal Intermédiaire en cas de Victoire / Défaite -->
+                        <div v-if="decisionState" class="absolute inset-0 bg-gray-900/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-8 text-center">
+                            <template v-if="decisionState === 'win'">
+                                <div class="text-6xl mb-4 animate-bounce">🎉</div>
+                                <h2 class="text-3xl font-black text-green-400 mb-2">Énigme Résolue !</h2>
+                                <p class="text-gray-300 mb-8 max-w-md">Vous avez brillamment résolu cette énigme et gagné <span class="text-yellow-400 font-bold">{{ riddlePoints }} points</span> ! Que souhaitez-vous faire ?</p>
+                                
+                                <div class="flex flex-col gap-4 w-full max-w-sm">
+                                    <button @click="goToNextPlace" class="py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 rounded-xl font-bold text-lg shadow-lg transition-transform transform hover:-translate-y-0.5">
+                                        {{ hasNextPlace ? '👉 Passer au lieu suivant' : '🏆 Terminer l\'aventure !' }}
+                                    </button>
+                                    <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="py-3 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl text-sm font-semibold transition-all text-purple-400">
+                                        💡 Autre énigme pour ce même lieu (Pour plus comprendre)
+                                    </button>
+                                </div>
+                            </template>
+
+                            <template v-if="decisionState === 'lose'">
+                                <div class="text-6xl mb-4">😢</div>
+                                <h2 class="text-3xl font-black text-red-400 mb-2">Échec de l'énigme</h2>
+                                <p class="text-gray-300 mb-8 max-w-md">Le temps est écoulé ou vous avez échoué. Choisissez votre destin :</p>
+                                
+                                <div class="flex flex-col gap-4 w-full max-w-sm">
+                                    <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="py-4 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 rounded-xl font-bold text-lg shadow-lg transition-transform transform hover:-translate-y-0.5">
+                                        🔄 Autre énigme pour le même niveau (Même lieu)
+                                    </button>
+                                    <button @click="goToNextPlace" class="py-3 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl font-semibold transition-all">
+                                        👉 Passer au lieu suivant
+                                    </button>
+                                    <button @click="forfeitSession" class="py-3 bg-red-950/40 hover:bg-red-950 border border-red-800/30 text-red-400 rounded-xl font-semibold transition-all">
+                                        💀 Perdre la session carrément
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+
                         <div v-if="isPaused" class="absolute inset-0 bg-gray-900/90 backdrop-blur-sm z-20 flex flex-col items-center justify-center rounded-3xl">
                             <div class="text-5xl mb-4">⏸️</div>
                             <h2 class="text-3xl font-bold text-yellow-400 mb-6">Jeu en Pause</h2>
                             <button @click="togglePause" class="px-8 py-4 bg-yellow-500 text-gray-900 font-bold rounded-full hover:bg-yellow-400 transition-colors">REPRENDRE</button>
+                        </div>
+
+                        <!-- Infos d'en-tête de la carte -->
+                        <div class="flex justify-between items-center mb-6 border-b border-gray-700/50 pb-4">
+                            <div class="flex flex-col gap-1">
+                                <span class="text-xs uppercase tracking-widest text-gray-500 font-bold">Progression</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                                        Lieu {{ currentPlaceIndex + 1 }} / {{ totalGamePlacesCount }}
+                                    </span>
+                                    <span class="text-xs bg-purple-900/40 text-purple-300 px-2 py-0.5 rounded border border-purple-500/20 font-bold uppercase tracking-wider">
+                                        {{ currentPlace?.nom }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Chrono Découverte -->
+                            <div v-if="modeChoisi === 'decouverte'" class="flex items-center gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full animate-ping" :class="timeLeft < 30 ? 'bg-red-500' : 'bg-green-500'"></span>
+                                    <span class="text-xl font-mono font-black tabular-nums" :class="timeLeft < 30 ? 'text-red-400' : 'text-white'">
+                                        {{ formatTime(timeLeft) }}
+                                    </span>
+                                </div>
+                                <button @click="togglePause" 
+                                    class="p-1.5 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors border border-gray-700 text-yellow-500 focus:outline-none">
+                                    <svg v-if="!isPaused" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                    <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Boussole de décompte pour le mode Gaming -->

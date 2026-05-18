@@ -44,6 +44,7 @@ Route::middleware(['auth', 'verified'])->prefix('game')->name('game.')->group(fu
     Route::post('/sessions', [GameEngineController::class, 'createSession'])->name('create');
     Route::get('/lobby/{token}', [GameEngineController::class, 'lobby'])->name('lobby');
     Route::get('/play/{token}', [GameEngineController::class, 'play'])->name('play');
+    Route::post('/play/record', [GameEngineController::class, 'recordResult'])->name('record');
 });
 
 // Admin Routes

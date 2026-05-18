@@ -1,6 +1,10 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+const props = defineProps({
+    stats: Object
+});
 </script>
 
 <template>
@@ -39,15 +43,17 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
                         
                         <div class="grid grid-cols-2 gap-4">
                             <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center">
-                                <span class="block text-4xl font-black text-blue-400 mb-2">0</span>
+                                <span class="block text-4xl font-black text-blue-400 mb-2">{{ stats?.total_games || 0 }}</span>
                                 <span class="text-sm text-gray-400 uppercase tracking-wider">Parties Jouées</span>
                             </div>
                             <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center">
-                                <span class="block text-4xl font-black text-purple-400 mb-2">0</span>
+                                <span class="block text-4xl font-black text-purple-400 mb-2">{{ stats?.riddles_solved || 0 }}</span>
                                 <span class="text-sm text-gray-400 uppercase tracking-wider">Énigmes Résolues</span>
                             </div>
                             <div class="col-span-2 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center mt-2">
-                                <span class="block text-5xl font-black text-yellow-400 mb-2 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]">0</span>
+                                <span class="block text-5xl font-black text-yellow-400 mb-2 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]">
+                                    {{ stats?.total_points || 0 }}
+                                </span>
                                 <span class="text-sm text-gray-400 uppercase tracking-wider">Points Totaux</span>
                             </div>
                         </div>

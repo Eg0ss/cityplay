@@ -14,12 +14,28 @@ use Inertia\Inertia;
 
 class GameEngineController extends Controller
 {
-    // Affiche le Dashboard Gaming
+    // Affiche le Dashboard Gaming avec les vraies statistiques en continu
     public function dashboard()
     {
-        // Récupérer les statistiques du joueur connecté
+        $userId = auth()->id();
+
+        // 1. Nombre de parties jouées (nombre d'inscriptions à des sessions)
+        $totalGames = GamePlayer::where('user_id', $userId)->count();
+
+        // 2. Nombre d'énigmes résolues
+        $riddlesSolved = GamePlayerRiddleAttempt::where('user_id', $userId)
+            ->where('status', 'gagne')
+            ->count();
+
+        // 3. Total des points cumulés dans la table des scores
+        $totalPoints = \App\Models\Score::where('user_id', $userId)->sum('points');
+
         return Inertia::render('Game/Dashboard', [
-            'history' => [] // À compléter
+            'stats' => [
+                'total_games' => $totalGames,
+                'riddles_solved' => $riddlesSolved,
+                'total_points' => $totalPoints,
+            ]
         ]);
     }
 
@@ -73,7 +89,7 @@ class GameEngineController extends Controller
         ];
         $niveauInt = $levelMapping[$validated['level']];
 
-        // 1. Trouver les $riddles_count lieux les plus proches grâce à la formule de Haversine
+        // 1. Trouver les $riddles_count lieux les plus proches qui ONT des énigmes de ce niveau
         $lat = $validated['user_lat'];
         $lng = $validated['user_lng'];
 
@@ -82,6 +98,9 @@ class GameEngineController extends Controller
                 '(6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance',
                 [$lat, $lng, $lat]
             )
+            ->whereHas('riddles', function($query) use ($niveauInt) {
+                $query->where('niveau', $niveauInt);
+            })
             ->orderBy('distance', 'asc')
             ->limit($validated['riddles_count'])
             ->get();
@@ -109,6 +128,52 @@ class GameEngineController extends Controller
         return redirect()->route('game.lobby', ['token' => $token]);
     }
 
+    // Enregistre les points et les tentatives du joueur en continu
+    public function recordResult(Request $request)
+    {
+        $validated = $request->validate([
+            'session_id' => 'required|integer',
+            'riddle_id' => 'required|integer',
+            'status' => 'required|string|in:gagne,perdu',
+            'points' => 'required|integer',
+            'mode_choisi' => 'required|string',
+            'temps_resolution' => 'nullable|integer'
+        ]);
+
+        $gameRiddle = GameRiddle::where('session_id', $validated['session_id'])
+            ->where('riddle_id', $validated['riddle_id'])
+            ->first();
+        
+        if (!$gameRiddle) {
+            $gameRiddle = GameRiddle::create([
+                'session_id' => $validated['session_id'],
+                'riddle_id' => $validated['riddle_id'],
+            ]);
+        }
+
+        GamePlayerRiddleAttempt::create([
+            'game_session_id' => $validated['session_id'],
+            'user_id' => auth()->id(),
+            'game_riddle_id' => $gameRiddle->id,
+            'mode_choisi' => $validated['mode_choisi'],
+            'status' => $validated['status'],
+            'points_earned' => $validated['points'],
+            'time_limit' => $validated['temps_resolution'] ?: 0,
+            'started_at' => now(),
+        ]);
+
+        if ($validated['status'] === 'gagne') {
+            \App\Models\Score::create([
+                'session_id' => $validated['session_id'],
+                'user_id' => auth()->id(),
+                'points' => $validated['points'],
+                'temps_resolution' => $validated['temps_resolution'] ?: 0
+            ]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
     // Affiche le Lobby (salle d'attente Multijoueur) ou lance directement si Solo
     public function lobby($token)
     {
@@ -132,8 +197,31 @@ class GameEngineController extends Controller
             ->where('lien_token', $token)
             ->firstOrFail();
 
+        // Trouver les IDs des lieux de cette session dans l'ordre de distance initial
+        $placeIds = $session->gameRiddles->pluck('riddle.place_id')->unique()->values();
+        
+        $levelMapping = [
+            'facile' => 1,
+            'intermediaire' => 2,
+            'difficile' => 3
+        ];
+        $niveauInt = $levelMapping[$session->level];
+
+        // Récupérer tous les lieux avec TOUTES leurs énigmes du niveau choisi
+        $places = \App\Models\Place::with(['riddles' => function($query) use ($niveauInt) {
+                $query->where('niveau', $niveauInt);
+            }])
+            ->whereIn('id', $placeIds)
+            ->get();
+
+        // Réordonner les lieux selon l'ordre initial calculé par proximité (les IDs de $placeIds)
+        $placesSorted = $placeIds->map(function ($id) use ($places) {
+            return $places->firstWhere('id', $id);
+        })->filter()->values();
+
         return Inertia::render('Game/Play/ActiveRiddle', [
-            'session' => $session
+            'session' => $session,
+            'placesWithRiddles' => $placesSorted
         ]);
     }
 }
