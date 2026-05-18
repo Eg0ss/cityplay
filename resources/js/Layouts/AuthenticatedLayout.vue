@@ -34,6 +34,12 @@ const confirmLogout = () => {
         rejectClass: 'p-button-secondary p-button-outlined text-gray-300 border-gray-600 hover:bg-gray-800 px-4 py-2 rounded-lg mr-2',
         acceptClass: 'p-button-danger bg-red-600 border-red-600 text-white hover:bg-red-500 px-4 py-2 rounded-lg',
         accept: () => {
+            // Libérer le focus trap du modal en floutant l'élément actif et en focusant le body
+            if (document.activeElement) {
+                document.activeElement.blur();
+            }
+            document.body.focus();
+            
             router.post(route('logout'));
         }
     });
@@ -58,7 +64,7 @@ onMounted(() => {
     <div class="min-h-screen font-sans transition-colors duration-300"
          :class="isDark ? 'bg-[#0A0A0B] text-white' : 'bg-gray-50 text-gray-900'">
         
-        <ConfirmDialog />
+        <ConfirmDialog :autoFocus="false" />
 
         <!-- Top Navigation -->
         <nav class="fixed top-0 z-50 w-full border-b backdrop-blur-md transition-colors"

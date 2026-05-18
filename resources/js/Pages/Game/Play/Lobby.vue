@@ -31,7 +31,16 @@ const startGame = () => {
 let pollInterval;
 onMounted(() => {
     pollInterval = setInterval(() => {
-        router.reload({ only: ['session'] });
+        router.reload({ 
+            only: ['session'],
+            onSuccess: (page) => {
+                // Double vérification de sécurité : redirection immédiate si la partie a commencé
+                if (page.props.session?.statut === 'en_cours' && !isCreator.value) {
+                    clearInterval(pollInterval);
+                    router.get(`/game/play/${props.session.lien_token}`);
+                }
+            }
+        });
     }, 4000); // Polling un peu plus rapide (4s) pour plus de dynamisme
 });
 
@@ -60,12 +69,12 @@ watch(() => props.session.players, (newPlayers, oldPlayers) => {
 }, { deep: true });
 
 // Rediriger automatiquement le participant si la partie est lancée
-watch(() => props.session, (newSession) => {
-    if (newSession?.statut === 'en_cours' && !isCreator.value) {
+watch(() => props.session?.statut, (newStatus) => {
+    if (newStatus === 'en_cours' && !isCreator.value) {
         clearInterval(pollInterval);
-        router.get(`/game/play/${newSession.lien_token}`);
+        router.get(`/game/play/${props.session.lien_token}`);
     }
-}, { deep: true, immediate: true });
+}, { immediate: true });
 </script>
 
 <template>
