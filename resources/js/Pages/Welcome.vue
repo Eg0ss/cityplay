@@ -1,6 +1,18 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
+import { 
+    Compass, 
+    Map as MapIcon, 
+    MapPin, 
+    Trophy, 
+    Rocket, 
+    LogIn, 
+    UserPlus, 
+    LayoutGrid, 
+    Target,
+    ArrowRight
+} from 'lucide-vue-next';
 
 const gsap = window.gsap;
 
@@ -122,11 +134,19 @@ onMounted(() => {
                 <div class="absolute inset-0 bg-[#171235]/20"></div>
             </div>
 
-            <!-- Floating Bobbing Emojis around the page (Drifting gamified feel) -->
-            <div class="absolute top-1/4 left-10 text-5xl animate-float opacity-30 select-none pointer-events-none hidden md:block">🧭</div>
-            <div class="absolute bottom-1/4 left-1/5 text-5xl animate-float opacity-30 select-none pointer-events-none hidden md:block" style="animation-delay: 1.5s;">🗺️</div>
-            <div class="absolute top-1/3 right-12 text-6xl animate-float opacity-30 select-none pointer-events-none hidden md:block" style="animation-delay: 0.8s;">📍</div>
-            <div class="absolute bottom-1/3 right-1/4 text-5xl animate-float opacity-30 select-none pointer-events-none hidden md:block" style="animation-delay: 2.2s;">🏆</div>
+            <!-- Floating Bobbing Icons around the page (Drifting gamified feel) -->
+            <div class="absolute top-1/4 left-10 text-[#87d74e] animate-float opacity-30 select-none pointer-events-none hidden md:block">
+                <Compass :size="48" />
+            </div>
+            <div class="absolute bottom-1/4 left-1/5 text-[#87d74e] animate-float opacity-30 select-none pointer-events-none hidden md:block" style="animation-delay: 1.5s;">
+                <MapIcon :size="48" />
+            </div>
+            <div class="absolute top-1/3 right-12 text-[#87d74e] animate-float opacity-30 select-none pointer-events-none hidden md:block" style="animation-delay: 0.8s;">
+                <MapPin :size="64" />
+            </div>
+            <div class="absolute bottom-1/3 right-1/4 text-[#87d74e] animate-float opacity-30 select-none pointer-events-none hidden md:block" style="animation-delay: 2.2s;">
+                <Trophy :size="48" />
+            </div>
 
             <div class="relative z-10 w-full max-w-7xl px-6 flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
                 <div class="flex-1 text-center lg:text-left space-y-8 lg:space-y-12 hero-reveal">
@@ -140,11 +160,13 @@ onMounted(() => {
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-                        <Link :href="route('register')" class="btn-3d btn-3d-green px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-[0_5px_0_#5d9933]">
-                            Démarrer l'Aventure 🚀
+                        <Link :href="route('register')" class="btn-3d btn-3d-green px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-[0_5px_0_#5d9933] flex items-center justify-center gap-3">
+                            Démarrer l'Aventure
+                            <Rocket :size="18" />
                         </Link>
-                        <button class="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs bg-[#1c183a] border border-[#2a245c] text-white hover:text-[#87d74e] transition-colors">
-                            Voir le Classement 🏆
+                        <button class="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs bg-[#1c183a] border border-[#2a245c] text-white hover:text-[#87d74e] transition-colors flex items-center justify-center gap-3">
+                            Voir le Classement
+                            <Trophy :size="18" />
                         </button>
                     </div>
                 </div>
@@ -154,19 +176,22 @@ onMounted(() => {
                 <div class="w-full max-w-md bg-[#10101c] p-5 sm:p-8 lg:p-10 rounded-[2.5rem] border-2 border-[#7751de] shadow-[0_0_35px_rgba(119,81,222,0.4)] relative hover-lift card-reveal mx-auto lg:mx-0">
                     <div class="absolute -top-10 -left-10 w-32 h-32 bg-[#7751de]/10 rounded-full blur-3xl pointer-events-none"></div>
                     
-                    <h3 class="text-xl font-black uppercase italic mb-8 text-[#ffc628] text-glow-yellow text-center tracking-tighter">
-                        🎯 Accès à l'aventure
+                    <h3 class="text-xl font-black uppercase italic mb-8 text-[#ffc628] text-glow-yellow text-center tracking-tighter flex items-center justify-center gap-3">
+                        <Target :size="24" class="text-[#ffc628]" />
+                        Accès à l'aventure
                     </h3>
                     
                     <div class="space-y-4">
                         <!-- Google Link agenced in 3D Blue (#4769b0) -->
-                        <button class="w-full btn-3d btn-3d-blue py-4 px-3 sm:px-4 rounded-2xl font-black uppercase text-[9px] min-[375px]:text-[10px] sm:text-xs tracking-wider sm:tracking-widest shadow-[0_4px_0_#2b3f6b] flex items-center justify-center gap-2">
-                            🔵 Continuer via Session Bleue
+                        <button class="w-full btn-3d btn-3d-blue py-4 px-3 sm:px-4 rounded-2xl font-black uppercase text-[9px] min-[375px]:text-[10px] sm:text-xs tracking-wider sm:tracking-widest shadow-[0_4px_0_#2b3f6b] flex items-center justify-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+                            Continuer via Session Bleue
                         </button>
                         
                         <!-- Direct Link agenced in 3D Purple (#7751de) -->
-                        <button class="w-full btn-3d btn-3d-purple py-4 px-3 sm:px-4 rounded-2xl font-black uppercase text-[9px] min-[375px]:text-[10px] sm:text-xs tracking-wider sm:tracking-widest shadow-[0_4px_0_#4d2f94] flex items-center justify-center gap-2">
-                            🟣 Continuer par Session Directe
+                        <button class="w-full btn-3d btn-3d-purple py-4 px-3 sm:px-4 rounded-2xl font-black uppercase text-[9px] min-[375px]:text-[10px] sm:text-xs tracking-wider sm:tracking-widest shadow-[0_4px_0_#4d2f94] flex items-center justify-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></div>
+                            Continuer par Session Directe
                         </button>
                     </div>
                     

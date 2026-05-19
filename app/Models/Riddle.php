@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Riddle extends Model
 {
-    protected $fillable = ['place_id', 'niveau', 'description', 'reponse', 'mcq_options'];
+    protected $fillable = ['place_id', 'niveau', 'description', 'reponse', 'mcq_options', 'indice_id'];
 
     protected $casts = [
         'mcq_options' => 'array',

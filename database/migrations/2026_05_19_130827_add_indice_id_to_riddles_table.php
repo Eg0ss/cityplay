@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Schema::table('riddles', function (Blueprint $table) {
-        //    $table->dropUnique(['place_id', 'niveau']);
-        // });
+        Schema::table('riddles', function (Blueprint $table) {
+            $table->foreignId('indice_id')->nullable()->constrained('hints')->onDelete('set null');
+        });
     }
 
     /**
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('riddles', function (Blueprint $table) {
-            $table->unique(['place_id', 'niveau']);
+            $table->dropConstrainedForeignId('indice_id');
         });
     }
 };

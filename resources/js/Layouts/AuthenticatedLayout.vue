@@ -5,6 +5,21 @@ import { useConfirm } from 'primevue/useconfirm';
 import ConfirmDialog from 'primevue/confirmdialog';
 import { userStatsStore } from '../store.js';
 import AudioWidget from '@/Components/AudioWidget.vue';
+import { 
+    Moon, 
+    Sun, 
+    LogOut, 
+    Menu, 
+    X, 
+    AlertTriangle, 
+    Rocket,
+    LayoutDashboard,
+    History,
+    Settings,
+    Trophy,
+    Gamepad2,
+    Map as MapIcon
+} from 'lucide-vue-next';
 
 const isMobileMenuOpen = ref(false);
 const isDark = ref(true);
@@ -68,7 +83,7 @@ onMounted(() => {
                     <div class="absolute -top-10 -left-10 w-24 h-24 bg-[#7751de]/10 rounded-full blur-2xl pointer-events-none"></div>
                     
                     <div class="mb-5 space-y-2">
-                        <span class="text-3xl text-glow-yellow block">⚠️</span>
+                        <AlertTriangle :size="48" class="text-[#ffc628] mx-auto text-glow-yellow" />
                         <h3 class="text-lg font-black uppercase italic tracking-tighter text-[#ffc628] text-glow-yellow">
                             {{ message.header }}
                         </h3>
@@ -119,8 +134,9 @@ onMounted(() => {
 
                     <div class="flex items-center gap-4">
                         <!-- Theme Toggle (Legacy support, hidden for immersion) -->
-                        <button @click="toggleTheme" class="p-2 rounded-xl bg-[#1c183a] border border-[#2a245c] text-lg hover:scale-110 transition-all hidden">
-                            {{ isDark ? '🌙' : '☀️' }}
+                        <button @click="toggleTheme" class="p-2 rounded-xl bg-[#1c183a] border border-[#2a245c] hover:scale-110 transition-all hidden">
+                            <Moon v-if="isDark" :size="20" />
+                            <Sun v-else :size="20" />
                         </button>
 
                         <!-- Bouton Déconnexion (Bouncy 3D Red) -->
@@ -140,8 +156,9 @@ onMounted(() => {
                         </div>
 
                         <!-- Hamburger (Mobile) -->
-                        <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="sm:hidden text-2xl p-2 rounded-xl bg-[#1c183a] border border-[#2a245c]">
-                            {{ isMobileMenuOpen ? '✕' : '☰' }}
+                        <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="sm:hidden p-2 rounded-xl bg-[#1c183a] border border-[#2a245c] text-white">
+                            <X v-if="isMobileMenuOpen" :size="24" />
+                            <Menu v-else :size="24" />
                         </button>
                     </div>
                 </div>
@@ -151,20 +168,34 @@ onMounted(() => {
             <transition name="fade">
                 <div v-if="isMobileMenuOpen" class="sm:hidden border-t bg-[#10101c] border-[#2a245c] px-6 py-8 space-y-6">
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="p-4 rounded-2xl bg-[#1c183a] border border-[#2a245c]">
+                        <div class="p-4 rounded-2xl bg-[#1c183a] border border-[#2a245c] flex flex-col items-center">
+                            <Trophy :size="16" class="text-gray-500 mb-1" />
                             <p class="text-[8px] font-black text-gray-500 uppercase tracking-widest">Points</p>
                             <p class="text-lg font-black text-white">{{ userStatsStore.points }} XP</p>
                         </div>
-                        <div class="p-4 rounded-2xl bg-[#1c183a] border border-[#2a245c]">
+                        <div class="p-4 rounded-2xl bg-[#1c183a] border border-[#2a245c] flex flex-col items-center">
+                            <Zap :size="16" class="text-[#87d74e] mb-1" />
                             <p class="text-[8px] font-black text-gray-500 uppercase tracking-widest">Niveau</p>
                             <p class="text-lg font-black text-[#87d74e] text-glow-green">{{ userStatsStore.levelName }}</p>
                         </div>
                     </div>
                     <nav class="flex flex-col gap-3">
-                        <Link :href="route('dashboard')" class="text-sm font-black uppercase tracking-widest py-3 border-b border-[#2a245c] text-white hover:text-[#87d74e] transition-colors">Tableau de Bord</Link>
-                        <Link :href="route('game.progression')" class="text-sm font-black uppercase tracking-widest py-3 border-b border-[#2a245c] text-white hover:text-[#87d74e] transition-colors">Ma Progression</Link>
-                        <Link :href="route('profile.edit')" class="text-sm font-black uppercase tracking-widest py-3 border-b border-[#2a245c] text-white hover:text-[#87d74e] transition-colors">Paramètres</Link>
-                        <button @click="confirmLogout" class="text-sm font-black uppercase tracking-widest py-3 text-red-500 text-left w-full hover:text-red-400 transition-colors">Déconnexion</button>
+                        <Link :href="route('dashboard')" class="flex items-center gap-3 text-sm font-black uppercase tracking-widest py-3 border-b border-[#2a245c] text-white hover:text-[#87d74e] transition-colors">
+                            <LayoutDashboard :size="16" />
+                            Tableau de Bord
+                        </Link>
+                        <Link :href="route('game.progression')" class="flex items-center gap-3 text-sm font-black uppercase tracking-widest py-3 border-b border-[#2a245c] text-white hover:text-[#87d74e] transition-colors">
+                            <History :size="16" />
+                            Ma Progression
+                        </Link>
+                        <Link :href="route('profile.edit')" class="flex items-center gap-3 text-sm font-black uppercase tracking-widest py-3 border-b border-[#2a245c] text-white hover:text-[#87d74e] transition-colors">
+                            <Settings :size="16" />
+                            Paramètres
+                        </Link>
+                        <button @click="confirmLogout" class="flex items-center gap-3 text-sm font-black uppercase tracking-widest py-3 text-red-500 text-left w-full hover:text-red-400 transition-colors">
+                            <LogOut :size="16" />
+                            Déconnexion
+                        </button>
                     </nav>
                 </div>
             </transition>
@@ -177,15 +208,20 @@ onMounted(() => {
                 <div class="mx-auto max-w-7xl px-8 flex gap-8">
                     <Link :href="route('dashboard')" 
                         :class="route().current('dashboard') ? 'border-[#87d74e] text-[#87d74e] text-glow-green' : 'border-transparent text-gray-400 hover:text-white'"
-                        class="py-5 border-b-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-200">
+                        class="flex items-center gap-2 py-5 border-b-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-200">
+                        <LayoutDashboard :size="14" />
                         Vue d'ensemble
                     </Link>
                     <Link :href="route('game.progression')" 
                         :class="route().current('game.progression') ? 'border-[#87d74e] text-[#87d74e] text-glow-green' : 'border-transparent text-gray-400 hover:text-white'"
-                        class="py-5 border-b-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-200">
+                        class="flex items-center gap-2 py-5 border-b-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-200">
+                        <History :size="14" />
                         Ma Progression
                     </Link>
-                    <Link href="#" class="py-5 border-b-2 border-transparent text-gray-400 hover:text-white text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-200">
+                    <Link :href="route('leaderboard')" 
+                        :class="route().current('leaderboard') ? 'border-[#87d74e] text-[#87d74e] text-glow-green' : 'border-transparent text-gray-400 hover:text-white'"
+                        class="flex items-center gap-2 py-5 border-b-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-200">
+                        <Trophy :size="14" />
                         Classement
                     </Link>
                 </div>
@@ -210,8 +246,8 @@ onMounted(() => {
         <AudioWidget />
 
         <!-- Floating Action Button (Mobile) -->
-        <button class="fixed bottom-8 right-8 h-16 w-16 bg-[#2fc276] text-white rounded-2xl shadow-[0_0_20px_rgba(47,194,118,0.5)] flex items-center justify-center text-3xl sm:hidden z-40 animate-bounce btn-3d btn-3d-green">
-            🚀
+        <button class="fixed bottom-8 right-8 h-16 w-16 bg-[#2fc276] text-white rounded-2xl shadow-[0_0_20px_rgba(47,194,118,0.5)] flex items-center justify-center sm:hidden z-40 animate-bounce btn-3d btn-3d-green">
+            <Rocket :size="24" />
         </button>
     </div>
 </template>

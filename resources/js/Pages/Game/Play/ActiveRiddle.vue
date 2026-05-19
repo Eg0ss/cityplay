@@ -1,5 +1,26 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
+import { 
+    Trophy, 
+    CheckCircle2, 
+    Pause, 
+    Play, 
+    LogOut, 
+    Map as MapIcon, 
+    MapPin, 
+    Gamepad2, 
+    Skull, 
+    RotateCcw, 
+    AlertTriangle, 
+    Compass, 
+    Rocket,
+    Clock,
+    Target,
+    Zap,
+    History,
+    X,
+    ChevronRight
+} from 'lucide-vue-next';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { useToast } from 'primevue/usetoast';
@@ -36,6 +57,38 @@ const totalTime = ref(0);
 const isPaused = ref(false);
 const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
+
+// État des indices
+const riddleHints = ref([]);
+const showHintsModal = ref(false);
+const isFetchingHints = ref(false);
+
+const fetchHints = async () => {
+    if (riddleHints.value.length > 0) {
+        showHintsModal.value = true;
+        return;
+    }
+
+    try {
+        isFetchingHints.value = true;
+        const response = await axios.get(route('game.hints', { riddleId: currentRiddle.value.id }));
+        if (response.data.success) {
+            riddleHints.value = response.data.hints;
+            showHintsModal.value = true;
+        }
+    } catch (e) {
+        console.error("Erreur lors de la récupération des indices:", e);
+        toast.add({ severity: 'error', summary: 'Erreur', detail: 'Impossible de charger les indices.', life: 3000 });
+    } finally {
+        isFetchingHints.value = false;
+    }
+};
+
+// Réinitialiser les indices quand on change d'énigme
+watch([currentPlaceIndex, currentRiddleInPlaceIndex], () => {
+    riddleHints.value = [];
+    showHintsModal.value = false;
+});
 
 // État de décision intermédiaire ('win', 'lose', 'already_solved' ou null)
 const decisionState = ref(null);
@@ -649,19 +702,48 @@ const formatTime = (seconds) => {
                     >
                         <button
                             type="button"
+                            @click="fetchHints"
+                            :disabled="isFetchingHints"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500/20 transition-all disabled:opacity-50"
+                        >
+                            <Zap v-if="!isFetchingHints" :size="16" />
+                            <RotateCcw v-else :size="16" class="animate-spin" />
+                            Indice
+                        </button>
+                        <button
+                            type="button"
                             @click="togglePause"
                             class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#26272F] bg-[#1C1D24] text-xs font-black uppercase tracking-widest text-[#f3a900] hover:border-[#f3a900]/40 transition-all"
                         >
-                            <span v-if="!isPaused">⏸️ Pause</span>
-                            <span v-else>▶️ Reprendre</span>
+                            <Pause v-if="!isPaused" :size="16" />
+                            <Play v-else :size="16" />
+                            <span v-if="!isPaused">Pause</span>
+                            <span v-else>Reprendre</span>
                         </button>
                         <button
                             type="button"
                             @click="forfeitSession"
                             class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 bg-[#1C1D24] text-xs font-black uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition-all"
                         >
-                            🚪 Quitter la partie
+                            <LogOut :size="16" />
+                            Quitter la partie
                         </button>
+                    </div>
+
+                    <!-- Game Mode Header HUD -->
+                    <div v-if="isPlaying" class="flex flex-wrap items-center gap-3 mb-6 animate-fade-in-up">
+                        <div class="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/5">
+                            <MapIcon :size="12" class="text-[#2fc276]" />
+                            <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">Secteur: {{ currentPlace?.nom }}</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-4 py-2 bg-[#2fc276]/10 rounded-xl border border-[#2fc276]/20">
+                            <Gamepad2 :size="12" class="text-[#2fc276]" />
+                            <span class="text-[9px] font-black uppercase tracking-widest text-[#2fc276]">{{ modeChoisi }} Mode</span>
+                        </div>
+                        <div v-if="session.type !== 'solo'" class="flex items-center gap-2 px-4 py-2 bg-purple-500/10 rounded-xl border border-purple-500/20">
+                            <Target :size="12" class="text-purple-400" />
+                            <span class="text-[9px] font-black uppercase tracking-widest text-purple-400">Type: {{ session.type }}</span>
+                        </div>
                     </div>
 
                     <!-- Mode Selection Screen (If Mixte is chosen) -->
@@ -673,21 +755,23 @@ const formatTime = (seconds) => {
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
                             <!-- Decouverte Adventure Card -->
                             <div class="bg-[#1C1D24] p-8 rounded-3xl border-2 border-[#f3a900]/30 hover:border-[#f3a900] hover:bg-[#f3a900]/5 transition-all duration-300 relative group flex flex-col items-center">
-                                <div class="text-6xl mb-4 transform group-hover:scale-105 group-hover:rotate-6 transition-transform">🗺️</div>
+                                <MapIcon :size="64" class="mb-4 text-[#f3a900] transform group-hover:scale-105 group-hover:rotate-6 transition-transform" />
                                 <h3 class="text-xl font-black text-[#f3a900] text-glow-yellow uppercase tracking-tight mb-2">Découverte</h3>
                                 <p class="text-xs text-gray-400 font-semibold mb-6">Validez vos coordonnées GPS physiques sur place.</p>
-                                <button @click="startRiddle('decouverte')" class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00]">
-                                    C'est parti ! 📍
+                                <button @click="startRiddle('decouverte')" class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] flex items-center justify-center gap-2">
+                                    <MapPin :size="14" />
+                                    C'est parti !
                                 </button>
                             </div>
                             
                             <!-- Gaming couch Card -->
                             <div class="bg-[#1C1D24] p-8 rounded-3xl border-2 border-[#2c72f6]/30 hover:border-[#2c72f6] hover:bg-[#2c72f6]/5 transition-all duration-300 relative group flex flex-col items-center">
-                                <div class="text-6xl mb-4 transform group-hover:scale-105 group-hover:-rotate-6 transition-transform">🎮</div>
+                                <Gamepad2 :size="64" class="mb-4 text-[#2c72f6] transform group-hover:scale-105 group-hover:-rotate-6 transition-transform" />
                                 <h3 class="text-xl font-black text-[#2c72f6] text-glow-blue uppercase tracking-tight mb-2">Gaming</h3>
                                 <p class="text-xs text-gray-400 font-semibold mb-6">Répondez intellectuellement depuis chez vous.</p>
-                                <button @click="startRiddle('gaming')" class="btn-3d btn-3d-blue w-full py-3 text-xs shadow-[0_4px_0_#1344a1]">
-                                    C'est parti ! 🕹️
+                                <button @click="startRiddle('gaming')" class="btn-3d btn-3d-blue w-full py-3 text-xs shadow-[0_4px_0_#1344a1] flex items-center justify-center gap-2">
+                                    <Zap :size="14" />
+                                    C'est parti !
                                 </button>
                             </div>
                         </div>
@@ -701,7 +785,10 @@ const formatTime = (seconds) => {
                             
                             <!-- Win state overlay -->
                             <template v-if="decisionState === 'win'">
-                                <div class="text-7xl mb-6 animate-bounce">🏆</div>
+                                <div class="relative mb-6">
+                                    <div class="absolute inset-0 bg-[#2fc276]/20 blur-2xl rounded-full"></div>
+                                    <Trophy :size="80" class="text-[#2fc276] relative animate-bounce" />
+                                </div>
                                 <h2 class="text-4xl font-black text-[#2fc276] text-glow-green uppercase italic tracking-tighter mb-2">Énigme Résolue !</h2>
                                 <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">
                                     Vous avez résolu cette énigme avec brio et empochez <span class="text-[#f3a900] text-glow-yellow font-black">{{ riddlePoints }} XP</span> !
@@ -709,28 +796,40 @@ const formatTime = (seconds) => {
                                 
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
                                     <button @click="goToNextPlace" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
-                                        {{ hasNextPlace ? 'Passer au lieu suivant 👉' : 'Terminer l\'aventure ! 🏁' }}
+                                        <CheckCircle2 :size="18" class="mr-2 inline" />
+                                        {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
                                     </button>
                                     <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318]">
-                                        Quitter la partie 🚪
+                                        <LogOut :size="14" class="mr-2 inline" />
+                                        Quitter la partie
                                     </button>
                                 </div>
                             </template>
 
                             <!-- Lose state overlay -->
                             <template v-if="decisionState === 'lose'">
-                                <div class="text-7xl mb-6">💀</div>
+                                <div class="relative mb-6">
+                                    <div class="absolute inset-0 bg-red-500/20 blur-2xl rounded-full"></div>
+                                    <Skull :size="80" class="text-red-500 relative animate-pulse" />
+                                </div>
                                 <h2 class="text-4xl font-black text-[#ea4335] text-glow-red uppercase italic tracking-tighter mb-2">Échec de l'énigme</h2>
                                 <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">Le chrono s'est écoulé ou vous avez soumis une mauvaise réponse. Choisissez votre destin :</p>
                                 
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
-                                    <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1]">
-                                        🔄 Autre énigme sur ce lieu
+                                     <button @click="fetchHints" class="btn-3d btn-3d-yellow w-full py-4 text-sm shadow-[0_5px_0_#9e6f00] flex items-center justify-center gap-2">
+                                         <Zap :size="18" />
+                                         Voir un indice
+                                     </button>
+                                     <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2">
+                                         <RotateCcw :size="18" />
+                                         Autre énigme sur ce lieu
+                                     </button>
+                                    <button @click="goToNextPlace" class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2">
+                                        Passer au lieu suivant
+                                        <ChevronRight :size="18" />
                                     </button>
-                                    <button @click="goToNextPlace" class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black">
-                                        Passer au lieu suivant 👉
-                                    </button>
-                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318]">
+                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
+                                        <LogOut :size="18" />
                                         Abandonner la partie
                                     </button>
                                 </div>
@@ -738,16 +837,18 @@ const formatTime = (seconds) => {
 
                             <!-- Already Solved state overlay -->
                             <template v-if="decisionState === 'already_solved'">
-                                <div class="text-7xl mb-6">⚠️</div>
+                                <AlertTriangle :size="80" class="text-[#f3a900] mb-6" />
                                 <h2 class="text-4xl font-black text-[#f3a900] text-glow-yellow uppercase italic tracking-tighter mb-2">Énigme Clôturée</h2>
                                 <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">{{ alreadySolvedMessage || 'Un coéquipier ou challenger a déjà répondu avec succès.' }}</p>
                                 
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
-                                    <button @click="goToNextPlace" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1]">
-                                        Passer au lieu suivant 👉
+                                    <button @click="goToNextPlace" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2">
+                                        Passer au lieu suivant
+                                        <ChevronRight :size="18" />
                                     </button>
-                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318]">
-                                        Quitter la partie 🚪
+                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
+                                        <LogOut :size="14" />
+                                        Quitter la partie
                                     </button>
                                 </div>
                             </template>
@@ -755,9 +856,47 @@ const formatTime = (seconds) => {
 
                         <!-- Paused overlay -->
                         <div v-if="isPaused" class="absolute inset-0 bg-[#0D0E12]/95 backdrop-blur-md z-20 flex flex-col items-center justify-center rounded-3xl">
-                            <div class="text-6xl mb-4">⏸️</div>
+                            <Pause :size="80" class="text-[#f3a900] mb-6 animate-pulse" />
                             <h2 class="text-3xl font-black uppercase italic tracking-tighter text-[#f3a900] text-glow-yellow mb-8">Jeu en Pause</h2>
                             <button @click="togglePause" class="btn-3d btn-3d-yellow px-8 py-3.5 text-xs text-[#0A0B0E] font-black shadow-[0_5px_0_#9e6f00]">REPRENDRE</button>
+                        </div>
+
+                        <!-- Hints overlay -->
+                        <div v-if="showHintsModal" class="absolute inset-0 bg-[#0D0E12]/98 backdrop-blur-xl z-40 flex flex-col p-6 sm:p-10 rounded-3xl border-2 border-amber-500/20">
+                            <div class="flex items-center justify-between mb-8">
+                                <div class="flex items-center gap-3">
+                                    <Zap :size="24" class="text-amber-500 animate-pulse" />
+                                    <h2 class="text-2xl font-black uppercase italic tracking-tighter text-white">Protocole d'aide</h2>
+                                </div>
+                                <button @click="showHintsModal = false" class="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
+                                    <X :size="20" />
+                                </button>
+                            </div>
+
+                            <div v-if="riddleHints.length > 0" class="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                                <div v-for="(hint, index) in riddleHints" :key="hint.id" class="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-3 animate-fade-in-up" :style="{ animationDelay: (index * 0.1) + 's' }">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[8px] font-black uppercase tracking-[0.3em] text-amber-500">INDICE #{{ index + 1 }} • {{ hint.difficulty_level }}</span>
+                                        <span class="text-[8px] font-black uppercase tracking-widest text-gray-500 italic">{{ hint.type }}</span>
+                                    </div>
+                                    
+                                    <div v-if="hint.type === 'image'" class="rounded-xl overflow-hidden border border-white/10">
+                                        <img :src="hint.content" class="w-full h-auto object-cover max-h-48" alt="Indice visuel" />
+                                    </div>
+                                    <p v-else class="text-sm font-bold leading-relaxed text-gray-200 italic">
+                                        "{{ hint.content }}"
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div v-else class="flex-1 flex flex-col items-center justify-center text-center space-y-4">
+                                <AlertTriangle :size="48" class="text-gray-600" />
+                                <p class="text-gray-500 font-black uppercase tracking-widest text-xs">Aucun indice disponible pour cette énigme.</p>
+                            </div>
+
+                            <div class="mt-8 pt-6 border-t border-white/5">
+                                <button @click="showHintsModal = false" class="w-full btn-3d btn-3d-yellow py-4 text-xs font-black shadow-[0_5px_0_#9e6f00] text-black">RETOURNER À L'ÉNIGME</button>
+                            </div>
                         </div>
 
                         <!-- Game Header Details -->
@@ -825,9 +964,7 @@ const formatTime = (seconds) => {
                                 
                                 <!-- Compass Details -->
                                 <div class="text-center z-10 flex flex-col items-center">
-                                    <div class="text-2xl mb-1 transition-transform duration-1000 ease-linear" :style="{ transform: `rotate(${compassRotation}deg)` }">
-                                        🧭
-                                    </div>
+                                    <Compass :size="24" class="mb-1 text-[#2fc276] transition-transform duration-1000 ease-linear" :style="{ transform: `rotate(${compassRotation}deg)` }" />
                                     <div class="text-3xl font-black font-mono tabular-nums text-white text-glow-green">
                                         {{ timeLeft }}s
                                     </div>
@@ -868,8 +1005,9 @@ const formatTime = (seconds) => {
                                     @keydown="playKey"
                                     @keydown.enter="submitGaming"
                                     class="w-full bg-[#0D0E12] border-2 border-[#26272F] focus:border-[#2fc276] focus:ring-0 rounded-2xl p-4.5 text-lg text-center text-white font-black uppercase tracking-widest transition-colors">
-                                <button @click="submitGaming" :disabled="!userAnswer" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
-                                    SOUMETTRE LA RÉPONSE 🚀
+                                <button @click="submitGaming" :disabled="!userAnswer" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b] flex items-center justify-center gap-2">
+                                    SOUMETTRE LA RÉPONSE
+                                    <Rocket :size="18" />
                                 </button>
                             </div>
                             

@@ -4,6 +4,19 @@ import { ref, onMounted } from 'vue';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from 'primevue/useconfirm';
+import { 
+    LogOut, 
+    AlertTriangle, 
+    Moon, 
+    Sun, 
+    X, 
+    Menu, 
+    LayoutDashboard, 
+    Building2, 
+    MapPin, 
+    ShieldCheck, 
+    Globe 
+} from 'lucide-vue-next';
 
 const isMobileMenuOpen = ref(false);
 const isDark = ref(true);
@@ -27,7 +40,7 @@ const confirm = useConfirm();
 const confirmLogout = () => {
     confirm.require({
         message: 'Êtes-vous sûr de vouloir vous déconnecter du terminal d\'administration ?',
-        header: 'Se déconnecter 🚪',
+        header: 'Se déconnecter',
         icon: 'pi pi-exclamation-triangle',
         rejectLabel: 'Rester',
         acceptLabel: 'Quitter',
@@ -61,7 +74,7 @@ onMounted(() => {
                 <div class="absolute -top-10 -left-10 w-24 h-24 bg-[#7751de]/10 rounded-full blur-2xl pointer-events-none"></div>
                 
                 <div class="mb-5 space-y-2">
-                    <span class="text-3xl text-glow-yellow block">⚠️</span>
+                    <AlertTriangle :size="48" class="text-[#ffc628] mx-auto text-glow-yellow" />
                     <h3 class="text-lg font-black uppercase italic tracking-tighter text-[#ffc628] text-glow-yellow">
                         {{ message.header }}
                     </h3>
@@ -99,11 +112,13 @@ onMounted(() => {
             </div>
             <div class="flex items-center gap-3">
                 <button @click="toggleTheme" class="h-10 w-10 flex items-center justify-center rounded-xl dark:bg-white/5 bg-gray-100">
-                    {{ isDark ? '🌙' : '☀️' }}
+                    <Moon v-if="isDark" :size="20" />
+                    <Sun v-else :size="20" />
                 </button>
                 <button @click="isMobileMenuOpen = !isMobileMenuOpen" 
-                    class="h-10 w-10 flex items-center justify-center rounded-xl dark:bg-white/5 bg-gray-100 text-2xl">
-                    {{ isMobileMenuOpen ? '✕' : '☰' }}
+                    class="h-10 w-10 flex items-center justify-center rounded-xl dark:bg-white/5 bg-gray-100 text-white">
+                    <X v-if="isMobileMenuOpen" :size="24" />
+                    <Menu v-else :size="24" />
                 </button>
             </div>
         </header>
@@ -172,15 +187,15 @@ onMounted(() => {
                         :class="isDark ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100'"
                         class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group mb-2">
                         <span class="text-xl">
-                            <svg v-if="isDark" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                            <Moon v-if="isDark" :size="20" />
+                            <Sun v-else :size="20" />
                         </span>
                         <span class="font-bold uppercase text-xs tracking-wider">{{ isDark ? 'Mode Sombre' : 'Mode Clair' }}</span>
                     </button>
                     <Link href="/" class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group"
                         :class="isDark ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100'">
                         <span class="text-xl">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                            <Globe :size="20" />
                         </span>
                         <span class="font-bold uppercase text-xs tracking-wider">Site Public</span>
                     </Link>
