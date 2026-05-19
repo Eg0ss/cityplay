@@ -1,10 +1,28 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { useConfirm } from 'primevue/useconfirm';
 
 const props = defineProps({
     stats: Object
 });
+
+const confirm = useConfirm();
+
+const confirmLogout = () => {
+    confirm.require({
+        message: 'Vous serez déconnecté et redirigé vers la page de connexion.',
+        header: 'Quitter la session',
+        icon: 'pi pi-exclamation-triangle',
+        rejectLabel: 'Rester',
+        acceptLabel: 'Se déconnecter',
+        rejectClass: 'p-button-secondary p-button-outlined text-gray-300 border-gray-600 hover:bg-gray-800 px-4 py-2 rounded-lg mr-2',
+        acceptClass: 'p-button-danger bg-red-600 border-red-600 text-white hover:bg-red-500 px-4 py-2 rounded-lg',
+        accept: () => {
+            router.post(route('logout'));
+        },
+    });
+};
 </script>
 
 <template>
@@ -81,6 +99,16 @@ const props = defineProps({
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="mt-12 flex justify-center">
+                    <button
+                        type="button"
+                        @click="confirmLogout"
+                        class="btn-3d btn-3d-red px-8 py-3.5 text-xs font-black uppercase tracking-widest shadow-[0_4px_0_#9e2318]"
+                    >
+                        🚪 Se déconnecter
+                    </button>
                 </div>
             </div>
         </div>

@@ -41,10 +41,20 @@ const userCoords = ref({ lat: null, lng: null });
 const decisionState = ref(null);
 const alreadySolvedMessage = ref('');
 
+let timerInterval = null;
+const sessionEndHandled = ref(false);
+
+// État local replicateur pour les mises à jour temps réel sans reload
+const localSessionData = ref({
+    attempts: props.session.attempts || [],
+    players: props.session.players || [],
+    statut: props.session.statut,
+});
+
 // Classement de la session en direct
 const sessionLeaderboard = computed(() => {
-    return props.session.players?.map(player => {
-        const sessionPoints = props.session.attempts
+    return localSessionData.value.players?.map(player => {
+        const sessionPoints = localSessionData.value.attempts
             ?.filter(att => att.user_id === player.user_id && att.status === 'gagne')
             ?.reduce((sum, att) => sum + (att.points_earned || 0), 0) || 0;
             
@@ -57,6 +67,46 @@ const sessionLeaderboard = computed(() => {
     }).sort((a, b) => b.points - a.points);
 });
 
+// Mode participants : objectif d'énigmes résolues par l'équipe (distinct game_riddle gagnées)
+const participantsTeamTarget = computed(() => {
+    if (props.session.type !== 'participants') return 0;
+    const riddlesCount = Math.max(0, Number(props.session.riddles_count) || 0);
+    const inPlay = props.session.game_riddles?.length ?? 0;
+    if (inPlay <= 0) return riddlesCount;
+    return Math.min(riddlesCount, inPlay);
+});
+
+const participantsTeamAnswered = computed(() => {
+    if (props.session.type !== 'participants') return 0;
+    const ids = new Set();
+    for (const att of localSessionData.value.attempts || []) {
+        const gr = att.game_riddle || att.gameRiddle;
+        const gid = gr?.id;
+        if (gid) ids.add(gid);
+    }
+    return ids.size;
+});
+
+const finishSessionRedirect = (message) => {
+    if (sessionEndHandled.value) return;
+    sessionEndHandled.value = true;
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    isPaused.value = false;
+    stopBackgroundMusic();
+    toast.add({
+        severity: 'success',
+        summary: 'Session terminée ! 🏆',
+        detail: message || 'L\'équipe a atteint l\'objectif d\'énigmes. Bravo !',
+        life: 5000,
+    });
+    setTimeout(() => {
+        router.get(route('game.dashboard'));
+    }, 1800);
+};
+
 // Trouver la première énigme non tentée dans le mode participants
 const selectFirstUnattemptedRiddle = () => {
     if (props.session.type !== 'participants') return;
@@ -65,7 +115,7 @@ const selectFirstUnattemptedRiddle = () => {
         const place = props.placesWithRiddles[pIdx];
         for (let rIdx = 0; rIdx < (place.riddles?.length || 0); rIdx++) {
             const riddle = place.riddles[rIdx];
-            const attempted = props.session.attempts?.some(att => {
+            const attempted = localSessionData.value.attempts?.some(att => {
                 const gameRiddle = att.game_riddle || att.gameRiddle;
                 return gameRiddle?.riddle_id === riddle.id;
             });
@@ -118,22 +168,19 @@ const hasNextPlace = computed(() => {
     return props.placesWithRiddles?.length > currentPlaceIndex.value + 1;
 });
 
-// Total des énigmes (nombre de lieux)
+// Total des énigmes affichées (lieux) — en participants, l'objectif affiché suit la config session
 const totalGamePlacesCount = computed(() => {
+    if (props.session.type === 'participants' && participantsTeamTarget.value > 0) {
+        return participantsTeamTarget.value;
+    }
     return props.placesWithRiddles?.length || 0;
 });
 
 const currentRiddleNumber = computed(() => {
     if (props.session.type !== 'participants') {
-        return Math.min(currentPlaceIndex.value + 1, totalGamePlacesCount.value);
+        return Math.min(currentPlaceIndex.value + 1, props.placesWithRiddles?.length || 0);
     }
-    const attemptedRiddleIds = new Set(
-        props.session.attempts?.map(att => {
-            const gameRiddle = att.game_riddle || att.gameRiddle;
-            return gameRiddle?.riddle_id;
-        }).filter(Boolean) || []
-    );
-    return Math.min(attemptedRiddleIds.size + 1, totalGamePlacesCount.value);
+    return Math.min(participantsTeamAnswered.value + 1, participantsTeamTarget.value || 1);
 });
 
 // Propriétés de la boussole
@@ -161,6 +208,15 @@ const recordAttemptOnBackend = async (status, pointsEarned) => {
             mode_choisi: modeChoisi.value || 'gaming',
             temps_resolution: totalTime.value - timeLeft.value
         });
+
+        if (response.data?.session_finished) {
+            if (response.data?.success) {
+                await router.reload({ only: ['session'] });
+            } else {
+                finishSessionRedirect(response.data?.message);
+            }
+            return false;
+        }
         
         if (response.data && response.data.already_solved) {
             toast.add({ 
@@ -188,6 +244,11 @@ let watchId = null;
 let unsubscribeBefore = null;
 
 onMounted(() => {
+    if (props.session.statut === 'termine') {
+        finishSessionRedirect();
+        return;
+    }
+
     // Démarrer la musique de fond dès le montage (sans interaction requise via autoplay)
     playBackgroundMusic('game');
 
@@ -195,11 +256,24 @@ onMounted(() => {
     if (window.Echo) {
         window.Echo.channel(`game.${props.session.lien_token}`)
             .listen('.App\\Events\\GameUpdated', (e) => {
-                router.reload({ 
-                    only: ['session'],
-                    preserveState: true,
-                    preserveScroll: true
-                });
+                // Mise à jour directe des données sans reload complet
+                if (e.session) {
+                    // Mettre à jour les tentatives et les joueurs en doux
+                    if (e.session.attempts) {
+                        localSessionData.value.attempts = e.session.attempts;
+                    }
+                    if (e.session.players) {
+                        localSessionData.value.players = e.session.players;
+                    }
+                    if (e.session.statut) {
+                        localSessionData.value.statut = e.session.statut;
+                        
+                        // Vérifier si la session est terminée
+                        if (e.session.statut === 'termine' && props.session.statut !== 'termine') {
+                            finishSessionRedirect();
+                        }
+                    }
+                }
             });
     }
 
@@ -255,7 +329,7 @@ onUnmounted(() => {
 });
 
 // Détecter si l'énigme active actuelle (currentRiddle) a été clôturée par un autre joueur
-watch(() => props.session.attempts, (newAttempts) => {
+watch(() => localSessionData.value.attempts, (newAttempts) => {
     if (props.session.type === 'participants' && newAttempts && currentRiddle.value) {
         // Rechercher une tentative pour l'énigme active
         const activeAttempt = newAttempts.find(att => {
@@ -281,6 +355,15 @@ watch(() => props.session.attempts, (newAttempts) => {
         }
     }
 }, { deep: true });
+
+watch(
+    () => props.session.statut,
+    (statut, prev) => {
+        if (statut !== 'termine') return;
+        if (prev === 'termine') return;
+        finishSessionRedirect();
+    }
+);
 
 // Calculer la distance en kilomètres par rapport au lieu cible (Formule de Haversine)
 const distanceToPlace = computed(() => {
@@ -328,7 +411,6 @@ const calculateChronoTimeForDiscovery = () => {
 };
 
 // Initialisation d'une énigme
-let timerInterval = null;
 const startRiddle = (mode) => {
     // Initialiser l'AudioContext au premier geste utilisateur
     initAudioContext();
@@ -438,6 +520,10 @@ const submitGaming = async () => {
 // Choix : Passer au lieu suivant
 const goToNextPlace = () => {
     playClick();
+    if (props.session.statut === 'termine') {
+        finishSessionRedirect();
+        return;
+    }
     if (props.session.type === 'participants') {
         selectFirstUnattemptedRiddle();
         decisionState.value = null;
@@ -548,8 +634,36 @@ const formatTime = (seconds) => {
                                 </div>
                             </div>
                         </div>
+                        <p
+                            v-if="session.type === 'participants' && participantsTeamTarget > 0"
+                            class="mt-4 text-center text-[10px] font-black uppercase tracking-widest text-[#4769b0]"
+                        >
+                            Objectif coop : {{ participantsTeamAnswered }} / {{ participantsTeamTarget }} énigmes clôturées par l'équipe
+                        </p>
                     </div>
                     
+                    <!-- Contrôles pause / quitter (accessibles pendant toute l'énigme, hors overlays) -->
+                    <div
+                        v-if="isPlaying && currentRiddle"
+                        class="w-full flex flex-wrap justify-end gap-2 mb-3 animate-fade-in-up"
+                    >
+                        <button
+                            type="button"
+                            @click="togglePause"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#26272F] bg-[#1C1D24] text-xs font-black uppercase tracking-widest text-[#f3a900] hover:border-[#f3a900]/40 transition-all"
+                        >
+                            <span v-if="!isPaused">⏸️ Pause</span>
+                            <span v-else>▶️ Reprendre</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="forfeitSession"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 bg-[#1C1D24] text-xs font-black uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition-all"
+                        >
+                            🚪 Quitter la partie
+                        </button>
+                    </div>
+
                     <!-- Mode Selection Screen (If Mixte is chosen) -->
                     <div v-if="!isPlaying" class="text-center animate-fade-in-up py-10">
                         <h2 class="text-3xl font-black uppercase italic tracking-tighter text-white mb-10">
@@ -597,6 +711,9 @@ const formatTime = (seconds) => {
                                     <button @click="goToNextPlace" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
                                         {{ hasNextPlace ? 'Passer au lieu suivant 👉' : 'Terminer l\'aventure ! 🏁' }}
                                     </button>
+                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318]">
+                                        Quitter la partie 🚪
+                                    </button>
                                 </div>
                             </template>
 
@@ -629,6 +746,9 @@ const formatTime = (seconds) => {
                                     <button @click="goToNextPlace" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1]">
                                         Passer au lieu suivant 👉
                                     </button>
+                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318]">
+                                        Quitter la partie 🚪
+                                    </button>
                                 </div>
                             </template>
                         </div>
@@ -644,9 +764,14 @@ const formatTime = (seconds) => {
                         <div class="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-8 border-b border-[#26272F] pb-6">
                             <div class="flex flex-col gap-1 text-center sm:text-left">
                                 <span class="text-[8px] font-black uppercase tracking-widest text-gray-500">Progression</span>
-                                <div class="flex items-center justify-center sm:justify-start gap-2">
+                                <div class="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                                     <span class="text-sm font-black text-white">
-                                        Lieu {{ currentRiddleNumber }} / {{ totalGamePlacesCount }}
+                                        <template v-if="session.type === 'participants' && participantsTeamTarget > 0">
+                                            Équipe {{ participantsTeamAnswered }} / {{ participantsTeamTarget }}
+                                        </template>
+                                        <template v-else>
+                                            Lieu {{ currentRiddleNumber }} / {{ totalGamePlacesCount }}
+                                        </template>
                                     </span>
                                     <span class="text-[9px] font-black bg-[#2fc276]/10 border border-[#2fc276]/20 text-[#2fc276] px-2.5 py-0.5 rounded-lg tracking-wider text-glow-green uppercase">
                                         {{ currentPlace?.nom }}
@@ -662,11 +787,6 @@ const formatTime = (seconds) => {
                                         {{ formatTime(timeLeft) }}
                                     </span>
                                 </div>
-                                <button @click="togglePause" 
-                                    class="p-2 bg-[#1C1D24] border border-[#26272F] rounded-xl hover:scale-105 transition-all text-[#f3a900]">
-                                    <svg v-if="!isPaused" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                                    <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-                                </button>
                             </div>
                         </div>
 

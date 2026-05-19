@@ -27,8 +27,24 @@ class GameUpdated implements ShouldBroadcastNow
 
     public function broadcastWith()
     {
+        // Enrichir l'événement avec les données détaillées
+        $sessionWithData = $this->session->load([
+            'attempts' => function ($query) {
+                $query->select('id', 'game_session_id', 'user_id', 'game_riddle_id', 'status', 'points_earned');
+            },
+            'attempts.user:id,name',
+            'players.user:id,name',
+        ]);
+
         return [
             'updated' => true,
+            'session' => [
+                'id' => $sessionWithData->id,
+                'statut' => $sessionWithData->statut,
+                'type' => $sessionWithData->type,
+                'attempts' => $sessionWithData->attempts,
+                'players' => $sessionWithData->players,
+            ],
         ];
     }
 }

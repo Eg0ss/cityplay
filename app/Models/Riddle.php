@@ -26,4 +26,9 @@ class Riddle extends Model
     {
         return $this->hasMany(GameRiddle::class);
     }
+
+    public function hints()
+    {
+        return $this->hasMany(Hint::class)->orderBy('order');
+    }
 }
