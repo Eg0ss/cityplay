@@ -4,6 +4,14 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
+import { useAudio } from '@/composables/useAudio.js';
+import AudioWidget from '@/Components/AudioWidget.vue';
+
+const {
+    playClick, playNotification,
+    playBackgroundMusic, stopBackgroundMusic,
+    initAudioContext,
+} = useAudio();
 
 const props = defineProps({
     session: Object
@@ -19,31 +27,48 @@ const copyLink = () => {
 };
 
 const startGame = () => {
+    playClick();
     router.post(`/game/lobby/${props.session.lien_token}/start`, {}, {
         onSuccess: () => {
+            stopBackgroundMusic();
             router.get(`/game/play/${props.session.lien_token}`);
         }
     });
 };
 
+const copyLinkWithSound = () => {
+    playClick();
+    copyLink();
+};
+
 let unsubscribeBefore = null;
 onMounted(() => {
-    // Écouter le canal du lobby via Laravel Echo pour synchroniser les joueurs en temps réel
-    window.Echo.channel(`lobby.${props.session.lien_token}`)
-        .listen('.App\\Events\\LobbyUpdated', (e) => {
-            // Recharger la session pour mettre à jour la liste des joueurs connectés
-            router.reload({ only: ['session'] });
-        });
+    // Démarrer la musique d'ambiance du lobby
+    playBackgroundMusic('lobby');
 
-    // Nettoyer le canal dès qu'une navigation commence (ex: déconnexion ou début du jeu)
+    // Écouter le canal du lobby via Laravel Echo (seulement si disponible)
+    if (window.Echo) {
+        window.Echo.channel(`lobby.${props.session.lien_token}`)
+            .listen('.App\\Events\\LobbyUpdated', (e) => {
+                router.reload({ only: ['session'] });
+            });
+    }
+
+    // Nettoyer le canal dès qu'une navigation commence
     unsubscribeBefore = router.on('before', () => {
-        window.Echo.leave(`lobby.${props.session.lien_token}`);
+        if (window.Echo) {
+            window.Echo.leave(`lobby.${props.session.lien_token}`);
+        }
+        stopBackgroundMusic();
     });
 });
 
 onUnmounted(() => {
     if (unsubscribeBefore) unsubscribeBefore();
-    window.Echo.leave(`lobby.${props.session.lien_token}`);
+    if (window.Echo) {
+        window.Echo.leave(`lobby.${props.session.lien_token}`);
+    }
+    stopBackgroundMusic();
 });
 
 // Le créateur est le premier joueur enregistré de la session (l'hôte)
@@ -51,11 +76,12 @@ const isCreator = computed(() => {
     return props.session.players?.[0]?.user_id === page.props.auth.user.id;
 });
 
-// Alerte/Toast quand un nouveau joueur rejoint la salle d'attente
+// Alerte/Toast + son quand un nouveau joueur rejoint la salle d'attente
 watch(() => props.session.players, (newPlayers, oldPlayers) => {
     if (oldPlayers && newPlayers && newPlayers.length > oldPlayers.length) {
         const newPlayer = newPlayers.find(np => !oldPlayers.some(op => op.id === np.id));
         if (newPlayer && newPlayer.user_id !== page.props.auth.user.id) {
+            playNotification();
             toast.add({ 
                 severity: 'info', 
                 summary: 'Nouveau joueur ! 👤', 
@@ -103,7 +129,7 @@ watch(() => props.session?.statut, (newStatus) => {
                                 .../game/lobby/{{ session.lien_token }}
                             </span>
                         </div>
-                        <button @click="copyLink" class="btn-3d btn-3d-green px-5 py-3 text-xs shadow-[0_4px_0_#1e7d4b] flex items-center justify-center gap-2 w-full sm:w-auto">
+                        <button @click="copyLinkWithSound" class="btn-3d btn-3d-green px-5 py-3 text-xs shadow-[0_4px_0_#1e7d4b] flex items-center justify-center gap-2 w-full sm:w-auto">
                             📋 <span>Copier</span>
                         </button>
                     </div>

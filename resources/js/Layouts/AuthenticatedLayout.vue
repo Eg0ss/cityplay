@@ -4,6 +4,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import { useConfirm } from 'primevue/useconfirm';
 import ConfirmDialog from 'primevue/confirmdialog';
 import { userStatsStore } from '../store.js';
+import AudioWidget from '@/Components/AudioWidget.vue';
 
 const isMobileMenuOpen = ref(false);
 const isDark = ref(true);
@@ -204,6 +205,9 @@ onMounted(() => {
                 <slot />
             </main>
         </div>
+
+        <!-- Widget Audio Global (toujours visible sur toutes les pages) -->
+        <AudioWidget />
 
         <!-- Floating Action Button (Mobile) -->
         <button class="fixed bottom-8 right-8 h-16 w-16 bg-[#2fc276] text-white rounded-2xl shadow-[0_0_20px_rgba(47,194,118,0.5)] flex items-center justify-center text-3xl sm:hidden z-40 animate-bounce btn-3d btn-3d-green">

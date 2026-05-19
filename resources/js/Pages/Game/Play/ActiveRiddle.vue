@@ -7,6 +7,15 @@ import { useConfirm } from 'primevue/useconfirm';
 import Toast from 'primevue/toast';
 import axios from 'axios';
 import { userStatsStore } from '@/store.js';
+import { useAudio } from '@/composables/useAudio.js';
+import AudioWidget from '@/Components/AudioWidget.vue';
+
+const {
+    playClick, playKey, playTick, playCountdown,
+    playWin, playLose, playAlreadySolved, playGameStart,
+    playBackgroundMusic, stopBackgroundMusic, pauseBackgroundMusic, resumeBackgroundMusic,
+    initAudioContext,
+} = useAudio();
 
 const props = defineProps({
     session: Object,
@@ -179,20 +188,27 @@ let watchId = null;
 let unsubscribeBefore = null;
 
 onMounted(() => {
-    // Écouter le canal du jeu via Laravel Echo pour synchroniser la partie en temps réel
-    window.Echo.channel(`game.${props.session.lien_token}`)
-        .listen('.App\\Events\\GameUpdated', (e) => {
-            // Recharger la session pour obtenir le classement et les tentatives les plus récentes
-            router.reload({ 
-                only: ['session'],
-                preserveState: true,
-                preserveScroll: true
+    // Démarrer la musique de fond dès le montage (sans interaction requise via autoplay)
+    playBackgroundMusic('game');
+
+    // Écouter le canal du jeu via Laravel Echo (seulement si disponible)
+    if (window.Echo) {
+        window.Echo.channel(`game.${props.session.lien_token}`)
+            .listen('.App\\Events\\GameUpdated', (e) => {
+                router.reload({ 
+                    only: ['session'],
+                    preserveState: true,
+                    preserveScroll: true
+                });
             });
-        });
+    }
 
     // Nettoyer tous les canaux, observateurs et timers dès qu'une navigation démarre
     unsubscribeBefore = router.on('before', () => {
-        window.Echo.leave(`game.${props.session.lien_token}`);
+        if (window.Echo) {
+            window.Echo.leave(`game.${props.session.lien_token}`);
+        }
+        stopBackgroundMusic();
         if (timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
@@ -230,7 +246,10 @@ onUnmounted(() => {
     if (unsubscribeBefore) {
         unsubscribeBefore();
     }
-    window.Echo.leave(`game.${props.session.lien_token}`);
+    if (window.Echo) {
+        window.Echo.leave(`game.${props.session.lien_token}`);
+    }
+    stopBackgroundMusic();
     if (watchId) navigator.geolocation.clearWatch(watchId);
     clearInterval(timerInterval);
 });
@@ -311,6 +330,10 @@ const calculateChronoTimeForDiscovery = () => {
 // Initialisation d'une énigme
 let timerInterval = null;
 const startRiddle = (mode) => {
+    // Initialiser l'AudioContext au premier geste utilisateur
+    initAudioContext();
+    playGameStart();
+
     modeChoisi.value = mode;
     isPlaying.value = true;
     decisionState.value = null;
@@ -331,6 +354,12 @@ const startChrono = () => {
     timerInterval = setInterval(() => {
         if (!isPaused.value && timeLeft.value > 0) {
             timeLeft.value--;
+            // Sons d'alerte chrono
+            if (timeLeft.value <= 5 && timeLeft.value > 0) {
+                playCountdown();
+            } else if (timeLeft.value <= 10 && timeLeft.value > 5) {
+                playTick();
+            }
         } else if (timeLeft.value <= 0) {
             clearInterval(timerInterval);
             handleLose();
@@ -339,10 +368,13 @@ const startChrono = () => {
 };
 
 const togglePause = () => {
+    playClick();
     isPaused.value = !isPaused.value;
     if (isPaused.value) {
+        pauseBackgroundMusic();
         toast.add({ severity: 'warn', summary: 'Chrono suspendu', detail: 'La pause est active.', life: 2500 });
     } else {
+        resumeBackgroundMusic();
         toast.add({ severity: 'info', summary: 'Reprise', detail: 'Le chrono a repris.', life: 2000 });
     }
 };
@@ -350,6 +382,7 @@ const togglePause = () => {
 const handleWin = async () => {
     clearInterval(timerInterval);
     decisionState.value = 'win';
+    playWin();
     toast.add({ severity: 'success', summary: 'Bonne réponse ! 🎯', detail: `La réponse était bien : ${currentRiddle.value.reponse}`, life: 4000 });
     userStatsStore.addPoints(riddlePoints.value);
     await recordAttemptOnBackend('gagne', riddlePoints.value);
@@ -358,6 +391,7 @@ const handleWin = async () => {
 const handleLose = async () => {
     clearInterval(timerInterval);
     decisionState.value = 'lose';
+    playLose();
     toast.add({ severity: 'error', summary: 'Échec sur cette énigme', detail: 'Votre choix ou le temps écoulé a mené à un échec.', life: 5000 });
     await recordAttemptOnBackend('perdu', 0);
 };
@@ -384,11 +418,13 @@ const submitDiscovery = async () => {
 };
 
 const submitQcm = (option) => {
+    playClick();
     userAnswer.value = option;
     submitGaming();
 };
 
 const submitGaming = async () => {
+    playClick();
     const answer = userAnswer.value.trim().toLowerCase();
     const correctAnswer = currentRiddle.value.reponse.trim().toLowerCase();
 
@@ -401,6 +437,7 @@ const submitGaming = async () => {
 
 // Choix : Passer au lieu suivant
 const goToNextPlace = () => {
+    playClick();
     if (props.session.type === 'participants') {
         selectFirstUnattemptedRiddle();
         decisionState.value = null;
@@ -708,6 +745,8 @@ const formatTime = (seconds) => {
                             <div v-if="session.level === 'difficile'" class="space-y-4">
                                 <label class="block text-xs font-black uppercase tracking-widest text-gray-500 text-center">Quel est le nom de ce lieu ?</label>
                                 <input v-model="userAnswer" type="text" placeholder="Entrez la réponse exacte..." 
+                                    @keydown="playKey"
+                                    @keydown.enter="submitGaming"
                                     class="w-full bg-[#0D0E12] border-2 border-[#26272F] focus:border-[#2fc276] focus:ring-0 rounded-2xl p-4.5 text-lg text-center text-white font-black uppercase tracking-widest transition-colors">
                                 <button @click="submitGaming" :disabled="!userAnswer" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
                                     SOUMETTRE LA RÉPONSE 🚀
