@@ -30,7 +30,21 @@ const form = useForm({
     reponse: '',              // Réponse attendue
     mcq_options: ['', '', '', ''], // Options pour les niveaux 1 & 2
     images: [],               // Fichiers images associés
+    hints: [],                // Liste des indices
 });
+
+// Fonctions pour gérer les indices
+const addHint = () => {
+    form.hints.push({
+        type: 'text',
+        content: '',
+        difficulty_level: 'easy'
+    });
+};
+
+const removeHint = (index) => {
+    form.hints.splice(index, 1);
+};
 
 // Gestion du changement de fichiers images
 const onFileChange = (e) => {
@@ -50,7 +64,7 @@ watch(() => form.niveau, (newVal) => {
  * Navigation entre les phases de forge
  */
 const nextStep = () => {
-    if (currentStep.value < 4) currentStep.value++;
+    if (currentStep.value < 5) currentStep.value++;
 };
 
 const prevStep = () => {
@@ -59,7 +73,7 @@ const prevStep = () => {
 
 // Calcul de la barre de progression (Gaming style)
 const progressWidth = computed(() => {
-    return ((currentStep.value - 1) / 3) * 100 + '%';
+    return ((currentStep.value - 1) / 4) * 100 + '%';
 });
 
 const isEditing = ref(false);
@@ -80,6 +94,7 @@ const openEditForm = (enigma) => {
     form.description = enigma.description;
     form.reponse = enigma.reponse;
     form.mcq_options = enigma.mcq_options || ['', '', '', ''];
+    form.hints = enigma.hints ? JSON.parse(JSON.stringify(enigma.hints)) : [];
     form.images = [];
     showForm.value = true;
     currentStep.value = 1;
@@ -279,6 +294,60 @@ const confirmDelete = (enigma) => {
                                         </div>
                                     </div>
                                 </div>
+                                <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
+                                    <button @click="prevStep" class="w-full sm:w-auto px-8 py-5 md:py-6 rounded-xl md:rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
+                                    <button @click="nextStep" class="w-full sm:flex-1 group flex items-center justify-center gap-4 bg-[#FF9F1C] text-black px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-sm shadow-xl hover:scale-105 transition-all">
+                                        VERROUILLER LES IMAGES
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 md:w-6 md:h-6 group-hover:translate-x-2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Phase 05 : Indices (Hints) -->
+                            <div v-else-if="currentStep === 5" key="step5" class="space-y-6 md:space-y-8 py-2 md:py-4">
+                                <div class="space-y-2">
+                                    <span class="text-[8px] md:text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 05</span>
+                                    <h3 class="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">PROTOCOLE D'<span class="text-[#FF9F1C]">ASSISTANCE</span></h3>
+                                </div>
+                                
+                                <div class="space-y-4">
+                                    <div v-for="(hint, index) in form.hints" :key="index" class="p-6 rounded-3xl dark:bg-black/40 bg-gray-50 border dark:border-white/5 border-gray-200 space-y-4 relative group/hint">
+                                        <button @click="removeHint(index)" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition-colors opacity-0 group-hover/hint:opacity-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                        </button>
+                                        
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div class="space-y-2">
+                                                <label class="text-[8px] font-black uppercase text-gray-500">Type d'indice</label>
+                                                <select v-model="hint.type" class="w-full bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-[#FF9F1C] focus:ring-0">
+                                                    <option value="text">Texte descriptif</option>
+                                                    <option value="keyword">Mot-clé</option>
+                                                    <option value="image">URL Image / Chemin</option>
+                                                    <option value="description">Description détaillée</option>
+                                                </select>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <label class="text-[8px] font-black uppercase text-gray-500">Difficulté d'accès</label>
+                                                <select v-model="hint.difficulty_level" class="w-full bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-gray-400 focus:ring-0">
+                                                    <option value="easy">Facile (Faible coût)</option>
+                                                    <option value="medium">Moyen (Coût modéré)</option>
+                                                    <option value="hard">Difficile (Coût élevé)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="space-y-2">
+                                            <label class="text-[8px] font-black uppercase text-gray-500">Contenu de l'indice</label>
+                                            <textarea v-model="hint.content" rows="2" class="w-full bg-transparent border-none p-0 text-xs font-bold italic text-white focus:ring-0 placeholder:opacity-20" placeholder="SAISISSEZ L'INDICE ICI..."></textarea>
+                                        </div>
+                                    </div>
+                                    
+                                    <button @click="addHint" type="button" class="w-full py-4 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-2xl text-[8px] font-black uppercase tracking-[0.3em] text-gray-500 hover:border-[#FF9F1C]/50 hover:text-[#FF9F1C] transition-all flex items-center justify-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                        AJOUTER UN INDICE AU PROTOCOLE
+                                    </button>
+                                </div>
+
                                 <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
                                     <button @click="prevStep" class="w-full sm:w-auto px-8 py-5 md:py-6 rounded-xl md:rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
                                     <button @click="submit" :disabled="form.processing" class="w-full sm:flex-1 group flex items-center justify-center gap-4 bg-white text-black px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-sm shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 transition-all disabled:opacity-30">

@@ -1,8 +1,22 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
+import { useConfirm } from 'primevue/useconfirm';
+import { 
+    LogOut, 
+    AlertTriangle, 
+    Moon, 
+    Sun, 
+    X, 
+    Menu, 
+    LayoutDashboard, 
+    Building2, 
+    MapPin, 
+    ShieldCheck, 
+    Globe 
+} from 'lucide-vue-next';
 
 const isMobileMenuOpen = ref(false);
 const isDark = ref(true);
@@ -21,6 +35,28 @@ const updateTheme = () => {
     }
 };
 
+const confirm = useConfirm();
+
+const confirmLogout = () => {
+    confirm.require({
+        message: 'Êtes-vous sûr de vouloir vous déconnecter du terminal d\'administration ?',
+        header: 'Se déconnecter',
+        icon: 'pi pi-exclamation-triangle',
+        rejectLabel: 'Rester',
+        acceptLabel: 'Quitter',
+        rejectClass: 'p-button-secondary p-button-outlined text-gray-300 border-gray-600 hover:bg-gray-800 px-4 py-2 rounded-lg mr-2',
+        acceptClass: 'p-button-danger bg-red-600 border-red-600 text-white hover:bg-red-500 px-4 py-2 rounded-lg',
+        accept: () => {
+            if (document.activeElement) {
+                document.activeElement.blur();
+            }
+            document.body.focus();
+            
+            router.post(route('logout'));
+        }
+    });
+};
+
 onMounted(() => {
     const savedTheme = localStorage.getItem('cityplay-theme');
     if (savedTheme) {
@@ -32,7 +68,33 @@ onMounted(() => {
 
 <template>
     <Toast />
-    <ConfirmDialog />
+    <ConfirmDialog :autoFocus="false">
+        <template #container="{ message, acceptCallback, rejectCallback }">
+            <div class="bg-[#10101c] border-2 border-[#7751de] p-8 rounded-[2rem] shadow-[0_0_45px_rgba(119,81,222,0.45)] max-w-sm w-full mx-auto relative overflow-hidden animate-slide-up text-center">
+                <div class="absolute -top-10 -left-10 w-24 h-24 bg-[#7751de]/10 rounded-full blur-2xl pointer-events-none"></div>
+                
+                <div class="mb-5 space-y-2">
+                    <AlertTriangle :size="48" class="text-[#ffc628] mx-auto text-glow-yellow" />
+                    <h3 class="text-lg font-black uppercase italic tracking-tighter text-[#ffc628] text-glow-yellow">
+                        {{ message.header }}
+                    </h3>
+                </div>
+                
+                <p class="text-gray-400 text-sm font-medium leading-relaxed mb-8">
+                    {{ message.message }}
+                </p>
+                
+                <div class="flex gap-4 justify-center">
+                    <button @click="rejectCallback" class="px-6 py-3.5 rounded-xl font-black uppercase text-[9px] tracking-widest bg-[#1c183a] border border-[#2a245c] text-white hover:text-[#87d74e] transition-colors">
+                        {{ message.rejectLabel || 'Annuler' }}
+                    </button>
+                    <button @click="acceptCallback" class="btn-3d btn-3d-red px-6 py-3.5 rounded-xl font-black uppercase text-[9px] tracking-widest text-white shadow-[0_4px_0_#9e2318]">
+                        {{ message.acceptLabel || 'Confirmer' }}
+                    </button>
+                </div>
+            </div>
+        </template>
+    </ConfirmDialog>
     <div class="min-h-screen font-sans flex overflow-hidden transition-colors duration-300" 
          :class="isDark ? 'bg-[#0A0A0B] text-white' : 'bg-gray-50 text-gray-900'">
         
@@ -50,11 +112,13 @@ onMounted(() => {
             </div>
             <div class="flex items-center gap-3">
                 <button @click="toggleTheme" class="h-10 w-10 flex items-center justify-center rounded-xl dark:bg-white/5 bg-gray-100">
-                    {{ isDark ? '🌙' : '☀️' }}
+                    <Moon v-if="isDark" :size="20" />
+                    <Sun v-else :size="20" />
                 </button>
                 <button @click="isMobileMenuOpen = !isMobileMenuOpen" 
-                    class="h-10 w-10 flex items-center justify-center rounded-xl dark:bg-white/5 bg-gray-100 text-2xl">
-                    {{ isMobileMenuOpen ? '✕' : '☰' }}
+                    class="h-10 w-10 flex items-center justify-center rounded-xl dark:bg-white/5 bg-gray-100 text-white">
+                    <X v-if="isMobileMenuOpen" :size="24" />
+                    <Menu v-else :size="24" />
                 </button>
             </div>
         </header>
@@ -125,15 +189,15 @@ onMounted(() => {
                         :class="isDark ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100'"
                         class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group mb-2">
                         <span class="text-xl">
-                            <svg v-if="isDark" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                            <Moon v-if="isDark" :size="20" />
+                            <Sun v-else :size="20" />
                         </span>
                         <span class="font-bold uppercase text-xs tracking-wider">{{ isDark ? 'Mode Sombre' : 'Mode Clair' }}</span>
                     </button>
                     <Link href="/" class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group"
                         :class="isDark ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100'">
                         <span class="text-xl">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                            <Globe :size="20" />
                         </span>
                         <span class="font-bold uppercase text-xs tracking-wider">Page accueil</span>
                     </Link>
@@ -150,10 +214,10 @@ onMounted(() => {
                         <p class="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Administrateur</p>
                     </div>
                 </div>
-                <Link :href="route('logout')" method="post" as="button" class="w-full py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all"
+                <button @click="confirmLogout" class="w-full py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all"
                     :class="isDark ? 'border-white/5 text-gray-500 hover:text-red-500' : 'border-gray-200 text-gray-400 hover:text-red-600'">
                     Quitter
-                </Link>
+                </button>
             </div>
         </aside>
 

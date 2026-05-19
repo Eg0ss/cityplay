@@ -4,6 +4,14 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
+import { useAudio } from '@/composables/useAudio.js';
+import AudioWidget from '@/Components/AudioWidget.vue';
+
+const {
+    playClick, playNotification,
+    playBackgroundMusic, stopBackgroundMusic,
+    initAudioContext,
+} = useAudio();
 
 const props = defineProps({
     session: Object
@@ -19,19 +27,48 @@ const copyLink = () => {
 };
 
 const startGame = () => {
-    router.post(`/game/lobby/${props.session.lien_token}/start`);
+    playClick();
+    router.post(`/game/lobby/${props.session.lien_token}/start`, {}, {
+        onSuccess: () => {
+            stopBackgroundMusic();
+            router.get(`/game/play/${props.session.lien_token}`);
+        }
+    });
 };
 
-// Polling simulation for new players (Normally done via Echo/Pusher)
-let pollInterval;
+const copyLinkWithSound = () => {
+    playClick();
+    copyLink();
+};
+
+let unsubscribeBefore = null;
 onMounted(() => {
-    pollInterval = setInterval(() => {
-        router.reload({ only: ['session'] });
-    }, 4000); // Polling un peu plus rapide (4s) pour plus de dynamisme
+    // Démarrer la musique d'ambiance du lobby
+    playBackgroundMusic('lobby');
+
+    // Écouter le canal du lobby via Laravel Echo (seulement si disponible)
+    if (window.Echo) {
+        window.Echo.channel(`lobby.${props.session.lien_token}`)
+            .listen('.App\\Events\\LobbyUpdated', (e) => {
+                router.reload({ only: ['session'] });
+            });
+    }
+
+    // Nettoyer le canal dès qu'une navigation commence
+    unsubscribeBefore = router.on('before', () => {
+        if (window.Echo) {
+            window.Echo.leave(`lobby.${props.session.lien_token}`);
+        }
+        stopBackgroundMusic();
+    });
 });
 
 onUnmounted(() => {
-    clearInterval(pollInterval);
+    if (unsubscribeBefore) unsubscribeBefore();
+    if (window.Echo) {
+        window.Echo.leave(`lobby.${props.session.lien_token}`);
+    }
+    stopBackgroundMusic();
 });
 
 // Le créateur est le premier joueur enregistré de la session (l'hôte)
@@ -39,11 +76,12 @@ const isCreator = computed(() => {
     return props.session.players?.[0]?.user_id === page.props.auth.user.id;
 });
 
-// Alerte/Toast quand un nouveau joueur rejoint la salle d'attente
+// Alerte/Toast + son quand un nouveau joueur rejoint la salle d'attente
 watch(() => props.session.players, (newPlayers, oldPlayers) => {
     if (oldPlayers && newPlayers && newPlayers.length > oldPlayers.length) {
         const newPlayer = newPlayers.find(np => !oldPlayers.some(op => op.id === np.id));
         if (newPlayer && newPlayer.user_id !== page.props.auth.user.id) {
+            playNotification();
             toast.add({ 
                 severity: 'info', 
                 summary: 'Nouveau joueur ! 👤', 
@@ -55,81 +93,94 @@ watch(() => props.session.players, (newPlayers, oldPlayers) => {
 }, { deep: true });
 
 // Rediriger automatiquement le participant si la partie est lancée
-watch(() => props.session, (newSession) => {
-    if (newSession?.statut === 'en_cours') {
-        clearInterval(pollInterval);
-        router.get(`/game/play/${newSession.lien_token}`);
+watch(() => props.session?.statut, (newStatus) => {
+    if (newStatus === 'en_cours' && !isCreator.value) {
+        router.get(`/game/play/${props.session.lien_token}`);
     }
-}, { deep: true, immediate: true });
+}, { immediate: true });
 </script>
 
 <template>
     <AuthenticatedLayout title="Salle d'attente">
         <Toast position="top-right" />
-        <div class="min-h-screen bg-gray-900 text-white font-sans py-12 px-4 flex items-center justify-center">
-            <div class="max-w-2xl w-full bg-gray-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.6)] border border-gray-700 p-8 relative overflow-hidden">
-                <!-- Background animations -->
-                <div class="absolute -top-20 -right-20 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl animate-pulse"></div>
-                <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s"></div>
+        <div class="min-h-screen text-white font-sans py-8 px-4 flex items-center justify-center relative">
+            
+            <div class="max-w-2xl w-full panel-glass p-5 sm:p-8 border border-[#26272F] relative overflow-hidden">
+                <!-- Background ambient lights -->
+                <div class="absolute -top-20 -right-20 w-64 h-64 bg-[#2fc276]/10 rounded-full blur-[80px] pointer-events-none -z-10"></div>
+                <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] pointer-events-none -z-10"></div>
 
                 <div class="relative z-10 text-center">
-                    <h1 class="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-                        Salle d'attente
+                    <!-- Title block -->
+                    <h1 class="text-4xl sm:text-5xl font-black uppercase italic tracking-tighter text-[#2fc276] text-glow-green mb-3">
+                        LOBBY DE JEU 🎮
                     </h1>
-                    <p class="text-gray-400 mb-8">
-                        Mode : <strong class="uppercase text-white">{{ session.type }}</strong>
-                        <span v-if="session.type === 'challengers'">({{ session.challenger_mode === 'reponse_par_membre' ? 'Rapide' : 'Complet' }})</span>
-                    </p>
+                    
+                    <div class="inline-block bg-[#1C1D24] border border-[#26272F] rounded-full px-5 py-1.5 text-[10px] font-black tracking-widest text-gray-400 mb-8 uppercase">
+                        Mode : <span class="text-white">{{ session.type }}</span>
+                        <span v-if="session.type === 'challengers'"> ({{ session.challenger_mode === 'reponse_par_membre' ? 'Rapide' : 'Complet' }})</span>
+                    </div>
 
-                    <!-- Link Sharing -->
-                    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-8 flex items-center justify-between">
+                    <!-- Link Sharing Console -->
+                    <div class="bg-[#0D0E12] border border-[#26272F] rounded-2xl p-4 mb-8 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
                         <div class="text-left overflow-hidden">
-                            <span class="block text-xs text-gray-500 font-bold mb-1 uppercase">Lien d'invitation</span>
-                            <span class="text-sm text-blue-400 truncate w-full block">.../game/lobby/{{ session.lien_token }}</span>
+                            <span class="block text-[8px] text-gray-500 font-black mb-1 uppercase tracking-widest">Lien d'invitation</span>
+                            <span class="text-sm font-black text-[#2fc276] truncate w-full block">
+                                .../game/lobby/{{ session.lien_token }}
+                            </span>
                         </div>
-                        <button @click="copyLink" class="ml-4 p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            📋 Copier
+                        <button @click="copyLinkWithSound" class="btn-3d btn-3d-green px-5 py-3 text-xs shadow-[0_4px_0_#1e7d4b] flex items-center justify-center gap-2 w-full sm:w-auto">
+                            📋 <span>Copier</span>
                         </button>
                     </div>
 
-                    <!-- Players List -->
+                    <!-- Players Connection Table -->
                     <div class="mb-10 text-left">
-                        <div class="flex justify-between items-end mb-4 border-b border-gray-700 pb-2">
-                            <h2 class="text-xl font-bold">Joueurs Connectés</h2>
-                            <span class="text-sm text-gray-400">{{ session.players.length }} / {{ session.max_joueurs }}</span>
+                        <div class="flex justify-between items-end mb-4 border-b border-[#26272F] pb-2">
+                            <h2 class="text-lg font-black uppercase italic tracking-tighter text-white">Joueurs Connectés</h2>
+                            <span class="text-xs font-black text-gray-400 tabular-nums">
+                                {{ session.players.length }} / {{ session.max_joueurs }}
+                            </span>
                         </div>
                         
                         <ul class="space-y-3">
+                            <!-- Joined active players -->
                             <li v-for="player in session.players" :key="player.id" 
-                                class="flex items-center gap-4 bg-gray-900/50 p-3 rounded-lg border border-gray-800 animate-fade-in-up">
-                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold shadow-inner">
-                                    {{ player.user.name.charAt(0).toUpperCase() }}
+                                class="flex items-center gap-4 bg-[#1C1D24] p-4 rounded-xl border border-[#26272F] animate-fade-in-up">
+                                <div class="w-12 h-12 rounded-full border-2 border-[#2fc276] bg-[#0D0E12] text-[#2fc276] shadow-[0_0_10px_rgba(47,194,118,0.2)] flex items-center justify-center font-black text-sm">
+                                    {{ player.user.name.substring(0, 2).toUpperCase() }}
                                 </div>
-                                <span class="font-semibold">{{ player.user.name }}</span>
-                                <span v-if="player.user_id === $page.props.auth.user.id" class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded border border-blue-500/30">Vous</span>
-                                <span class="ml-auto text-xs text-green-400 font-bold tracking-wider">PRÊT</span>
+                                <div class="flex flex-col">
+                                    <span class="font-black text-white text-base">{{ player.user.name }}</span>
+                                    <span class="text-[8px] font-black uppercase text-[#2fc276] text-glow-green" v-if="player.user_id === $page.props.auth.user.id">Vous</span>
+                                </div>
+                                <span class="ml-auto text-[9px] font-black bg-[#2fc276]/10 border border-[#2fc276]/20 text-[#2fc276] px-3 py-1 rounded-lg tracking-widest text-glow-green uppercase">PRÊT</span>
                             </li>
                             
-                            <!-- Placeholder pour les joueurs manquants -->
+                            <!-- Placeholder waiting slots -->
                             <li v-for="i in (session.max_joueurs - session.players.length)" :key="'empty'+i" 
-                                class="flex items-center gap-4 bg-gray-900/20 p-3 rounded-lg border border-gray-800/50 border-dashed opacity-50">
-                                <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center">?</div>
-                                <span class="text-gray-500 italic">En attente d'un joueur...</span>
+                                class="flex items-center gap-4 bg-transparent p-4 rounded-xl border-2 border-dashed border-[#26272F] opacity-40">
+                                <div class="w-12 h-12 rounded-full border-2 border-dashed border-[#26272F] flex items-center justify-center font-black text-sm text-gray-600">?</div>
+                                <span class="text-gray-500 font-bold italic text-sm">En attente d'un joueur...</span>
                             </li>
                         </ul>
                     </div>
 
-                    <!-- Action Button -->
-                    <button v-if="isCreator" @click="startGame" 
-                        :disabled="session.players.length < session.max_joueurs && session.type !== 'solo'"
-                        class="w-full py-4 rounded-xl font-black text-lg transition-all duration-300 transform shadow-lg relative overflow-hidden group"
-                        :class="session.players.length >= session.max_joueurs || session.type === 'solo' 
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:scale-105 hover:shadow-[0_0_20px_rgba(16,185,129,0.5)]' 
-                            : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'">
-                        <span class="relative z-10">{{ session.players.length >= session.max_joueurs || session.type === 'solo' ? 'LANCER LA PARTIE !' : 'ATTENDRE D\'AUTRES JOUEURS...' }}</span>
-                        <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
-                    </button>
-                    <p v-else class="text-gray-400 italic">En attente de l'hôte pour démarrer la partie...</p>
+                    <!-- Creator / Host Launch Controls -->
+                    <div v-if="isCreator">
+                        <button @click="startGame" 
+                            :disabled="session.players.length < session.max_joueurs && session.type !== 'solo'"
+                            class="w-full py-4 text-base"
+                            :class="session.players.length >= session.max_joueurs || session.type === 'solo' 
+                                ? 'btn-3d btn-3d-green shadow-[0_5px_0_#1e7d4b]' 
+                                : 'py-4 rounded-xl bg-[#1C1D24] border border-[#26272F] text-gray-500 cursor-not-allowed font-black text-lg text-center'">
+                            {{ session.players.length >= session.max_joueurs || session.type === 'solo' ? 'LANCER LA PARTIE ! 🚀' : 'ATTENDRE LES JOUEURS...' }}
+                        </button>
+                    </div>
+                    <!-- Participant Waiting Notice -->
+                    <p v-else class="text-gray-400 font-semibold italic text-center text-sm py-4 animate-pulse">
+                        ⌛ En attente de l'hôte pour démarrer la partie...
+                    </p>
                 </div>
             </div>
         </div>

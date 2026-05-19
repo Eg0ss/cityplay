@@ -5,40 +5,271 @@
 
 @layer base {
     :root {
-        --primary-orange: #FF9F1C;
-        --primary-dark: #1A1A1A;
-        --bg-light: #FDFCFB;
-        --accent-yellow: #FFBF00;
+        /* GeoGuessr Official Hex Codes */
+        --geoguessr-green: #87d74e;
+        --geoguessr-green-hover: #77be43;
+        --geoguessr-green-shadow: #5d9933;
+        
+        --geoguessr-yellow: #ffc628;
+        --geoguessr-yellow-hover: #e5b220;
+        --geoguessr-yellow-shadow: #b78e19;
+
+        --geoguessr-blue: #4769b0;
+        --geoguessr-blue-hover: #3a5692;
+        --geoguessr-blue-shadow: #2b3f6b;
+        
+        --geoguessr-purple: #7751de;
+        --geoguessr-purple-hover: #623eb8;
+        --geoguessr-purple-shadow: #4d2f94;
+
+        --geoguessr-red: #ea4335;
+        --geoguessr-red-hover: #d33426;
+        --geoguessr-red-shadow: #9e2318;
+        
+        --geoguessr-bg-dark: #171235;      /* Base lower page color */
+        --geoguessr-nav-dark: #10101c;     /* Navbar background */
+        --geoguessr-card-dark: #1c183a;    /* Card panel background */
+        --geoguessr-border-dark: #2a245c;  /* Technical tech-lines border */
+    }
+    
+    body {
+        font-family: 'Outfit', 'Inter', sans-serif !important;
+        background-color: var(--geoguessr-bg-dark);
+        color: #FFFFFF;
+        overflow-x: hidden;
     }
 }
 
-/* Style de la barre de progression Inertia (NProgress) */
+/* --- BOUNCY 3D GEOGUESSR BUTTONS --- */
+.btn-3d {
+    position: relative;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+/* Green 3D Button (#87d74e) */
+.btn-3d-green {
+    background-color: var(--geoguessr-green);
+    color: #0d0e15;
+    box-shadow: 0 5px 0 var(--geoguessr-green-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+.btn-3d-green:hover:not(:disabled) {
+    background-color: var(--geoguessr-green-hover);
+}
+.btn-3d-green:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 0px 0 var(--geoguessr-green-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Yellow 3D Button (#ffc628) */
+.btn-3d-yellow {
+    background-color: var(--geoguessr-yellow);
+    color: #0d0e15;
+    box-shadow: 0 5px 0 var(--geoguessr-yellow-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+.btn-3d-yellow:hover:not(:disabled) {
+    background-color: var(--geoguessr-yellow-hover);
+}
+.btn-3d-yellow:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 0px 0 var(--geoguessr-yellow-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Blue 3D Button (#4769b0) */
+.btn-3d-blue {
+    background-color: var(--geoguessr-blue);
+    color: #FFFFFF;
+    box-shadow: 0 5px 0 var(--geoguessr-blue-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+.btn-3d-blue:hover:not(:disabled) {
+    background-color: var(--geoguessr-blue-hover);
+}
+.btn-3d-blue:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 0px 0 var(--geoguessr-blue-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Purple 3D Button (#7751de) */
+.btn-3d-purple {
+    background-color: var(--geoguessr-purple);
+    color: #FFFFFF;
+    box-shadow: 0 5px 0 var(--geoguessr-purple-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+.btn-3d-purple:hover:not(:disabled) {
+    background-color: var(--geoguessr-purple-hover);
+}
+.btn-3d-purple:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 0px 0 var(--geoguessr-purple-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Red 3D Button */
+.btn-3d-red {
+    background-color: var(--geoguessr-red);
+    color: #FFFFFF;
+    box-shadow: 0 5px 0 var(--geoguessr-red-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+.btn-3d-red:hover:not(:disabled) {
+    background-color: var(--geoguessr-red-hover);
+}
+.btn-3d-red:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 0px 0 var(--geoguessr-red-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Disabled State for all 3D buttons */
+.btn-3d:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: translateY(0);
+    box-shadow: none !important;
+}
+
+/* --- GLASSMORPHIC PREMIUM PANELS --- */
+.panel-glass {
+    background: rgba(28, 24, 58, 0.85); /* Deep rich purple backdrop */
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.panel-glass-light {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+}
+
+/* --- NEON GLOW EFFECTS --- */
+.glow-green {
+    box-shadow: 0 0 25px rgba(135, 215, 78, 0.3);
+    border-color: rgba(135, 215, 78, 0.4) !important;
+}
+.glow-yellow {
+    box-shadow: 0 0 25px rgba(255, 198, 40, 0.3);
+    border-color: rgba(255, 198, 40, 0.4) !important;
+}
+.glow-blue {
+    box-shadow: 0 0 25px rgba(71, 105, 176, 0.3);
+    border-color: rgba(71, 105, 176, 0.4) !important;
+}
+.glow-purple {
+    box-shadow: 0 0 25px rgba(119, 81, 222, 0.3);
+    border-color: rgba(119, 81, 222, 0.4) !important;
+}
+
+.text-glow-green {
+    text-shadow: 0 0 10px rgba(135, 215, 78, 0.6);
+}
+.text-glow-yellow {
+    text-shadow: 0 0 10px rgba(255, 198, 40, 0.6);
+}
+
+/* --- KEYFRAME ANIMATIONS --- */
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes glowPulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(135, 215, 78, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(135, 215, 78, 0.4);
+    }
+}
+
+.animate-slide-up {
+    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+    animation: float 4s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+    animation: glowPulse 3s infinite;
+}
+
+/* Card hover animation */
+.hover-lift {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+.hover-lift:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+}
+
+/* --- PROGRESS BAR CUSTOMIZATION --- */
 #nprogress .bar {
     height: 4px !important;
-    background-color: #1A1A1A !important; /* Noir/sombre en mode clair */
+    background-color: var(--geoguessr-green) !important;
     transition: background-color 0.3s ease !important;
 }
 
 #nprogress .peg {
-    box-shadow: 0 0 10px #1A1A1A, 0 0 5px #1A1A1A !important;
+    box-shadow: 0 0 10px var(--geoguessr-green), 0 0 5px var(--geoguessr-green) !important;
 }
 
-/* En mode sombre, la barre devient blanche */
 html.dark #nprogress .bar {
-    background-color: #FFFFFF !important; /* Blanc en mode sombre */
+    background-color: var(--geoguessr-green) !important;
 }
 
 html.dark #nprogress .peg {
-    box-shadow: 0 0 10px #FFFFFF, 0 0 5px #FFFFFF !important;
+    box-shadow: 0 0 10px var(--geoguessr-green), 0 0 5px var(--geoguessr-green) !important;
 }
 
-/* Règle de fallback pour Inertia Progress classique */
 .inertia-progress-bar {
     height: 4px !important;
-    background-color: #1A1A1A !important;
+    background-color: var(--geoguessr-green) !important;
 }
 
 html.dark .inertia-progress-bar {
-    background-color: #FFFFFF !important;
+    background-color: var(--geoguessr-green) !important;
 }
 
+/* --- PREMIUM SCROLLBARS --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--geoguessr-bg-dark);
+}
+::-webkit-scrollbar-thumb {
+    background: #2a245c;
+    border-radius: 10px;
+    border: 2px solid var(--geoguessr-bg-dark);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #3c3482;
+}

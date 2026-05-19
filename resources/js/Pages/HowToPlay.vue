@@ -1,6 +1,15 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, markRaw } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { 
+    MapPin, 
+    Puzzle, 
+    Trophy, 
+    Moon, 
+    Sun,
+    ChevronLeft,
+    Rocket
+} from 'lucide-vue-next';
 
 const isDark = ref(true);
 
@@ -27,9 +36,9 @@ onMounted(() => {
 });
 
 const steps = [
-    { title: "Choisissez un lieu", desc: "Explorez la carte et sélectionnez un monument ou un endroit emblématique du Bénin.", icon: "📍" },
-    { title: "Résolvez l'énigme", desc: "Utilisez les indices textuels et visuels pour deviner l'histoire ou le nom caché.", icon: "🧩" },
-    { title: "Gagnez des points", desc: "Accumulez des points pour chaque bonne réponse et grimpez dans le classement mondial.", icon: "🏆" },
+    { title: "Choisissez un lieu", desc: "Explorez la carte et sélectionnez un monument ou un endroit emblématique du Bénin.", icon: markRaw(MapPin) },
+    { title: "Résolvez l'énigme", desc: "Utilisez les indices textuels et visuels pour deviner l'histoire ou le nom caché.", icon: markRaw(Puzzle) },
+    { title: "Gagnez des points", desc: "Accumulez des points pour chaque bonne réponse et grimpez dans le classement mondial.", icon: markRaw(Trophy) },
 ];
 </script>
 
@@ -46,8 +55,9 @@ const steps = [
                 </div>
                 <span class="text-2xl font-black tracking-tighter uppercase italic">Cityplay</span>
             </Link>
-            <button @click="toggleTheme" class="h-12 w-12 rounded-2xl dark:bg-white/5 bg-white shadow-xl flex items-center justify-center text-xl hover:scale-110 transition-all border dark:border-white/5 border-gray-100">
-                {{ isDark ? '🌙' : '☀️' }}
+            <button @click="toggleTheme" class="h-12 w-12 rounded-2xl dark:bg-white/5 bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border dark:border-white/5 border-gray-100">
+                <Moon v-if="isDark" :size="20" />
+                <Sun v-else :size="20" />
             </button>
         </nav>
 
@@ -68,8 +78,8 @@ const steps = [
                     class="dark:bg-[#111113] bg-white p-12 rounded-[3rem] border dark:border-white/5 border-gray-100 shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden">
                     <div class="absolute -top-4 -right-4 text-8xl opacity-5 font-black italic">0{{ i + 1 }}</div>
                     
-                    <div class="h-20 w-20 dark:bg-white/5 bg-gray-50 rounded-[2rem] flex items-center justify-center text-4xl mb-8 group-hover:scale-110 transition-transform duration-500 border dark:border-white/10 border-gray-200">
-                        {{ step.icon }}
+                    <div class="h-20 w-20 dark:bg-white/5 bg-gray-50 rounded-[2rem] flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 border dark:border-white/10 border-gray-200">
+                        <component :is="step.icon" :size="40" class="text-[#FF9F1C]" />
                     </div>
                     <h3 class="text-3xl font-black uppercase italic tracking-tighter mb-4 dark:text-white text-gray-900">{{ step.title }}</h3>
                     <p class="text-lg dark:text-gray-500 text-gray-500 font-medium leading-relaxed">{{ step.desc }}</p>
@@ -85,10 +95,12 @@ const steps = [
                 <h2 class="relative z-10 text-4xl lg:text-7xl font-black text-white uppercase italic tracking-tighter leading-none">VOTRE AVENTURE <br />COMMENCE ICI.</h2>
                 <p class="relative z-10 text-xl text-gray-400 max-w-2xl mx-auto font-medium">Rejoignez la matrice et commencez à décoder l'histoire du Bénin dès aujourd'hui.</p>
                 <div class="relative z-10 pt-4 flex flex-col sm:flex-row items-center justify-center gap-6">
-                    <Link :href="route('register')" class="w-full sm:w-auto bg-[#FF9F1C] text-black px-16 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl hover:scale-105 transition-all">
+                    <Link :href="route('register')" class="w-full sm:w-auto bg-[#FF9F1C] text-black px-16 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-3">
+                        <Rocket :size="18" />
                         Créer un Profil
                     </Link>
-                    <Link href="/" class="text-white font-black uppercase tracking-widest text-xs hover:text-[#FF9F1C] transition-colors">
+                    <Link href="/" class="text-white font-black uppercase tracking-widest text-xs hover:text-[#FF9F1C] transition-colors flex items-center gap-2">
+                        <ChevronLeft :size="14" />
                         Retour au Hub
                     </Link>
                 </div>

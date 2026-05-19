@@ -188,7 +188,7 @@ class AdminController extends Controller
     {
         return Inertia::render('Admin/Enigmas', [
             'place' => $place->load('city'),
-            'enigmas' => $place->riddles()->with('images')->orderBy('niveau')->get(),
+            'enigmas' => $place->riddles()->with('images', 'hints')->orderBy('niveau')->get(),
         ]);
     }
 
@@ -201,6 +201,10 @@ class AdminController extends Controller
             'reponse' => 'required|string|max:255',
             'mcq_options' => 'nullable|array',
             'images.*' => 'nullable|image|max:2048',
+            'hints' => 'nullable|array',
+            'hints.*.type' => 'required|string|in:text,image,keyword,description',
+            'hints.*.content' => 'required|string',
+            'hints.*.difficulty_level' => 'nullable|string|in:easy,medium,hard',
         ]);
 
         // Filtrer les options vides pour ne pas stocker de tableau de chaînes vides
@@ -230,6 +234,17 @@ class AdminController extends Controller
             }
         }
 
+        if (isset($validated['hints'])) {
+            foreach ($validated['hints'] as $index => $hintData) {
+                $riddle->hints()->create([
+                    'type' => $hintData['type'],
+                    'content' => $hintData['content'],
+                    'difficulty_level' => $hintData['difficulty_level'] ?? 'easy',
+                    'order' => $index + 1,
+                ]);
+            }
+        }
+
         return back()->with('success', 'Énigme ajoutée à la matrice.');
     }
 
@@ -242,6 +257,10 @@ class AdminController extends Controller
             'reponse' => 'required|string|max:255',
             'mcq_options' => 'nullable|array',
             'images.*' => 'nullable|image|max:2048',
+            'hints' => 'nullable|array',
+            'hints.*.type' => 'required|string|in:text,image,keyword,description',
+            'hints.*.content' => 'required|string',
+            'hints.*.difficulty_level' => 'nullable|string|in:easy,medium,hard',
         ]);
 
         if (isset($validated['mcq_options'])) {
@@ -265,6 +284,19 @@ class AdminController extends Controller
             foreach ($request->file('images') as $image) {
                 $path = $image->store('riddles', 'public');
                 $enigma->images()->create(['image_path' => $path]);
+            }
+        }
+
+        // Mettre à jour les indices
+        if (isset($validated['hints'])) {
+            $enigma->hints()->delete(); // On simplifie en supprimant/recréant
+            foreach ($validated['hints'] as $index => $hintData) {
+                $enigma->hints()->create([
+                    'type' => $hintData['type'],
+                    'content' => $hintData['content'],
+                    'difficulty_level' => $hintData['difficulty_level'] ?? 'easy',
+                    'order' => $index + 1,
+                ]);
             }
         }
 
