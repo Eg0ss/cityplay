@@ -1,6 +1,14 @@
 <script setup>
 import AdminLayout from './AdminLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { 
+    Users, 
+    MapPin, 
+    Puzzle, 
+    Trophy, 
+    Rocket,
+    Clock
+} from 'lucide-vue-next';
 
 defineProps({
     stats: Object,
@@ -24,7 +32,10 @@ defineProps({
                     </p>
                 </div>
                 <div class="text-left lg:text-right">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Temps Réel</p>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center lg:justify-end gap-2">
+                        <Clock :size="10" />
+                        Temps Réel
+                    </p>
                     <p class="text-xl lg:text-2xl font-black font-mono tracking-tighter dark:text-white text-gray-900">{{ new Date().toLocaleDateString() }}</p>
                 </div>
             </div>
@@ -89,7 +100,7 @@ defineProps({
                         <div v-for="place in recent_places" :key="place.id" class="flex items-center justify-between p-4 dark:bg-white/5 bg-gray-50 rounded-2xl border dark:border-white/5 border-gray-100 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors group cursor-pointer">
                             <div class="flex items-center gap-4">
                                 <div class="h-10 w-10 lg:h-12 lg:w-12 dark:bg-black/60 bg-white border border-gray-200 dark:border-none rounded-xl flex items-center justify-center text-lg lg:text-xl group-hover:scale-110 transition-transform shadow-sm">
-                                    📍
+                                    <MapPin :size="20" class="text-[#FF9F1C]" />
                                 </div>
                                 <div>
                                     <p class="font-black text-xs lg:text-sm uppercase dark:text-white text-gray-900">{{ place.nom }}</p>
@@ -108,7 +119,8 @@ defineProps({
                         </div> -->
                         <h3 class="text-2xl lg:text-3xl font-black uppercase italic tracking-tighter mb-4 dark:text-white text-gray-900">Nouveau Secteur</h3>
                         <p class="text-gray-500 dark:text-gray-400 font-medium text-sm max-w-xs mb-8 lg:mb-10">Étendez la matrice en ajoutant une nouvelle destination stratégique.</p>
-                        <Link :href="route('admin.cities')" class="bg-gray-900 dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs lg:text-sm hover:scale-105 transition-all shadow-lg">
+                        <Link :href="route('admin.cities')" class="bg-gray-900 dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs lg:text-sm hover:scale-105 transition-all shadow-lg flex items-center gap-3">
+                            <MapPin :size="16" />
                             Déployer Maintenant
                         </Link>
                     </div>

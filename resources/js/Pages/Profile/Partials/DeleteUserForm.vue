@@ -1,23 +1,15 @@
 <script setup>
-import DangerButton from '@/Components/DangerButton.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
 import Modal from '@/Components/Modal.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
 import { nextTick, ref } from 'vue';
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
 
-const form = useForm({
-    password: '',
-});
+const form = useForm({ password: '' });
 
 const confirmUserDeletion = () => {
     confirmingUserDeletion.value = true;
-
     nextTick(() => passwordInput.value.focus());
 };
 
@@ -32,7 +24,6 @@ const deleteUser = () => {
 
 const closeModal = () => {
     confirmingUserDeletion.value = false;
-
     form.clearErrors();
     form.reset();
 };
@@ -40,67 +31,68 @@ const closeModal = () => {
 
 <template>
     <section class="space-y-6">
-        <header>
-            <h2 class="text-lg font-medium text-gray-900">
-                Delete Account
+        <header class="mb-8">
+            <h2 class="text-xl font-black uppercase italic tracking-tighter text-red-400">
+                ⚠️ Zone <span class="text-red-500">Dangereuse</span>
             </h2>
-
-            <p class="mt-1 text-sm text-gray-600">
-                Once your account is deleted, all of its resources and data will
-                be permanently deleted. Before deleting your account, please
-                download any data or information that you wish to retain.
+            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-2">
+                La suppression de votre compte est irréversible — toutes vos données seront perdues
             </p>
         </header>
 
-        <DangerButton @click="confirmUserDeletion">Delete Account</DangerButton>
+        <button
+            @click="confirmUserDeletion"
+            class="btn-3d btn-3d-red px-8 py-3 text-xs font-black uppercase tracking-widest shadow-[0_4px_0_#9e2318]"
+        >
+            🗑️ Supprimer mon compte
+        </button>
 
+        <!-- Modal de confirmation -->
         <Modal :show="confirmingUserDeletion" @close="closeModal">
-            <div class="p-6">
-                <h2
-                    class="text-lg font-medium text-gray-900"
-                >
-                    Are you sure you want to delete your account?
-                </h2>
+            <div class="bg-[#0D0E18] border border-red-500/30 rounded-3xl p-8 text-center">
+                <!-- Icône -->
+                <div class="text-5xl mb-4">💀</div>
 
-                <p class="mt-1 text-sm text-gray-600">
-                    Once your account is deleted, all of its resources and data
-                    will be permanently deleted. Please enter your password to
-                    confirm you would like to permanently delete your account.
+                <h2 class="text-2xl font-black uppercase italic tracking-tighter text-red-400 mb-2">
+                    Suppression du compte
+                </h2>
+                <p class="text-sm text-gray-400 font-semibold leading-relaxed mb-8 max-w-md mx-auto">
+                    Cette action est <span class="text-red-400 font-black">irréversible</span>. Toutes vos données, parties, et progression seront définitivement supprimées. Confirmez avec votre mot de passe.
                 </p>
 
-                <div class="mt-6">
-                    <InputLabel
-                        for="password"
-                        value="Password"
-                        class="sr-only"
-                    />
-
-                    <TextInput
+                <!-- Input mot de passe -->
+                <div class="mb-6 text-left">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                        Mot de passe de confirmation
+                    </label>
+                    <input
                         id="password"
                         ref="passwordInput"
                         v-model="form.password"
                         type="password"
-                        class="mt-1 block w-3/4"
-                        placeholder="Password"
+                        placeholder="Votre mot de passe..."
                         @keyup.enter="deleteUser"
+                        class="w-full bg-[#171235] border-2 border-red-500/30 focus:border-red-500 focus:ring-0 rounded-xl px-4 py-3 text-sm text-white font-bold placeholder-gray-600 transition-colors outline-none"
                     />
-
-                    <InputError :message="form.errors.password" class="mt-2" />
+                    <p v-if="form.errors.password" class="mt-2 text-xs text-red-400 font-bold">{{ form.errors.password }}</p>
                 </div>
 
-                <div class="mt-6 flex justify-end">
-                    <SecondaryButton @click="closeModal">
-                        Cancel
-                    </SecondaryButton>
-
-                    <DangerButton
-                        class="ms-3"
-                        :class="{ 'opacity-25': form.processing }"
-                        :disabled="form.processing"
-                        @click="deleteUser"
+                <!-- Boutons -->
+                <div class="flex gap-4 justify-center">
+                    <button
+                        @click="closeModal"
+                        class="px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest bg-[#1c183a] border border-[#2a245c] text-white hover:text-[#87d74e] transition-colors"
                     >
-                        Delete Account
-                    </DangerButton>
+                        Annuler
+                    </button>
+                    <button
+                        @click="deleteUser"
+                        :class="{ 'opacity-50 cursor-not-allowed': form.processing }"
+                        :disabled="form.processing"
+                        class="btn-3d btn-3d-red px-6 py-3 text-[10px] font-black uppercase tracking-widest shadow-[0_4px_0_#9e2318]"
+                    >
+                        ✅ Confirmer la suppression
+                    </button>
                 </div>
             </div>
         </Modal>

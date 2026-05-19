@@ -30,27 +30,33 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $userData = null;
         if ($user) {
             // Calculer les points totaux du joueur
             $totalPoints = \App\Models\Score::where('user_id', $user->id)->sum('points');
-            $user->total_points = $totalPoints;
             
             // Calculer le niveau dynamique
             if ($totalPoints < 500) {
-                $user->level_name = 'BRONZE I';
+                $levelName = 'BRONZE I';
             } elseif ($totalPoints < 1500) {
-                $user->level_name = 'BRONZE II';
+                $levelName = 'BRONZE II';
             } elseif ($totalPoints < 3000) {
-                $user->level_name = 'ARGENT I';
+                $levelName = 'ARGENT I';
             } else {
-                $user->level_name = 'OR I';
+                $levelName = 'OR I';
             }
+
+            // Exporter en tableau et fusionner les propriétés calculées sans polluer le modèle Eloquent
+            $userData = array_merge($user->toArray(), [
+                'total_points' => $totalPoints,
+                'level_name' => $levelName,
+            ]);
         }
 
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user,
+                'user' => $userData,
             ],
         ];
     }
