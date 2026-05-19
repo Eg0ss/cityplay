@@ -29,26 +29,13 @@ const form = useForm({
     description: '',          // Texte de l'énigme
     reponse: '',              // Réponse attendue
     mcq_options: ['', '', '', ''], // Options pour les niveaux 1 & 2
-    images: [],               // Fichiers images associés
-    hints: [],                // Liste des indices
+    hint_keyword: '',         // Mot-clé d'indice (Optionnel)
+    hint_images: [],          // Images d'indice (Optionnel)
 });
 
-// Fonctions pour gérer les indices
-const addHint = () => {
-    form.hints.push({
-        type: 'text',
-        content: '',
-        difficulty_level: 'easy'
-    });
-};
-
-const removeHint = (index) => {
-    form.hints.splice(index, 1);
-};
-
-// Gestion du changement de fichiers images
-const onFileChange = (e) => {
-    form.images = Array.from(e.target.files);
+// Gérer le changement de fichiers pour les images d'indice
+const onHintImagesChange = (e) => {
+    form.hint_images = Array.from(e.target.files);
 };
 
 // Surveillance du niveau pour adapter les options QCM (pas de QCM au niveau 3)
@@ -64,7 +51,7 @@ watch(() => form.niveau, (newVal) => {
  * Navigation entre les phases de forge
  */
 const nextStep = () => {
-    if (currentStep.value < 5) currentStep.value++;
+    if (currentStep.value < 4) currentStep.value++;
 };
 
 const prevStep = () => {
@@ -73,7 +60,7 @@ const prevStep = () => {
 
 // Calcul de la barre de progression (Gaming style)
 const progressWidth = computed(() => {
-    return ((currentStep.value - 1) / 4) * 100 + '%';
+    return ((currentStep.value - 1) / 3) * 100 + '%';
 });
 
 const isEditing = ref(false);
@@ -94,8 +81,15 @@ const openEditForm = (enigma) => {
     form.description = enigma.description;
     form.reponse = enigma.reponse;
     form.mcq_options = enigma.mcq_options || ['', '', '', ''];
-    form.hints = enigma.hints ? JSON.parse(JSON.stringify(enigma.hints)) : [];
-    form.images = [];
+    
+    // Charger les indices existants
+    form.hint_keyword = '';
+    form.hint_images = [];
+    if (enigma.hints) {
+        const keywordHint = enigma.hints.find(h => h.type === 'keyword');
+        if (keywordHint) form.hint_keyword = keywordHint.content;
+    }
+
     showForm.value = true;
     currentStep.value = 1;
 };
@@ -241,16 +235,17 @@ const confirmDelete = (enigma) => {
                                 </div>
                             </div>
 
-                            <!-- Phase 03 : Texte de l'énigme & QCM -->
+                            <!-- Phase 03 : Texte & QCM -->
                             <div v-else-if="currentStep === 3" key="step3" class="space-y-6 md:space-y-8 py-2 md:py-4">
                                 <div class="space-y-2">
                                     <span class="text-[8px] md:text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 03</span>
-                                    <h3 class="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">SÉQUENCE <span class="text-[#FF9F1C]">ÉNIGMATIQUE</span></h3>
+                                    <h3 class="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">SÉQUENCE <span class="text-[#FF9F1C]">NARRATIVE</span></h3>
                                 </div>
-                                <div class="space-y-4 md:space-y-6">
+                                <div class="space-y-6">
+                                    <!-- Texte de l'énigme -->
                                     <div class="space-y-2 md:space-y-3">
                                         <label class="block text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Le texte de l'indice</label>
-                                        <textarea v-model="form.description" rows="4" autofocus
+                                        <textarea v-model="form.description" rows="5" autofocus
                                             class="w-full text-lg md:text-xl dark:bg-black/40 bg-gray-50 border-none rounded-2xl md:rounded-3xl py-5 md:py-6 px-6 md:px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-bold italic tracking-tight placeholder:opacity-20" 
                                             placeholder="DÉCRIVEZ LE LIEU SANS LE NOMMER..."></textarea>
                                     </div>
@@ -277,78 +272,38 @@ const confirmDelete = (enigma) => {
                                 </div>
                             </div>
 
-                            <!-- Phase 04 : Images / Artefacts -->
+                            <!-- Phase 04 : Indices (Images multiples & Mot-clé) -->
                             <div v-else-if="currentStep === 4" key="step4" class="space-y-6 md:space-y-8 py-2 md:py-4">
                                 <div class="space-y-2">
                                     <span class="text-[8px] md:text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 04</span>
-                                    <h3 class="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">ARTEFACTS <span class="text-[#FF9F1C]">VISUELS</span></h3>
-                                </div>
-                                <div class="space-y-4">
-                                    <div class="relative group">
-                                        <input type="file" multiple @change="onFileChange" 
-                                            class="absolute inset-0 opacity-0 cursor-pointer z-20" accept="image/*" />
-                                        <div class="dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-[2rem] py-10 md:py-16 px-6 md:px-8 text-center group-hover:border-[#FF9F1C]/50 transition-all">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 md:mb-4 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                                            <p class="text-[10px] md:text-xs font-black uppercase tracking-widest dark:text-white text-gray-900">Transférer les artefacts (Images)</p>
-                                            <p class="text-[8px] md:text-[10px] text-gray-500 uppercase font-bold mt-2">{{ form.images.length }} fichier(s) sélectionné(s)</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
-                                    <button @click="prevStep" class="w-full sm:w-auto px-8 py-5 md:py-6 rounded-xl md:rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
-                                    <button @click="nextStep" class="w-full sm:flex-1 group flex items-center justify-center gap-4 bg-[#FF9F1C] text-black px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-sm shadow-xl hover:scale-105 transition-all">
-                                        VERROUILLER LES IMAGES
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 md:w-6 md:h-6 group-hover:translate-x-2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Phase 05 : Indices (Hints) -->
-                            <div v-else-if="currentStep === 5" key="step5" class="space-y-6 md:space-y-8 py-2 md:py-4">
-                                <div class="space-y-2">
-                                    <span class="text-[8px] md:text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 05</span>
-                                    <h3 class="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">PROTOCOLE D'<span class="text-[#FF9F1C]">ASSISTANCE</span></h3>
-                                </div>
-                                
-                                <div class="space-y-4">
-                                    <div v-for="(hint, index) in form.hints" :key="index" class="p-6 rounded-3xl dark:bg-black/40 bg-gray-50 border dark:border-white/5 border-gray-200 space-y-4 relative group/hint">
-                                        <button @click="removeHint(index)" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition-colors opacity-0 group-hover/hint:opacity-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                        </button>
-                                        
-                                        <div class="grid grid-cols-2 gap-4">
-                                            <div class="space-y-2">
-                                                <label class="text-[8px] font-black uppercase text-gray-500">Type d'indice</label>
-                                                <select v-model="hint.type" class="w-full bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-[#FF9F1C] focus:ring-0">
-                                                    <option value="text">Texte descriptif</option>
-                                                    <option value="keyword">Mot-clé</option>
-                                                    <option value="image">URL Image / Chemin</option>
-                                                    <option value="description">Description détaillée</option>
-                                                </select>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <label class="text-[8px] font-black uppercase text-gray-500">Difficulté d'accès</label>
-                                                <select v-model="hint.difficulty_level" class="w-full bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-gray-400 focus:ring-0">
-                                                    <option value="easy">Facile (Faible coût)</option>
-                                                    <option value="medium">Moyen (Coût modéré)</option>
-                                                    <option value="hard">Difficile (Coût élevé)</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="space-y-2">
-                                            <label class="text-[8px] font-black uppercase text-gray-500">Contenu de l'indice</label>
-                                            <textarea v-model="hint.content" rows="2" class="w-full bg-transparent border-none p-0 text-xs font-bold italic text-white focus:ring-0 placeholder:opacity-20" placeholder="SAISISSEZ L'INDICE ICI..."></textarea>
-                                        </div>
-                                    </div>
-                                    
-                                    <button @click="addHint" type="button" class="w-full py-4 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-2xl text-[8px] font-black uppercase tracking-[0.3em] text-gray-500 hover:border-[#FF9F1C]/50 hover:text-[#FF9F1C] transition-all flex items-center justify-center gap-3">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                                        AJOUTER UN INDICE AU PROTOCOLE
-                                    </button>
+                                    <h3 class="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">PROTOCOLE D'<span class="text-[#FF9F1C]">INDICES</span></h3>
                                 </div>
 
-                                <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
+                                <div class="space-y-8">
+                                    <!-- Indice Images (Multiples) -->
+                                    <div class="space-y-4">
+                                        <label class="block text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Images d'indice (Optionnel - Plusieurs fichiers possibles)</label>
+                                        <div class="relative group">
+                                            <input type="file" multiple @change="onHintImagesChange" 
+                                                class="absolute inset-0 opacity-0 cursor-pointer z-20" accept="image/*" />
+                                            <div class="dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-[2rem] py-12 md:py-20 px-6 md:px-8 text-center group-hover:border-[#FF9F1C]/50 transition-all">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-4 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                                <p class="text-xs font-black uppercase tracking-widest dark:text-white text-gray-900">Images d'indice</p>
+                                                <p class="text-[10px] text-gray-500 uppercase font-bold mt-2">{{ form.hint_images.length > 0 ? form.hint_images.length + ' IMAGE(S) PRÊTE(S)' : 'CHARGER DES INDICES VISUELS' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Mot-clé d'indice -->
+                                    <div class="space-y-3 md:space-y-4">
+                                        <label class="block text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Mot-clé d'indice (Optionnel)</label>
+                                        <input v-model="form.hint_keyword" type="text"
+                                            class="w-full text-lg dark:bg-black/40 bg-gray-50 border-none rounded-2xl py-5 px-6 md:px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-bold italic tracking-tight placeholder:opacity-20" 
+                                            placeholder="SAISISSEZ UN MOT-CLÉ COMME INDICE..." />
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col sm:flex-row gap-3 md:gap-4 pt-4">
                                     <button @click="prevStep" class="w-full sm:w-auto px-8 py-5 md:py-6 rounded-xl md:rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
                                     <button @click="submit" :disabled="form.processing" class="w-full sm:flex-1 group flex items-center justify-center gap-4 bg-white text-black px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-sm shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 transition-all disabled:opacity-30">
                                         INSCRIRE DANS LA MATRICE
