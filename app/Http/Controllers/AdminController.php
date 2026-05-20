@@ -264,4 +264,29 @@ class AdminController extends Controller
 
         return back()->with('success', 'Énigme mise à jour avec succès.');
     }
+
+    // Générer un lien de session rapide pour un lieu
+    public function generateSession(Place $place)
+    {
+        $token = str()->random(10);
+        $session = \App\Models\GameSession::create([
+            'statut' => 'en_attente',
+            'lien_token' => $token,
+            'max_joueurs' => 10,
+            'level' => 'facile',
+            'location_type' => 'place',
+            'location_id' => $place->id,
+            'riddles_count' => $place->riddles()->count(),
+            'type' => 'participants',
+        ]);
+
+        \App\Models\GamePlayer::create([
+            'session_id' => $session->id,
+            'user_id' => auth()->id(),
+            'statut' => 'pret',
+            'global_mode' => 'mixte'
+        ]);
+
+        return redirect()->route('game.lobby', ['token' => $token])->with('success', 'Lien de session généré pour ce lieu !');
+    }
 }

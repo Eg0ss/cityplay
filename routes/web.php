@@ -74,6 +74,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('/places/{place}/toggle', [AdminController::class, 'togglePlace'])->name('places.toggle');
     Route::get('/places/{place}/enigmas', [AdminController::class, 'riddles'])->name('enigmas');
     Route::post('/places/{place}/enigmas', [AdminController::class, 'storeRiddle'])->name('enigmas.store');
+    Route::post('/places/{place}/generate-session', [AdminController::class, 'generateSession'])->name('places.generate_session');
 });
 
 Route::middleware('auth')->group(function () {

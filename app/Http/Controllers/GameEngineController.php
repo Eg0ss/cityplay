@@ -342,10 +342,34 @@ class GameEngineController extends Controller
                     'message' => "Désolé ! Un autre participant de la session a déjà clôturé cette énigme !"
                 ]);
             }
+        } elseif ($session->type === 'challengers' && $session->challenger_mode === 'reponse_par_membre') {
+            $alreadyAttempted = GamePlayerRiddleAttempt::where('game_session_id', $session->id)
+                ->where('game_riddle_id', $gameRiddle->id)
+                ->exists();
+                
+            if ($alreadyAttempted) {
+                return response()->json([
+                    'success' => false,
+                    'already_solved' => true,
+                    'message' => "Trop tard ! Un challenger a déjà répondu à cette énigme."
+                ]);
+            }
+        } elseif ($session->type === 'challengers' && $session->challenger_mode === 'reponse_par_tous') {
+            $alreadyAttemptedByUser = GamePlayerRiddleAttempt::where('game_session_id', $session->id)
+                ->where('game_riddle_id', $gameRiddle->id)
+                ->where('user_id', auth()->id())
+                ->exists();
+                
+            if ($alreadyAttemptedByUser) {
+                return response()->json([
+                    'success' => false,
+                    'already_solved' => true,
+                    'message' => "Vous avez déjà répondu à cette énigme."
+                ]);
+            }
         }
 
-        // En mode participants: chaque joueur ne gagne des points que s'il résout l'énigme
-        // Les autres joueurs ne gagnent pas de points (pas de cumul)
+        // En mode participants ou challengers (reponse_par_membre): chaque joueur ne gagne des points que s'il résout l'énigme
         $pointsToAward = 0;
         if ($validated['status'] === 'gagne') {
             $pointsToAward = $validated['points'];
@@ -387,8 +411,8 @@ class GameEngineController extends Controller
                 $session->update(['statut' => 'termine']);
                 $sessionFinished = true;
             }
-        } elseif ($session->type === 'participants') {
-            // En mode participants : vérifier si toutes les énigmes ont été résolues par l'équipe
+        } elseif ($session->type === 'participants' || ($session->type === 'challengers' && $session->challenger_mode === 'reponse_par_membre')) {
+            // En mode participants ou challenger (membre): vérifier si toutes les énigmes ont été résolues par l'équipe/groupe
             $sessionRiddlesInPlay = GameRiddle::where('session_id', $session->id)->count();
             $targetAnswered = min(max((int) $session->riddles_count, 0), $sessionRiddlesInPlay);
 
@@ -403,6 +427,18 @@ class GameEngineController extends Controller
                     $session->update(['statut' => 'termine']);
                     $sessionFinished = true;
                 }
+            }
+        } elseif ($session->type === 'challengers' && $session->challenger_mode === 'reponse_par_tous') {
+            // En mode challenger (tous): vérifier si TOUS les joueurs ont répondu à TOUTES les énigmes
+            $playersCount = $session->players()->count();
+            $sessionRiddlesCount = GameRiddle::where('session_id', $session->id)->count();
+            $totalAttemptsRequired = $playersCount * $sessionRiddlesCount;
+            
+            $totalAttempts = GamePlayerRiddleAttempt::where('game_session_id', $session->id)->count();
+            
+            if ($totalAttempts >= $totalAttemptsRequired) {
+                $session->update(['statut' => 'termine']);
+                $sessionFinished = true;
             }
         }
 
@@ -483,39 +519,28 @@ class GameEngineController extends Controller
                 ->with('success', 'Cette session de jeu est terminée. Bravo à l\'équipe !');
         }
 
-        // Construire une structure de lieux avec uniquement les énigmes sélectionnées pour cette session
-        $placesWithSelectedRiddles = [];
-        $processedPlaces = [];
+        // Construire une structure de quêtes (Steps) avec l'énigme et son lieu associé
+        $gameSteps = [];
         
         foreach ($session->gameRiddles as $gameRiddle) {
             $riddle = $gameRiddle->riddle;
             $place = $riddle->place;
-            $placeId = $place->id;
             
-            // Si ce lieu n'a pas encore été ajouté, l'ajouter
-            if (!isset($processedPlaces[$placeId])) {
-                $processedPlaces[$placeId] = [
-                    'id' => $place->id,
-                    'nom' => $place->nom,
-                    'lat' => $place->lat,
-                    'lng' => $place->lng,
-                    'rayon_marge' => $place->rayon_marge,
-                    'image' => $place->image,
-                    'verified_description' => $place->verified_description,
-                    'riddles' => []
-                ];
-            }
-            
-            // Ajouter l'énigme à ce lieu
-            $processedPlaces[$placeId]['riddles'][] = $riddle;
+            $gameSteps[] = [
+                'id' => $place->id,
+                'nom' => $place->nom,
+                'latitude' => $place->lat,
+                'longitude' => $place->lng,
+                'rayon_marge' => $place->rayon_marge,
+                'image' => $place->image,
+                'verified_description' => $place->verified_description,
+                'riddle' => $riddle // Une seule énigme par étape
+            ];
         }
-        
-        // Convertir en array indexé
-        $placesWithSelectedRiddles = array_values($processedPlaces);
 
         return Inertia::render('Game/Play/ActiveRiddle', [
             'session' => $session,
-            'placesWithRiddles' => $placesWithSelectedRiddles
+            'gameSteps' => $gameSteps
         ]);
     }
 

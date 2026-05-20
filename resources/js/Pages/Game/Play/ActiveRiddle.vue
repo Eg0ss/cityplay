@@ -40,7 +40,7 @@ const {
 
 const props = defineProps({
     session: Object,
-    placesWithRiddles: Array
+    gameSteps: Array
 });
 
 const page = usePage();
@@ -49,7 +49,6 @@ const confirm = useConfirm();
 
 // État local du jeu
 const currentPlaceIndex = ref(0);
-const currentRiddleInPlaceIndex = ref(0);
 const modeChoisi = ref(null); // Pour le mode 'mixte'
 const isPlaying = ref(false);
 const timeLeft = ref(0);
@@ -85,7 +84,7 @@ const fetchHints = async () => {
 };
 
 // Réinitialiser les indices quand on change d'énigme
-watch([currentPlaceIndex, currentRiddleInPlaceIndex], () => {
+watch([currentPlaceIndex], () => {
     riddleHints.value = [];
     showHintsModal.value = false;
 });
@@ -164,32 +163,29 @@ const finishSessionRedirect = (message) => {
 const selectFirstUnattemptedRiddle = () => {
     if (props.session.type !== 'participants') return;
     
-    for (let pIdx = 0; pIdx < props.placesWithRiddles.length; pIdx++) {
-        const place = props.placesWithRiddles[pIdx];
-        for (let rIdx = 0; rIdx < (place.riddles?.length || 0); rIdx++) {
-            const riddle = place.riddles[rIdx];
-            const attempted = localSessionData.value.attempts?.some(att => {
-                const gameRiddle = att.game_riddle || att.gameRiddle;
-                return gameRiddle?.riddle_id === riddle.id;
-            });
-            if (!attempted) {
-                currentPlaceIndex.value = pIdx;
-                currentRiddleInPlaceIndex.value = rIdx;
-                return;
-            }
+    for (let pIdx = 0; pIdx < props.gameSteps.length; pIdx++) {
+        const step = props.gameSteps[pIdx];
+        const riddle = step.riddle;
+        const attempted = localSessionData.value.attempts?.some(att => {
+            const gameRiddle = att.game_riddle || att.gameRiddle;
+            return gameRiddle?.riddle_id === riddle.id;
+        });
+        if (!attempted) {
+            currentPlaceIndex.value = pIdx;
+            return;
         }
     }
     
     // Si toutes les énigmes ont été tentées, on affiche l'écran de fin
-    currentPlaceIndex.value = props.placesWithRiddles.length;
+    currentPlaceIndex.value = props.gameSteps.length;
 };
 
 const currentPlace = computed(() => {
-    return props.placesWithRiddles?.[currentPlaceIndex.value];
+    return props.gameSteps?.[currentPlaceIndex.value];
 });
 
 const currentRiddle = computed(() => {
-    return currentPlace.value?.riddles?.[currentRiddleInPlaceIndex.value];
+    return currentPlace.value?.riddle;
 });
 
 const parsedMcqOptions = computed(() => {
@@ -213,25 +209,27 @@ const riddlePoints = computed(() => {
 
 // Vérification de la disponibilité d'autres énigmes pour ce lieu
 const hasMoreRiddlesForPlace = computed(() => {
-    return currentPlace.value?.riddles?.length > currentRiddleInPlaceIndex.value + 1;
+    // Dans le nouveau système, chaque étape est une énigme unique. 
+    // On ne propose "une autre énigme sur ce lieu" que s'il y a d'autres étapes avec le même lieu ID plus loin.
+    return props.gameSteps?.some((step, index) => index > currentPlaceIndex.value && step.id === currentPlace.value?.id);
 });
 
 // Vérification de la présence d'un lieu suivant
 const hasNextPlace = computed(() => {
-    return props.placesWithRiddles?.length > currentPlaceIndex.value + 1;
+    return props.gameSteps?.length > currentPlaceIndex.value + 1;
 });
 
-// Total des énigmes affichées (lieux) — en participants, l'objectif affiché suit la config session
+// Total des étapes (énigmes)
 const totalGamePlacesCount = computed(() => {
     if (props.session.type === 'participants' && participantsTeamTarget.value > 0) {
         return participantsTeamTarget.value;
     }
-    return props.placesWithRiddles?.length || 0;
+    return props.gameSteps?.length || 0;
 });
 
 const currentRiddleNumber = computed(() => {
     if (props.session.type !== 'participants') {
-        return Math.min(currentPlaceIndex.value + 1, props.placesWithRiddles?.length || 0);
+        return Math.min(currentPlaceIndex.value + 1, props.gameSteps?.length || 0);
     }
     return Math.min(participantsTeamAnswered.value + 1, participantsTeamTarget.value || 1);
 });
@@ -363,7 +361,12 @@ onMounted(() => {
                 userCoords.value.lat = position.coords.latitude;
                 userCoords.value.lng = position.coords.longitude;
             },
-            (error) => console.warn("Erreur de suivi GPS:", error),
+            (error) => {
+                // On ne loggue l'erreur que si ce n'est pas un refus explicite (Permission Denied)
+                if (error.code !== 1) {
+                    console.warn("Erreur de suivi GPS:", error);
+                }
+            },
             { enableHighAccuracy: true }
         );
     }
@@ -383,27 +386,28 @@ onUnmounted(() => {
 
 // Détecter si l'énigme active actuelle (currentRiddle) a été clôturée par un autre joueur
 watch(() => localSessionData.value.attempts, (newAttempts) => {
-    if (props.session.type === 'participants' && newAttempts && currentRiddle.value) {
-        // Rechercher une tentative pour l'énigme active
-        const activeAttempt = newAttempts.find(att => {
-            const gameRiddle = att.game_riddle || att.gameRiddle;
-            return gameRiddle?.riddle_id === currentRiddle.value.id;
-        });
-        
-        if (activeAttempt && !decisionState.value) {
-            // Ignorer si c'est la tentative locale (déjà gérée par les handlers de QCM / GPS)
-            if (activeAttempt.user_id === page.props.auth.user.id) {
-                return;
-            }
+    if (newAttempts && currentRiddle.value) {
+        // En mode participants ou challenger (réponse par membre), on verrouille l'énigme si quelqu'un a déjà répondu
+        if (props.session.type === 'participants' || (props.session.type === 'challengers' && props.session.challenger_mode === 'reponse_par_membre')) {
+            const activeAttempt = newAttempts.find(att => {
+                const gameRiddle = att.game_riddle || att.gameRiddle;
+                return gameRiddle?.riddle_id === currentRiddle.value.id;
+            });
             
-            // Si c'est une tentative faite par un autre participant
-            decisionState.value = 'already_solved';
-            clearInterval(timerInterval);
-            
-            if (activeAttempt.status === 'gagne') {
-                alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un participant'} a résolu cette énigme ! Progression partagée. 🟢`;
-            } else {
-                alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un participant'} a tenté et échoué sur cette énigme. 🔴`;
+            if (activeAttempt && !decisionState.value) {
+                // Ignorer si c'est la tentative locale
+                if (activeAttempt.user_id === page.props.auth.user.id) {
+                    return;
+                }
+                
+                decisionState.value = 'already_solved';
+                clearInterval(timerInterval);
+                
+                if (activeAttempt.status === 'gagne') {
+                    alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un joueur'} a résolu cette énigme ! 🟢`;
+                } else {
+                    alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un joueur'} a échoué sur cette énigme. Elle est désormais verrouillée. 🔴`;
+                }
             }
         }
     }
@@ -463,6 +467,10 @@ const calculateChronoTimeForDiscovery = () => {
     return 1800; // 30 min max
 };
 
+const currentPlayer = computed(() => {
+    return props.session.players?.find(p => p.user_id === page.props.auth.user.id);
+});
+
 // Initialisation d'une énigme
 const startRiddle = (mode) => {
     // Initialiser l'AudioContext au premier geste utilisateur
@@ -481,6 +489,7 @@ const startRiddle = (mode) => {
     }
     
     timeLeft.value = totalTime.value;
+    userAnswer.value = ''; // Reset answer
     startChrono();
 };
 
@@ -577,33 +586,34 @@ const goToNextPlace = () => {
         finishSessionRedirect();
         return;
     }
+    
+    const nextRiddleLogic = () => {
+        if (currentPlayer.value && (currentPlayer.value.global_mode === 'gaming' || currentPlayer.value.global_mode === 'decouverte')) {
+            startRiddle(currentPlayer.value.global_mode);
+        } else {
+            // Mode mixte : isPlaying reste false pour afficher le choix du mode
+            isPlaying.value = false;
+            decisionState.value = null;
+        }
+    };
+
     if (props.session.type === 'participants') {
         selectFirstUnattemptedRiddle();
         decisionState.value = null;
-        isPlaying.value = false;
         
-        const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
-        if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
-            startRiddle(player.global_mode);
-        }
-        
-        if (currentPlaceIndex.value >= props.placesWithRiddles.length) {
+        if (currentPlaceIndex.value >= props.gameSteps.length) {
             toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 6000 });
             setTimeout(() => {
                 router.get(route('game.dashboard'));
             }, 3000);
+        } else {
+            nextRiddleLogic();
         }
     } else {
         if (hasNextPlace.value) {
             currentPlaceIndex.value++;
-            currentRiddleInPlaceIndex.value = 0;
             decisionState.value = null;
-            isPlaying.value = false;
-            
-            const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
-            if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
-                startRiddle(player.global_mode);
-            }
+            nextRiddleLogic();
         } else {
             toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 6000 });
             setTimeout(() => {
@@ -615,14 +625,17 @@ const goToNextPlace = () => {
 
 // Choix : Autre énigme pour le même lieu
 const loadAnotherRiddle = () => {
-    if (hasMoreRiddlesForPlace.value) {
-        currentRiddleInPlaceIndex.value++;
+    // On cherche la prochaine étape qui a le même lieu
+    const nextStepIndex = props.gameSteps.findIndex((step, index) => index > currentPlaceIndex.value && step.id === currentPlace.value?.id);
+    
+    if (nextStepIndex !== -1) {
+        currentPlaceIndex.value = nextStepIndex;
         decisionState.value = null;
-        isPlaying.value = false;
         
-        const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
-        if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
-            startRiddle(player.global_mode);
+        if (currentPlayer.value && (currentPlayer.value.global_mode === 'gaming' || currentPlayer.value.global_mode === 'decouverte')) {
+            startRiddle(currentPlayer.value.global_mode);
+        } else {
+            isPlaying.value = false;
         }
     } else {
         toast.add({ severity: 'warn', summary: 'Énigmes épuisées', detail: 'Plus d\'énigmes de ce niveau pour ce lieu.', life: 4000 });
@@ -785,41 +798,77 @@ const formatTime = (seconds) => {
                             
                             <!-- Win state overlay -->
                             <template v-if="decisionState === 'win'">
-                                <div class="relative mb-6">
+                                <div class="relative mb-4">
                                     <div class="absolute inset-0 bg-[#2fc276]/20 blur-2xl rounded-full"></div>
-                                    <Trophy :size="80" class="text-[#2fc276] relative animate-bounce" />
+                                    <Trophy :size="60" class="text-[#2fc276] relative animate-bounce" />
                                 </div>
-                                <h2 class="text-4xl font-black text-[#2fc276] text-glow-green uppercase italic tracking-tighter mb-2">Énigme Résolue !</h2>
-                                <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">
-                                    Vous avez résolu cette énigme avec brio et empochez <span class="text-[#f3a900] text-glow-yellow font-black">{{ riddlePoints }} XP</span> !
+                                <h2 class="text-3xl font-black text-[#2fc276] text-glow-green uppercase italic tracking-tighter mb-1">Énigme Résolue !</h2>
+                                <p class="text-xs text-gray-400 font-bold mb-4">
+                                    Vous avez empoché <span class="text-[#f3a900] text-glow-yellow font-black">{{ riddlePoints }} XP</span> !
                                 </p>
+
+                                <!-- Lieu Info Card -->
+                                <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 text-left animate-fade-in-up">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-lg bg-[#2fc276]/10 flex items-center justify-center border border-[#2fc276]/20">
+                                            <MapPin :size="20" class="text-[#2fc276]" />
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-black text-white uppercase">{{ currentPlace?.nom }}</h4>
+                                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Secret Dévoilé</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-300 leading-relaxed italic mb-4">
+                                        "{{ currentPlace?.verified_description || 'Un lieu emblématique chargé d\'histoire à découvrir.' }}"
+                                    </p>
+                                    <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.lat},${currentPlace?.lng}`" 
+                                       target="_blank"
+                                       class="flex items-center justify-center gap-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all">
+                                        <Compass :size="14" />
+                                        Ouvrir l'itinéraire GPS
+                                    </a>
+                                </div>
                                 
-                                <div class="flex flex-col gap-4 w-full max-w-xs">
+                                <div class="flex flex-col gap-3 w-full max-w-xs">
                                     <button @click="goToNextPlace" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
                                         <CheckCircle2 :size="18" class="mr-2 inline" />
                                         {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
-                                    </button>
-                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318]">
-                                        <LogOut :size="14" class="mr-2 inline" />
-                                        Quitter la partie
                                     </button>
                                 </div>
                             </template>
 
                             <!-- Lose state overlay -->
                             <template v-if="decisionState === 'lose'">
-                                <div class="relative mb-6">
+                                <div class="relative mb-4">
                                     <div class="absolute inset-0 bg-red-500/20 blur-2xl rounded-full"></div>
-                                    <Skull :size="80" class="text-red-500 relative animate-pulse" />
+                                    <Skull :size="60" class="text-red-500 relative animate-pulse" />
                                 </div>
-                                <h2 class="text-4xl font-black text-[#ea4335] text-glow-red uppercase italic tracking-tighter mb-2">Échec de l'énigme</h2>
-                                <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">Le chrono s'est écoulé ou vous avez soumis une mauvaise réponse. Choisissez votre destin :</p>
+                                <h2 class="text-3xl font-black text-[#ea4335] text-glow-red uppercase italic tracking-tighter mb-1">Échec</h2>
+                                <p class="text-xs text-gray-400 font-bold mb-4">Le chrono s'est écoulé ou la réponse était fausse.</p>
+
+                                <!-- Lieu Info Card (Même en cas d'échec, on apprend !) -->
+                                <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 text-left animate-fade-in-up">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                                            <MapPin :size="20" class="text-red-400" />
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-black text-white uppercase">{{ currentPlace?.nom }}</h4>
+                                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Le saviez-vous ?</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-300 leading-relaxed italic mb-4 line-clamp-3">
+                                        "{{ currentPlace?.verified_description || 'Un lieu emblématique chargé d\'histoire à découvrir.' }}"
+                                    </p>
+                                    <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.lat},${currentPlace?.lng}`" 
+                                       target="_blank"
+                                       class="flex items-center justify-center gap-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all">
+                                        <Compass :size="14" />
+                                        S'y rendre quand même
+                                    </a>
+                                </div>
                                 
-                                <div class="flex flex-col gap-4 w-full max-w-xs">
-                                     <button @click="fetchHints" class="btn-3d btn-3d-yellow w-full py-4 text-sm shadow-[0_5px_0_#9e6f00] flex items-center justify-center gap-2">
-                                         <Zap :size="18" />
-                                         Voir un indice
-                                     </button>
+                                <div class="flex flex-col gap-3 w-full max-w-xs">
                                      <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2">
                                          <RotateCcw :size="18" />
                                          Autre énigme sur ce lieu
@@ -828,9 +877,8 @@ const formatTime = (seconds) => {
                                         Passer au lieu suivant
                                         <ChevronRight :size="18" />
                                     </button>
-                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
-                                        <LogOut :size="18" />
-                                        Abandonner la partie
+                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100">
+                                        Abandonner
                                     </button>
                                 </div>
                             </template>

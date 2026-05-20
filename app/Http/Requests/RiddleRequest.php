@@ -26,6 +26,7 @@ class RiddleRequest extends FormRequest
             'description' => 'required|string',
             'reponse' => 'required|string|max:255',
             'mcq_options' => 'nullable|array',
+            'images' => 'nullable|array|max:3',
             'images.*' => 'nullable|image|max:2048',
             'hints' => 'nullable|array',
             'hints.*.type' => 'required|string|in:text,image,keyword,description',

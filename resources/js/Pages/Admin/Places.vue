@@ -499,6 +499,10 @@ const confirmDelete = (place) => {
                                     class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border">
                                     {{ place.is_active ? 'Opérationnel' : 'Hors-Ligne' }}
                                 </span>
+                                <Link :href="route('admin.places.generate_session', { place: place.id })" method="post" as="button"
+                                    class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-blue-500/20 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all">
+                                    Générer Lien Partage
+                                </Link>
                             </div>
                             <div class="flex flex-wrap items-center gap-4 lg:gap-6 text-gray-500 font-bold text-[8px] lg:text-[10px] uppercase tracking-widest">
                                 <span class="flex items-center gap-2">

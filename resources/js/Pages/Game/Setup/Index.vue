@@ -98,7 +98,10 @@ const startSubmission = () => {
                 submitForm();
             },
             (error) => {
-                console.warn("Erreur Géolocalisation, utilisation de coordonnées par défaut (Cotonou).", error);
+                // Silencieux si l'utilisateur a refusé, sinon on prévient gentiment
+                if (error.code !== 1) {
+                    console.warn("Erreur Géolocalisation, utilisation de coordonnées par défaut (Cotonou).", error);
+                }
                 form.user_lat = 6.3650;
                 form.user_lng = 2.4183;
                 submitForm();
