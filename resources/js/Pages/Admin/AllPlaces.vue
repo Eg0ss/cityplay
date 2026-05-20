@@ -26,17 +26,17 @@ const showForm = ref(false);
 
 // Définition du formulaire avec Inertia useForm
 const form = useForm({
-    city_id: '',            // Cité parente
-    nom: '',                  // Nom du lieu/secteur
-    image: null,              // Image du lieu
-    verified_description: '', // Description narrative
-    lat: 6.3667,              // Latitude par défaut (Cotonou)
-    lng: 2.4333,              // Longitude par défaut
+    city_id: '',            
+    nom: '',                  
+    image: null,              
+    verified_description: '',
+    lat: 6.3667,              
+    lng: 2.4333,              
     rayon_marge: 5,           // Rayon de détection par défaut
 });
 
 // Références pour la gestion de la carte Leaflet
-const map = ref(null);
+const map = ref(null); 
 const marker = ref(null);
 const suggestions = ref([]);
 const isSearching = ref(false);

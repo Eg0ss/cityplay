@@ -1,9 +1,6 @@
 <script setup>
-// Importation du layout de base pour l'administration
 import AdminLayout from './AdminLayout.vue';
-// Importation des utilitaires Inertia pour la gestion du head, des liens et des formulaires
 import { Head, Link, useForm } from '@inertiajs/vue3';
-// Importation des hooks Vue pour la réactivité et les cycles de vie
 import { ref, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
@@ -29,20 +26,20 @@ const filteredCities = computed(() => {
     );
 });
 
-// État pour afficher ou masquer le processus d'initialisation
+//afficher ou masquer le formulaire de création cité
 const showForm = ref(false);
 
-// État pour suivre l'étape actuelle du processus de création (style jeu vidéo)
+// suivre l'étape actuelle du processus de création
 const currentStep = ref(1);
 
-// Définition du formulaire avec Inertia useForm pour la gestion automatique des erreurs et du chargement
+// formulaire avec Inertia
 const form = useForm({
-    name: '',         // Nom de la cité
-    description: '',  // Description/Narratif de la cité
-    departement: '',   // Département géographique
+    name: '',        
+    description: '', 
+    departement: '', 
 });
 
-// Fonction pour passer à l'étape suivante du processus
+// Fonction pour passer à l'étape suivante du processus de création cité
 const nextStep = () => {
     if (currentStep.value < 3) currentStep.value++;
 };
@@ -60,6 +57,7 @@ const openCreateForm = () => {
     showForm.value = true;
 };
 
+// Fonction pour ouvrir le formulaire de modification d'une cité existante
 const openEditForm = (city) => {
     isEditing.value = true;
     editingCityId.value = city.id;
@@ -102,6 +100,7 @@ const submit = () => {
     }
 };
 
+//confirmation de supression
 const confirmDelete = (city) => {
     confirm.require({
         message: `Voulez-vous vraiment supprimer la cité "${city.name}" ? Cette action est irréversible et supprimera tous les lieux associés.`,
