@@ -6,6 +6,7 @@ use App\Models\Place;
 use App\Models\Riddle;
 use App\Models\User;
 use App\Models\City;
+use App\Http\Requests\RiddleRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -193,30 +194,9 @@ class AdminController extends Controller
     }
 
     // Ajouter une énigme
-    public function storeRiddle(Request $request, Place $place)
+    public function storeRiddle(RiddleRequest $request, Place $place)
     {
-        $validated = $request->validate([
-            'niveau' => 'required|integer|between:1,3',
-            'description' => 'required|string',
-            'reponse' => 'required|string|max:255',
-            'mcq_options' => 'nullable|array',
-            'images.*' => 'nullable|image|max:2048',
-            'hints' => 'nullable|array',
-            'hints.*.type' => 'required|string|in:text,image,keyword,description',
-            'hints.*.content' => 'required|string',
-            'hints.*.difficulty_level' => 'nullable|string|in:easy,medium,hard',
-        ]);
-
-        // Filtrer les options vides pour ne pas stocker de tableau de chaînes vides
-        if (isset($validated['mcq_options'])) {
-            $validated['mcq_options'] = array_values(array_filter($validated['mcq_options'], function($val) {
-                return !is_null($val) && trim($val) !== '';
-            }));
-            
-            if (empty($validated['mcq_options'])) {
-                $validated['mcq_options'] = null;
-            }
-        }
+        $validated = $request->validated();
 
         // Créer l'énigme
         $riddle = $place->riddles()->create([
@@ -234,6 +214,7 @@ class AdminController extends Controller
             }
         }
 
+        // Stocker les indices
         if (isset($validated['hints'])) {
             foreach ($validated['hints'] as $index => $hintData) {
                 $riddle->hints()->create([
@@ -249,29 +230,9 @@ class AdminController extends Controller
     }
 
     // Modifier une énigme
-    public function updateRiddle(Request $request, Riddle $enigma)
+    public function updateRiddle(RiddleRequest $request, Riddle $enigma)
     {
-        $validated = $request->validate([
-            'niveau' => 'required|integer|between:1,3',
-            'description' => 'required|string',
-            'reponse' => 'required|string|max:255',
-            'mcq_options' => 'nullable|array',
-            'images.*' => 'nullable|image|max:2048',
-            'hints' => 'nullable|array',
-            'hints.*.type' => 'required|string|in:text,image,keyword,description',
-            'hints.*.content' => 'required|string',
-            'hints.*.difficulty_level' => 'nullable|string|in:easy,medium,hard',
-        ]);
-
-        if (isset($validated['mcq_options'])) {
-            $validated['mcq_options'] = array_values(array_filter($validated['mcq_options'], function($val) {
-                return !is_null($val) && trim($val) !== '';
-            }));
-            
-            if (empty($validated['mcq_options'])) {
-                $validated['mcq_options'] = null;
-            }
-        }
+        $validated = $request->validated();
 
         $enigma->update([
             'niveau' => $validated['niveau'],
@@ -280,6 +241,7 @@ class AdminController extends Controller
             'mcq_options' => $validated['mcq_options'] ?? null,
         ]);
 
+        // Stocker les nouvelles images
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $path = $image->store('riddles', 'public');

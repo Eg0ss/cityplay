@@ -56,6 +56,22 @@ const isCityWithoutRiddles = computed(() => {
     return selectedCity.value && selectedCity.value.riddles_count === 0;
 });
 
+// Nombre maximum d'énigmes disponibles pour le niveau sélectionné
+const maxRiddlesForLevel = computed(() => {
+    if (!selectedCity.value || !selectedCity.value.riddles_by_level) {
+        return 1;
+    }
+    const count = selectedCity.value.riddles_by_level[form.level] || 0;
+    return Math.max(1, count);
+});
+
+// Ajuster automatiquement riddles_count si dépasse le max du niveau
+const adjustRiddlesCount = () => {
+    if (form.riddles_count > maxRiddlesForLevel.value) {
+        form.riddles_count = maxRiddlesForLevel.value;
+    }
+};
+
 const nextStep = () => {
     if (isCityWithoutRiddles.value && currentStep.value === 1) return;
     
@@ -204,9 +220,13 @@ const submitForm = () => {
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <label v-for="lvl in ['facile', 'intermediaire', 'difficile']" :key="lvl" 
                                     class="cursor-pointer relative rounded-2xl border-2 p-5 text-center flex flex-col items-center justify-center transition-all duration-200 bg-[#10101c] border-[#2a245c]"
-                                    :class="form.level === lvl ? 'border-[#87d74e] bg-[#87d74e]/5 shadow-[0_0_15px_rgba(135,215,78,0.15)]' : 'hover:border-gray-500'">
+                                    :class="form.level === lvl ? 'border-[#87d74e] bg-[#87d74e]/5 shadow-[0_0_15px_rgba(135,215,78,0.15)]' : 'hover:border-gray-500'"
+                                    @click="form.level = lvl; adjustRiddlesCount();">
                                     <input type="radio" v-model="form.level" :value="lvl" class="sr-only">
                                     <span class="capitalize font-black text-sm tracking-wider" :class="form.level === lvl ? 'text-[#87d74e]' : 'text-gray-400'">{{ lvl }}</span>
+                                    <span class="text-[8px] font-bold text-gray-500 mt-2" v-if="selectedCity && selectedCity.riddles_by_level">
+                                        {{ selectedCity.riddles_by_level[lvl] || 0 }} dispo
+                                    </span>
                                 </label>
                             </div>
                         </div>
@@ -215,9 +235,11 @@ const submitForm = () => {
                         <div class="space-y-4 pt-4">
                             <div class="flex justify-between items-center">
                                 <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Nombre d'énigmes</label>
-                                <span class="text-[9px] font-bold text-gray-500" v-if="selectedCity">Max dispo dans la ville : {{ selectedCity.riddles_count }}</span>
+                                <span class="text-[9px] font-bold text-gray-500" v-if="selectedCity">
+                                    Max pour niveau {{ form.level }} : {{ maxRiddlesForLevel }}
+                                </span>
                             </div>
-                            <input type="range" v-model="form.riddles_count" min="1" :max="Math.max(1, selectedCity?.riddles_count || 10)" class="w-full accent-[#87d74e] bg-[#10101c] h-2 rounded-full cursor-pointer">
+                            <input type="range" v-model="form.riddles_count" min="1" :max="maxRiddlesForLevel" class="w-full accent-[#87d74e] bg-[#10101c] h-2 rounded-full cursor-pointer">
                             <div class="text-center text-4xl font-black text-[#87d74e] text-glow-green tabular-nums">{{ form.riddles_count }}</div>
                         </div>
                     </div>

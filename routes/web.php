@@ -18,7 +18,6 @@ Route::get('/', function () {
     ]);
 });
 
-
 Route::get('/comment-jouer', [PageController::class, 'howToPlay'])->name('how-to-play');
 Route::get('/explorer', [PageController::class, 'explore'])->name('explore');
 Route::get('/classement', [PageController::class, 'leaderboard'])->name('leaderboard');
@@ -28,7 +27,7 @@ Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 Route::get('/lieux/{id}', [PageController::class, 'showPlace'])->name('places.show');
 
 Route::get('/dashboard', function (Request $request) {
-    if ($request->user()->role === 'admin') {
+    if ($request->user()->is_admin) {
         return redirect()->route('admin.dashboard');
     }
     // Rediriger les joueurs vers le nouveau tableau de bord Gaming
