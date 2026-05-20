@@ -4,7 +4,7 @@ import AdminLayout from './AdminLayout.vue';
 // Importation des utilitaires Inertia pour la gestion du head, des liens et des formulaires
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 // Importation des hooks Vue pour la réactivité et la surveillance
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 
@@ -93,6 +93,20 @@ const openEditForm = (enigma) => {
     showForm.value = true;
     currentStep.value = 1;
 };
+
+/**
+ * Détection automatique du mode édition via l'URL
+ */
+onMounted(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('edit');
+    if (editId) {
+        const enigmaToEdit = props.enigmas.find(e => e.id == editId);
+        if (enigmaToEdit) {
+            openEditForm(enigmaToEdit);
+        }
+    }
+});
 
 /**
  * Soumission finale de l'énigme à la matrice
@@ -285,7 +299,7 @@ const confirmDelete = (enigma) => {
                                         <label class="block text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Images d'indice (Optionnel - Plusieurs fichiers possibles)</label>
                                         <div class="relative group">
                                             <input type="file" multiple @change="onHintImagesChange" 
-                                                class="absolute inset-0 opacity-0 cursor-pointer z-20" accept="image/*" />
+                                                class="absolute inset-0 opacity-0 cursor-pointer z-20" />
                                             <div class="dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-[2rem] py-12 md:py-20 px-6 md:px-8 text-center group-hover:border-[#FF9F1C]/50 transition-all">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-4 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                                                 <p class="text-xs font-black uppercase tracking-widest dark:text-white text-gray-900">Images d'indice</p>

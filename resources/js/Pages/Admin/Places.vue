@@ -415,18 +415,18 @@ const confirmDelete = (place) => {
                                 </div>
 
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Image du Lieu</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Fichier du Lieu</label>
                                     <div class="relative group h-[200px]">
                                         <input type="file" @change="onFileChange" 
-                                            class="absolute inset-0 opacity-0 cursor-pointer z-20" accept="image/*" />
+                                            class="absolute inset-0 opacity-0 cursor-pointer z-20" />
                                         <div class="h-full dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-3xl flex flex-col items-center justify-center p-4 group-hover:border-[#FF9F1C]/50 transition-all overflow-hidden">
                                             <template v-if="!form.image">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mb-2 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                                                <p class="text-[10px] font-black uppercase tracking-widest dark:text-white text-gray-900">Charger depuis le gestionnaire</p>
+                                                <p class="text-[10px] font-black uppercase tracking-widest dark:text-white text-gray-900">Charger un fichier</p>
                                             </template>
                                             <template v-else>
                                                 <p class="text-[10px] font-black text-[#FF9F1C] uppercase truncate max-w-full px-4">{{ form.image.name }}</p>
-                                                <p class="text-[8px] text-gray-500 uppercase mt-1">Cliquer pour changer l'image</p>
+                                                <p class="text-[8px] text-gray-500 uppercase mt-1">Cliquer pour changer le fichier</p>
                                             </template>
                                         </div>
                                     </div>

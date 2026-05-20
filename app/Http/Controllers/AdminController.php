@@ -15,8 +15,9 @@ class AdminController extends Controller
     public function dashboard()
     {
         $totalRiddles = Riddle::count();
-        $solvedRiddles = Riddle::whereHas('gameRiddles', function($q){ 
-            $q->whereNotNull('repondu_par'); 
+        // Compter le nombre d'énigmes uniques ayant au moins une tentative réussie
+        $solvedRiddles = Riddle::whereHas('gameRiddles.attempts', function($q) {
+            $q->where('status', 'gagne');
         })->count();
 
         return Inertia::render('Admin/Dashboard', [
@@ -112,7 +113,7 @@ class AdminController extends Controller
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
             'rayon_marge' => 'required|integer',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|file|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
@@ -133,7 +134,7 @@ class AdminController extends Controller
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
             'rayon_marge' => 'required|integer',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|file|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
@@ -169,7 +170,7 @@ class AdminController extends Controller
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
             'rayon_marge' => 'required|integer',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|file|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
@@ -206,7 +207,7 @@ class AdminController extends Controller
             'reponse' => 'required|string|max:255',
             'mcq_options' => 'nullable|array',
             'hint_keyword' => 'nullable|string|max:255',
-            'hint_images.*' => 'nullable|image|max:2048',
+            'hint_images.*' => 'nullable|file|max:2048',
         ]);
 
         // Filtrer les options vides pour ne pas stocker de tableau de chaînes vides
@@ -262,7 +263,7 @@ class AdminController extends Controller
             'reponse' => 'required|string|max:255',
             'mcq_options' => 'nullable|array',
             'hint_keyword' => 'nullable|string|max:255',
-            'hint_images.*' => 'nullable|image|max:2048',
+            'hint_images.*' => 'nullable|file|max:2048',
         ]);
 
         if (isset($validated['mcq_options'])) {

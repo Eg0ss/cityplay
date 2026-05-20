@@ -198,7 +198,7 @@ const confirmDelete = (enigma) => {
                         </div>
 
                         <div class="flex lg:flex-col items-center justify-center gap-3">
-                            <Link :href="route('admin.enigmas', { place: enigma.place_id })" 
+                            <Link :href="route('admin.enigmas', { place: enigma.place_id, edit: enigma.id })" 
                                 class="h-14 w-14 dark:bg-white/5 bg-gray-50 rounded-2xl flex items-center justify-center hover:bg-[#FF9F1C] hover:text-black transition-all group shadow-lg"
                                 title="Éditer dans l'atelier">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>

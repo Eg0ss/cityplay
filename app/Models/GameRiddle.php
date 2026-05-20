@@ -26,4 +26,9 @@ class GameRiddle extends Model
     {
         return $this->belongsTo(User::class, 'repondu_par');
     }
+
+    public function attempts()
+    {
+        return $this->hasMany(GamePlayerRiddleAttempt::class, 'game_riddle_id');
+    }
 }
