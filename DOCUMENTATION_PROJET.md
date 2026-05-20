@@ -102,5 +102,110 @@ Pour ce projet, nous avons choisi des outils modernes garantissant rapidité, s�
 3.  **Nettoyage des QCM** : Lors de la création d'une énigme, si l'admin laisse des cases de choix vides, le code les retire automatiquement avant de sauvegarder.
 
 ---
-*Document mis à jour le 18 mai 2026 par l'assistant IA pour Cityplay.*
+*Document mis à jour le 20 mai 2026 par l'assistant IA pour Cityplay.*
+
+---
+
+## Rapport synthétique technique (version courte)
+
+Objectif: fournir une vue d'ensemble claire pour un développeur souhaitant comprendre le projet, son architecture et où trouver chaque fonctionnalité.
+
+- Application: jeu d'exploration/énigmes géolocalisées (Cityplay).
+- Backend: Laravel (Eloquent, migrations, events, broadcast).
+- Frontend: Inertia + Vue.js (pages et composants dans `resources/js`).
+
+---
+
+## 1. Fichiers et points d'entrée importants
+
+- Routes principales: [routes/web.php](routes/web.php)
+- Layout serveur / Inertia: [resources/views/app.blade.php](resources/views/app.blade.php)
+- Point d'entrée JS: [resources/js/app.js](resources/js/app.js) et [resources/js/bootstrap.js](resources/js/bootstrap.js)
+- Pages Inertia principales: [resources/js/Pages](resources/js/Pages)
+
+---
+
+## 2. Base de données (migrations clés)
+
+Les migrations décrivent le modèle de données central:
+
+- `users`: comptes joueurs/admins — [database/migrations/0001_01_01_000000_create_users_table.php](database/migrations/0001_01_01_000000_create_users_table.php)
+- `cities`: villes couvertes — [database/migrations/2026_05_15_154520_create_cities_table.php](database/migrations/2026_05_15_154520_create_cities_table.php)
+- `places`: lieux géolocalisés (lat/lng, marges) — [database/migrations/2026_05_13_191207_create_places_table.php](database/migrations/2026_05_13_191207_create_places_table.php)
+- `riddles`: énigmes (niveau, description, reponse, mcq_options) — [database/migrations/2026_05_13_191209_create_riddles_table.php](database/migrations/2026_05_13_191209_create_riddles_table.php)
+- `riddle_images`, `hints` — images et indices associés aux énigmes
+- `game_sessions`, `game_players`, `game_riddles`, `game_player_riddle_attempts`, `scores` — tables de gameplay/score
+
+Remarque: des migrations additionnelles existent (modifications de colonnes, index, champs optionnels). Voir le dossier [database/migrations](database/migrations) pour l'historique complet.
+
+---
+
+## 3. Modèles Eloquent (résumé)
+
+- `User` — relations: `gameSessions()` (via `game_players`), `scores()`, `gamePlayers()` — [app/Models/User.php](app/Models/User.php)
+- `City` — `places()` — [app/Models/City.php](app/Models/City.php)
+- `Place` — champs gps, `riddles()` — [app/Models/Place.php](app/Models/Place.php)
+- `Riddle` — `images()`, `hints()`, `gameRiddles()` — [app/Models/Riddle.php](app/Models/Riddle.php)
+- `GameSession` — `players()`, `gameRiddles()`, `attempts()`, `scores()` — [app/Models/GameSession.php](app/Models/GameSession.php)
+- `GamePlayer`, `GameRiddle`, `GamePlayerRiddleAttempt`, `Score` — modèles opérationnels pour gérer inscriptions, tentatives et points.
+
+Ces modèles implémentent la logique relationnelle principale entre sessions, joueurs, lieux et énigmes.
+
+---
+
+## 4. Contrôleurs et logique métier
+
+- `GameEngineController` — logique métier du gameplay: création de session, sélection d'énigmes par proximité/niveau (Haversine), lobby multijoueur, enregistrement continu des résultats, dashboard joueur et progression. Utilise les événements `GameUpdated` et `LobbyUpdated`. Voir [app/Http/Controllers/GameEngineController.php](app/Http/Controllers/GameEngineController.php)
+- `GameController` — actions liées aux sessions simples et soumission de réponses. Voir [app/Http/Controllers/GameController.php](app/Http/Controllers/GameController.php)
+- `AdminController` — CRUD villes, lieux, énigmes; upload d'images; nettoyage des options QCM; gestion des indices. Voir [app/Http/Controllers/AdminController.php](app/Http/Controllers/AdminController.php)
+- `PageController` — pages publiques (Inertia) : HowToPlay, Explore, Leaderboard, etc. Voir [app/Http/Controllers/PageController.php](app/Http/Controllers/PageController.php)
+
+Sécurité: routes `game.*` protégées par `auth, verified`; routes `admin.*` protégées par middleware `admin`.
+
+---
+
+## 5. Frontend (Inertia + Vue)
+
+- Pages clés: `resources/js/Pages/Game/Setup/Index.vue`, `Game/Play/Lobby.vue`, `Game/Play/ActiveRiddle.vue`, `Game/Dashboard.vue`, `Game/Progression.vue`.
+- Composants UI réutilisables dans `resources/js/Components` (boutons, modales, formulaires).
+- Auth: pages dans `resources/js/Pages/Auth`.
+- Entrée: [resources/js/app.js](resources/js/app.js) initialise Inertia et monteur Vue.
+
+Remarque: le rendu côté client utilise Inertia pour naviguer sans rechargement complet; la logique temps réel est gérée via events/broadcasting côté serveur et via listeners dans le frontend (bootstrap.js / store.js).
+
+---
+
+## 6. Points techniques et recommandations
+
+- Événements temps réel: confirmer la configuration de `broadcasting.php` et les credentials Pusher/Redis pour la prod.
+- Géo‑calculs: la sélection d'énigmes utilise une formule de distance (Haversine) en SQL; envisager l'ajout d'index ou d'une couche géo spécifique si la table `places` devient grande.
+- Stockage des images: usage du disque `public` via `Storage::disk('public')`; ne pas oublier `php artisan storage:link` en déploiement.
+- Validation & sécurité: vérifier le middleware `admin` et les règles `authorize` côté contrôleur si sensibles.
+
+---
+
+## 7. Où commencer si vous reprisez le projet
+
+1. Installer dépendances et builder assets:
+
+```bash
+composer install
+npm install
+npm run build
+php artisan migrate
+php artisan storage:link
+```
+
+2. Créer un compte admin (via Seeder ou DB) pour accéder à `/admin`.
+3. Tester une partie: créer une `City` → ajouter `Place`(s) avec coordonnées → ajouter quelques `Riddle` → lancer `game/setup` et créer une session.
+
+---
+
+## 8. Souhaitez-vous que je :
+
+- Génère un fichier `REPORT_DEVELOPER.md` plus détaillé (diagramme ER + explication des tables), ou
+- Analyse une partie spécifique (sécurité, performance, tests), ou
+- Liste et documente chaque endpoint API et payload attendu pour le frontend.
+
+Répondez simplement par l'option souhaitée et je m'en occupe.
 
