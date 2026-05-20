@@ -522,6 +522,9 @@ class GameEngineController extends Controller
         // Construire une structure de quêtes (Steps) avec l'énigme et son lieu associé
         $gameSteps = [];
         
+        // Charger les relations nécessaires pour éviter les requêtes N+1 et permettre l'accès instantané aux indices
+        $session->load(['gameRiddles.riddle.hints', 'gameRiddles.riddle.images', 'gameRiddles.riddle.place']);
+        
         foreach ($session->gameRiddles as $gameRiddle) {
             $riddle = $gameRiddle->riddle;
             $place = $riddle->place;
@@ -534,7 +537,7 @@ class GameEngineController extends Controller
                 'rayon_marge' => $place->rayon_marge,
                 'image' => $place->image,
                 'verified_description' => $place->verified_description,
-                'riddle' => $riddle // Une seule énigme par étape
+                'riddle' => $riddle // Contient maintenant hints et images
             ];
         }
 

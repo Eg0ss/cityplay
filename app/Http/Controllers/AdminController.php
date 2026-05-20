@@ -15,12 +15,17 @@ class AdminController extends Controller
     //dashboard admin
     public function dashboard()
     {
+        $totalRiddles = Riddle::count();
+        $solvedRiddles = Riddle::whereHas('gameRiddles', function($q){ 
+            $q->whereNotNull('repondu_par'); 
+        })->count();
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
                 'users_count' => User::count(),
                 'places_count' => Place::count(),
-                'riddles_count' => Riddle::count(),
-                'solved_count' => 0,
+                'riddles_count' => $totalRiddles,
+                'solved_count' => $totalRiddles > 0 ? round(($solvedRiddles / $totalRiddles) * 100) : 0,
             ],
             'recent_places' => Place::with('city')->latest()->take(5)->get(),
         ]);
@@ -196,9 +201,26 @@ class AdminController extends Controller
     // Ajouter une énigme
     public function storeRiddle(RiddleRequest $request, Place $place)
     {
-        $validated = $request->validated();
+        $validated = $request->validate([
+            'niveau' => 'required|integer|between:1,3',
+            'description' => 'required|string',
+            'reponse' => 'required|string|max:255',
+            'mcq_options' => 'nullable|array',
+            'hint_keyword' => 'nullable|string|max:255',
+            'hint_images.*' => 'nullable|image|max:2048',
+        ]);
 
-        // Créer l'énigme
+        // Filtrer les options vides pour ne pas stocker de tableau de chaînes vides
+        if (isset($validated['mcq_options'])) {
+            $validated['mcq_options'] = array_values(array_filter($validated['mcq_options'], function($val) {
+                return !is_null($val) && trim($val) !== '';
+            }));
+            
+            if (empty($validated['mcq_options'])) {
+                $validated['mcq_options'] = null;
+            }
+        }
+
         $riddle = $place->riddles()->create([
             'niveau' => $validated['niveau'],
             'description' => $validated['description'],
@@ -206,22 +228,25 @@ class AdminController extends Controller
             'mcq_options' => $validated['mcq_options'] ?? null,
         ]);
 
-        // Stocker les images
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('riddles', 'public');
-                $riddle->images()->create(['image_path' => $path]);
-            }
+        // Sauvegarder le mot-clé d'indice
+        if (!empty($validated['hint_keyword'])) {
+            $riddle->hints()->create([
+                'type' => 'keyword',
+                'content' => $validated['hint_keyword'],
+                'difficulty_level' => 'easy',
+                'order' => 1,
+            ]);
         }
 
-        // Stocker les indices
-        if (isset($validated['hints'])) {
-            foreach ($validated['hints'] as $index => $hintData) {
+        // Sauvegarder les images d'indice
+        if ($request->hasFile('hint_images')) {
+            foreach ($request->file('hint_images') as $index => $image) {
+                $path = $image->store('hints', 'public');
                 $riddle->hints()->create([
-                    'type' => $hintData['type'],
-                    'content' => $hintData['content'],
-                    'difficulty_level' => $hintData['difficulty_level'] ?? 'easy',
-                    'order' => $index + 1,
+                    'type' => 'image',
+                    'content' => '/storage/' . $path,
+                    'difficulty_level' => 'medium',
+                    'order' => $index + 2,
                 ]);
             }
         }
@@ -232,7 +257,24 @@ class AdminController extends Controller
     // Modifier une énigme
     public function updateRiddle(RiddleRequest $request, Riddle $enigma)
     {
-        $validated = $request->validated();
+        $validated = $request->validate([
+            'niveau' => 'required|integer|between:1,3',
+            'description' => 'required|string',
+            'reponse' => 'required|string|max:255',
+            'mcq_options' => 'nullable|array',
+            'hint_keyword' => 'nullable|string|max:255',
+            'hint_images.*' => 'nullable|image|max:2048',
+        ]);
+
+        if (isset($validated['mcq_options'])) {
+            $validated['mcq_options'] = array_values(array_filter($validated['mcq_options'], function($val) {
+                return !is_null($val) && trim($val) !== '';
+            }));
+            
+            if (empty($validated['mcq_options'])) {
+                $validated['mcq_options'] = null;
+            }
+        }
 
         $enigma->update([
             'niveau' => $validated['niveau'],
@@ -241,24 +283,30 @@ class AdminController extends Controller
             'mcq_options' => $validated['mcq_options'] ?? null,
         ]);
 
-        // Stocker les nouvelles images
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('riddles', 'public');
-                $enigma->images()->create(['image_path' => $path]);
-            }
-        }
-
         // Mettre à jour les indices
-        if (isset($validated['hints'])) {
-            $enigma->hints()->delete(); // On simplifie en supprimant/recréant
-            foreach ($validated['hints'] as $index => $hintData) {
+        if (!empty($validated['hint_keyword']) || $request->hasFile('hint_images')) {
+            // Pour simplifier, on supprime les anciens indices de type keyword/image
+            $enigma->hints()->whereIn('type', ['keyword', 'image'])->delete();
+
+            if (!empty($validated['hint_keyword'])) {
                 $enigma->hints()->create([
-                    'type' => $hintData['type'],
-                    'content' => $hintData['content'],
-                    'difficulty_level' => $hintData['difficulty_level'] ?? 'easy',
-                    'order' => $index + 1,
+                    'type' => 'keyword',
+                    'content' => $validated['hint_keyword'],
+                    'difficulty_level' => 'easy',
+                    'order' => 1,
                 ]);
+            }
+
+            if ($request->hasFile('hint_images')) {
+                foreach ($request->file('hint_images') as $index => $image) {
+                    $path = $image->store('hints', 'public');
+                    $enigma->hints()->create([
+                        'type' => 'image',
+                        'content' => '/storage/' . $path,
+                        'difficulty_level' => 'medium',
+                        'order' => $index + 2,
+                    ]);
+                }
             }
         }
 

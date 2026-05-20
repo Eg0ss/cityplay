@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use App\Models\City;
 use App\Models\Place;
 use App\Models\Riddle;
@@ -17,12 +16,8 @@ class GameDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // Nettoyage sécurisé via Eloquent pour PostgreSQL/Supabase
-        Hint::query()->delete();
-        RiddleImage::query()->delete();
-        Riddle::query()->delete();
-        Place::query()->delete();
-        City::query()->delete();
+        // On ne nettoie pas ici, migrate:fresh s'en charge. 
+        // On crée les données directement via Eloquent pour assurer la compatibilité PG.
 
         $citiesData = [
             [
@@ -56,6 +51,7 @@ class GameDataSeeder extends Seeder
             ]);
 
             foreach ($cityInfo['places'] as $index => $placeName) {
+                // Variation légère des coordonnées pour chaque lieu
                 $placeLat = $cityInfo['lat'] + (rand(-20, 20) / 1000);
                 $placeLng = $cityInfo['lng'] + (rand(-20, 20) / 1000);
 
@@ -77,7 +73,8 @@ class GameDataSeeder extends Seeder
                 for ($level = 1; $level <= 3; $level++) {
                     $difficultyText = $level === 1 ? 'Facile' : ($level === 2 ? 'Intermédiaire' : 'Difficile');
                     
-                    for ($i = 1; $i <= 5; $i++) { // 5 énigmes par niveau pour éviter les timeouts
+                    // On réduit à 3 énigmes par niveau pour être plus léger (Total 180 énigmes)
+                    for ($i = 1; $i <= 3; $i++) {
                         $options = [
                             $place->nom,
                             "Lieu Mystère " . ($i + 1),

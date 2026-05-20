@@ -55,8 +55,8 @@ let debounceTimeout = null;
 const searchLocation = () => {
     if (debounceTimeout) clearTimeout(debounceTimeout);
     
-    debounceTimeout = setTimeout(async () => {
-        if (!form.nom || form.nom.length < 3) {
+    debounceTimeout = setTimeout(async () => { 
+        if (!form.nom || form.nom.length < 3) { 
             suggestions.value = [];
             return;
         }
@@ -467,7 +467,7 @@ const filteredPlaces = computed(() => {
                             <!-- Colonne Droite : Radar Géo-Spatial -->
                             <div class="space-y-8">
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Radar Satellite</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Localisation map</label>
                                     <div id="map-selector" class="w-full h-[400px] lg:h-[500px] rounded-[2rem] border-4 dark:border-white/5 border-gray-100 overflow-hidden shadow-inner"></div>
                                 </div>
 
@@ -608,14 +608,15 @@ const filteredPlaces = computed(() => {
     transform: translateX(20px);
 }
 
-/* Custom styles for Leaflet to match gaming theme */
+/* Custom styles for Leaflet to match light theme */
 :deep(.leaflet-container) {
-    background: #0A0A0B;
+    background: #f8fafc;
     font-family: inherit;
 }
 
 :deep(.leaflet-tile) {
-    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+    /* Style clair naturel (Capture 1) */
+    filter: none;
 }
 
 :deep(.leaflet-control-attribution) {
