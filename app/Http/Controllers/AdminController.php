@@ -31,6 +31,7 @@ class AdminController extends Controller
         ]);
     }
 
+    // Toutes les villes
     public function cities()
     {
         return Inertia::render('Admin/Cities', [
@@ -116,6 +117,7 @@ class AdminController extends Controller
             'image' => 'nullable|file|max:2048',
         ]);
 
+        // Stocker l'image si elle est fournie
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('places', 'public');
         }

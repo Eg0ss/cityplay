@@ -102,5 +102,24 @@ Pour ce projet, nous avons choisi des outils modernes garantissant rapidité, s�
 3.  **Nettoyage des QCM** : Lors de la création d'une énigme, si l'admin laisse des cases de choix vides, le code les retire automatiquement avant de sauvegarder.
 
 ---
-*Document mis à jour le 18 mai 2026 par l'assistant IA pour Cityplay.*
+
+liste des tables créées via les migrations :
+
+1. Structure du Monde
+
+- cities : Stocke les villes et leurs départements.
+- places : Gère les lieux d'intérêt avec leurs coordonnées GPS et descriptions.
+2. Contenu des Énigmes
+
+- riddles : Contient les questions, réponses et niveaux de difficulté des défis.
+- riddle_images : Stocke les artefacts (images) liés aux énigmes.
+- hints : Gère le système d'indices (mots-clés et images d'aide).
+3. Moteur de Jeu
+
+- game_sessions : Gère les sessions de jeu actives (Solo, Coop, Compétition).
+- game_players : Gère les participants inscrits dans chaque session.
+- game_riddles : Fait le lien entre les sessions de jeu et les énigmes sélectionnées.
+- game_player_riddle_attempts : Enregistre chaque tentative (gagnée/perdue) et le temps de résolution.
+- scores : Stocke les points XP et les statistiques de réussite finale.
+*Document mis à jour le 20 mai 2026  pour Cityplay.*
 
