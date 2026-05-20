@@ -18,7 +18,8 @@ import {
     Settings,
     Trophy,
     Gamepad2,
-    Map as MapIcon
+    Map as MapIcon,
+    Zap
 } from 'lucide-vue-next';
 
 const isMobileMenuOpen = ref(false);
@@ -139,10 +140,11 @@ onMounted(() => {
                             <Sun v-else :size="20" />
                         </button>
 
-                        <!-- Bouton Déconnexion (Bouncy 3D Red) -->
-                        <!-- <button @click="confirmLogout" class="btn-3d btn-3d-red px-5 py-2.5 text-xs text-white">
-                            🚪 Quitter
-                        </button> -->
+                        <!-- Bouton Déconnexion (Desktop/Tablet) -->
+                        <button @click="confirmLogout" class="hidden sm:flex items-center gap-2 btn-3d btn-3d-red px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-[0_4px_0_#9e2318] hover:scale-105 transition-all">
+                            <LogOut :size="14" />
+                            Quitter
+                        </button>
 
                         <!-- User Profile Dropdown (Desktop) -->
                         <div class="hidden sm:flex items-center gap-3 border-l border-[#2a245c] pl-6">

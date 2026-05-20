@@ -27,7 +27,7 @@ const currentStep = ref(1);
 const form = useForm({
     niveau: 1,                // Niveau de difficulté (1-3)
     description: '',          // Texte de l'énigme
-    reponse: '',              // Réponse attendue
+    reponse: props.place.nom,  // Réponse attendue (Pré-remplie avec le nom du lieu)
     mcq_options: ['', '', '', ''], // Options pour les niveaux 1 & 2
     hint_keyword: '',         // Mot-clé d'indice (Optionnel)
     hint_images: [],          // Images d'indice (Optionnel)
@@ -330,7 +330,7 @@ const confirmDelete = (enigma) => {
 
                     <!-- Éléments HUD décoratifs -->
                     <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em] animate-pulse">Core Sync: 100%</div>
-                    <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Step {{ currentStep }} / 04</div>
+                    <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Step {{ currentStep }} / 05</div>
                 </div>
             </transition>
 

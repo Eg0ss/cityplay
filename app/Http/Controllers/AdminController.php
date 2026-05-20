@@ -6,6 +6,7 @@ use App\Models\Place;
 use App\Models\Riddle;
 use App\Models\User;
 use App\Models\City;
+use App\Http\Requests\RiddleRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -201,7 +202,7 @@ class AdminController extends Controller
     }
 
     // Ajouter une énigme
-    public function storeRiddle(Request $request, Place $place)
+    public function storeRiddle(RiddleRequest $request, Place $place)
     {
         $validated = $request->validate([
             'niveau' => 'required|integer|between:1,3',
@@ -257,7 +258,7 @@ class AdminController extends Controller
     }
 
     // Modifier une énigme
-    public function updateRiddle(Request $request, Riddle $enigma)
+    public function updateRiddle(RiddleRequest $request, Riddle $enigma)
     {
         $validated = $request->validate([
             'niveau' => 'required|integer|between:1,3',
@@ -313,5 +314,30 @@ class AdminController extends Controller
         }
 
         return back()->with('success', 'Énigme mise à jour avec succès.');
+    }
+
+    // Générer un lien de session rapide pour un lieu
+    public function generateSession(Place $place)
+    {
+        $token = str()->random(10);
+        $session = \App\Models\GameSession::create([
+            'statut' => 'en_attente',
+            'lien_token' => $token,
+            'max_joueurs' => 10,
+            'level' => 'facile',
+            'location_type' => 'place',
+            'location_id' => $place->id,
+            'riddles_count' => $place->riddles()->count(),
+            'type' => 'participants',
+        ]);
+
+        \App\Models\GamePlayer::create([
+            'session_id' => $session->id,
+            'user_id' => auth()->id(),
+            'statut' => 'pret',
+            'global_mode' => 'mixte'
+        ]);
+
+        return redirect()->route('game.lobby', ['token' => $token])->with('success', 'Lien de session généré pour ce lieu !');
     }
 }

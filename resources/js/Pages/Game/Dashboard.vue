@@ -100,16 +100,6 @@ const confirmLogout = () => {
                         </div>
                     </div>
                 </div>
-
-                <div class="mt-12 flex justify-center">
-                    <button
-                        type="button"
-                        @click="confirmLogout"
-                        class="btn-3d btn-3d-red px-8 py-3.5 text-xs font-black uppercase tracking-widest shadow-[0_4px_0_#9e2318]"
-                    >
-                        🚪 Se déconnecter
-                    </button>
-                </div>
             </div>
         </div>
     </AuthenticatedLayout>
