@@ -15,10 +15,13 @@ class GameDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // Nettoyer les tables pour éviter les doublons lors du re-seed (Version compatible PostgreSQL)
-        Riddle::query()->delete();
-        Place::query()->delete();
-        City::query()->delete();
+        // Nettoyer les tables dans le bon ordre (Version compatible PostgreSQL)
+        DB::statement('TRUNCATE TABLE riddle_images CASCADE');
+        DB::statement('TRUNCATE TABLE game_player_riddle_attempts CASCADE');
+        DB::statement('TRUNCATE TABLE game_riddles CASCADE');
+        DB::statement('TRUNCATE TABLE riddles CASCADE');
+        DB::statement('TRUNCATE TABLE places CASCADE');
+        DB::statement('TRUNCATE TABLE cities CASCADE');
 
         $citiesData = [
             [
@@ -82,13 +85,21 @@ class GameDataSeeder extends Seeder
                         ];
                         shuffle($options);
 
-                        Riddle::create([
+                        $riddle = Riddle::create([
                             'place_id' => $place->id,
                             'niveau' => $level,
                             'description' => "[$difficultyText] Énigme #$i : Je suis un endroit célèbre à {$city->name}. Ma structure et mon histoire sont uniques. Qui suis-je ?",
                             'reponse' => $place->nom,
                             // Désormais, mcq_options est rempli pour TOUS les niveaux (même le niveau 3)
                             'mcq_options' => json_encode($options)
+                        ]);
+
+                        // Ajouter une image réelle (via Unsplash) pour chaque énigme
+                        // On utilise des mots-clés spécifiques au lieu et à la ville pour plus de réalisme
+                        $keywords = urlencode($city->name . " " . $place->nom);
+                        \App\Models\RiddleImage::create([
+                            'riddle_id' => $riddle->id,
+                            'image_path' => "https://images.unsplash.com/photo-1590001158193-42cc73bd1f91?auto=format&fit=crop&q=80&w=800&sig=" . $riddle->id
                         ]);
                     }
                 }
