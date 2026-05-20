@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\City;
 use App\Models\Place;
 use App\Models\Riddle;
+use App\Models\Hint;
+use App\Models\RiddleImage;
 
 class GameDataSeeder extends Seeder
 {
@@ -15,13 +17,12 @@ class GameDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // Nettoyer les tables dans le bon ordre (Version compatible PostgreSQL)
-        DB::statement('TRUNCATE TABLE riddle_images CASCADE');
-        DB::statement('TRUNCATE TABLE game_player_riddle_attempts CASCADE');
-        DB::statement('TRUNCATE TABLE game_riddles CASCADE');
-        DB::statement('TRUNCATE TABLE riddles CASCADE');
-        DB::statement('TRUNCATE TABLE places CASCADE');
-        DB::statement('TRUNCATE TABLE cities CASCADE');
+        // Nettoyage sécurisé via Eloquent pour PostgreSQL/Supabase
+        Hint::query()->delete();
+        RiddleImage::query()->delete();
+        Riddle::query()->delete();
+        Place::query()->delete();
+        City::query()->delete();
 
         $citiesData = [
             [
@@ -63,20 +64,20 @@ class GameDataSeeder extends Seeder
                     'city_id' => $city->id,
                     'ville' => $city->name,
                     'departement' => $city->departement,
-                    'verified_description' => "Un lieu historique et culturel majeur de la ville de " . $city->name . ". Ce site est un pilier du patrimoine béninois.",
+                    'verified_description' => "Un lieu emblématique de " . $city->name . ". Découvrez son architecture unique et son importance historique pour le Bénin.",
                     'lat' => $placeLat,
                     'lng' => $placeLng,
                     'rayon_marge' => 50,
                     'marge_validation_gps' => 50,
                     'is_active' => true,
-                    'image' => 'https://images.unsplash.com/photo-1590001158193-42cc73bd1f91?auto=format&fit=crop&q=80&w=800'
+                    'image' => 'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&q=80&w=800'
                 ]);
 
-                // Pour chaque lieu, créer 10 énigmes par niveau (Total 30 énigmes par lieu)
+                // Création d'énigmes pour chaque niveau
                 for ($level = 1; $level <= 3; $level++) {
                     $difficultyText = $level === 1 ? 'Facile' : ($level === 2 ? 'Intermédiaire' : 'Difficile');
                     
-                    for ($i = 1; $i <= 10; $i++) {
+                    for ($i = 1; $i <= 5; $i++) { // 5 énigmes par niveau pour éviter les timeouts
                         $options = [
                             $place->nom,
                             "Lieu Mystère " . ($i + 1),
@@ -90,16 +91,32 @@ class GameDataSeeder extends Seeder
                             'niveau' => $level,
                             'description' => "[$difficultyText] Énigme #$i : Je suis un endroit célèbre à {$city->name}. Ma structure et mon histoire sont uniques. Qui suis-je ?",
                             'reponse' => $place->nom,
-                            // Désormais, mcq_options est rempli pour TOUS les niveaux (même le niveau 3)
-                            'mcq_options' => json_encode($options)
+                            'mcq_options' => $options
                         ]);
 
-                        // Ajouter une image réelle (via Unsplash) pour chaque énigme
-                        // On utilise des mots-clés spécifiques au lieu et à la ville pour plus de réalisme
-                        $keywords = urlencode($city->name . " " . $place->nom);
-                        \App\Models\RiddleImage::create([
+                        // L'indice est la réponse elle-même
+                        Hint::create([
                             'riddle_id' => $riddle->id,
-                            'image_path' => "https://images.unsplash.com/photo-1590001158193-42cc73bd1f91?auto=format&fit=crop&q=80&w=800&sig=" . $riddle->id
+                            'type' => 'text',
+                            'content' => $place->nom,
+                            'difficulty_level' => 'medium',
+                            'order' => 1
+                        ]);
+
+                        // Images Unsplash de qualité
+                        $imageUrls = [
+                            'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&q=80&w=800',
+                            'https://images.unsplash.com/photo-1564507592333-c60657451dad?auto=format&fit=crop&q=80&w=800',
+                            'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&q=80&w=800',
+                            'https://images.unsplash.com/photo-1514222139-1bc96e232ed1?auto=format&fit=crop&q=80&w=800',
+                            'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=800',
+                            'https://images.unsplash.com/photo-1526392060635-9d6019884377?auto=format&fit=crop&q=80&w=800',
+                        ];
+                        $randomImage = $imageUrls[array_rand($imageUrls)];
+
+                        RiddleImage::create([
+                            'riddle_id' => $riddle->id,
+                            'image_path' => $randomImage . "?sig=" . $riddle->id
                         ]);
                     }
                 }

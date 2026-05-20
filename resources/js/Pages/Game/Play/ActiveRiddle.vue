@@ -59,35 +59,23 @@ const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
 
 // État des indices
-const riddleHints = ref([]);
-const showHintsModal = ref(false);
-const isFetchingHints = ref(false);
+const showFlashHint = ref(false);
 
-const fetchHints = async () => {
-    if (riddleHints.value.length > 0) {
-        showHintsModal.value = true;
-        return;
-    }
-
-    try {
-        isFetchingHints.value = true;
-        const response = await axios.get(route('game.hints', { riddleId: currentRiddle.value.id }));
-        if (response.data.success) {
-            riddleHints.value = response.data.hints;
-            showHintsModal.value = true;
-        }
-    } catch (e) {
-        console.error("Erreur lors de la récupération des indices:", e);
-        toast.add({ severity: 'error', summary: 'Erreur', detail: 'Impossible de charger les indices.', life: 3000 });
-    } finally {
-        isFetchingHints.value = false;
-    }
+const triggerHint = () => {
+    if (showFlashHint.value) return;
+    
+    playClick();
+    showFlashHint.value = true;
+    
+    // Fermer l'indice automatiquement après 1 seconde
+    setTimeout(() => {
+        showFlashHint.value = false;
+    }, 1000);
 };
 
-// Réinitialiser les indices quand on change d'énigme
+// Réinitialiser l'état quand on change d'énigme
 watch([currentPlaceIndex], () => {
-    riddleHints.value = [];
-    showHintsModal.value = false;
+    showFlashHint.value = false;
 });
 
 // État de décision intermédiaire ('win', 'lose', 'already_solved' ou null)
@@ -154,11 +142,11 @@ const finishSessionRedirect = (message) => {
         severity: 'success',
         summary: 'Session terminée ! 🏆',
         detail: message || 'L\'équipe a atteint l\'objectif d\'énigmes. Bravo !',
-        life: 5000,
+        life: 2000,
     });
     setTimeout(() => {
         router.get(route('game.dashboard'));
-    }, 1800);
+    }, 300);
 };
 
 // Trouver la première énigme non tentée dans le mode participants
@@ -560,12 +548,10 @@ const togglePause = () => {
     isPaused.value = !isPaused.value;
     if (isPaused.value) {
         pauseBackgroundMusic();
-        toast.add({ severity: 'warn', summary: 'Chrono suspendu', detail: 'La pause est active.', life: 2500 });
     } else {
         // Recalculer endTime pour compenser le temps passé en pause
         endTime.value = Date.now() + (timeLeft.value * 1000);
         resumeBackgroundMusic();
-        toast.add({ severity: 'info', summary: 'Reprise', detail: 'Le chrono a repris.', life: 2000 });
     }
 };
 
@@ -634,7 +620,6 @@ const goToNextPlace = async () => {
     
     if (props.session.statut === 'termine') {
         finishSessionRedirect();
-        isNavigating.value = false;
         return;
     }
     
@@ -655,11 +640,11 @@ const goToNextPlace = async () => {
         decisionState.value = null;
         
         if (currentPlaceIndex.value >= props.gameSteps.length) {
-            toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 6000 });
+            toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 2000 });
             setTimeout(() => {
                 router.get(route('game.dashboard'));
                 isNavigating.value = false;
-            }, 3000);
+            }, 300);
         } else {
             // Un petit délai pour s'assurer que les computed props se mettent à jour
             setTimeout(() => {
@@ -675,11 +660,11 @@ const goToNextPlace = async () => {
                 nextRiddleLogic();
             }, 50);
         } else {
-            toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 6000 });
+            toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 2000 });
             setTimeout(() => {
                 router.get(route('game.dashboard'));
                 isNavigating.value = false;
-            }, 3000);
+            }, 300);
         }
     }
 };
@@ -776,12 +761,11 @@ const formatTime = (seconds) => {
                     >
                         <button
                             type="button"
-                            @click="fetchHints"
-                            :disabled="isFetchingHints"
+                            @click="triggerHint"
+                            :disabled="showFlashHint"
                             class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500/20 transition-all disabled:opacity-50"
                         >
-                            <Zap v-if="!isFetchingHints" :size="16" />
-                            <RotateCcw v-else :size="16" class="animate-spin" />
+                            <Zap :size="16" />
                             Indice
                         </button>
                         <button
@@ -941,8 +925,9 @@ const formatTime = (seconds) => {
                                         :disabled="isNavigating"
                                         class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2 disabled:opacity-50">
                                         <template v-if="!isNavigating">
-                                            Passer au lieu suivant
-                                            <ChevronRight :size="18" />
+                                            {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
+                                            <ChevronRight v-if="hasNextPlace" :size="18" />
+                                            <CheckCircle2 v-else :size="18" />
                                         </template>
                                         <template v-else>
                                             Chargement...
@@ -966,8 +951,9 @@ const formatTime = (seconds) => {
                                         :disabled="isNavigating"
                                         class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50">
                                         <template v-if="!isNavigating">
-                                            Passer au lieu suivant
-                                            <ChevronRight :size="18" />
+                                            {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
+                                            <ChevronRight v-if="hasNextPlace" :size="18" />
+                                            <CheckCircle2 v-else :size="18" />
                                         </template>
                                         <template v-else>
                                             <RotateCcw :size="18" class="animate-spin" />
@@ -986,44 +972,6 @@ const formatTime = (seconds) => {
                             <Pause :size="80" class="text-[#f3a900] mb-6 animate-pulse" />
                             <h2 class="text-3xl font-black uppercase italic tracking-tighter text-[#f3a900] text-glow-yellow mb-8">Jeu en Pause</h2>
                             <button @click="togglePause" class="btn-3d btn-3d-yellow px-8 py-3.5 text-xs text-[#0A0B0E] font-black shadow-[0_5px_0_#9e6f00]">REPRENDRE</button>
-                        </div>
-
-                        <!-- Hints overlay -->
-                        <div v-if="showHintsModal" class="absolute inset-0 bg-[#0D0E12]/98 backdrop-blur-xl z-40 flex flex-col p-6 sm:p-10 rounded-3xl border-2 border-amber-500/20">
-                            <div class="flex items-center justify-between mb-8">
-                                <div class="flex items-center gap-3">
-                                    <Zap :size="24" class="text-amber-500 animate-pulse" />
-                                    <h2 class="text-2xl font-black uppercase italic tracking-tighter text-white">Protocole d'aide</h2>
-                                </div>
-                                <button @click="showHintsModal = false" class="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
-                                    <X :size="20" />
-                                </button>
-                            </div>
-
-                            <div v-if="riddleHints.length > 0" class="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-                                <div v-for="(hint, index) in riddleHints" :key="hint.id" class="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-3 animate-fade-in-up" :style="{ animationDelay: (index * 0.1) + 's' }">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-[8px] font-black uppercase tracking-[0.3em] text-amber-500">INDICE #{{ index + 1 }} • {{ hint.difficulty_level }}</span>
-                                        <span class="text-[8px] font-black uppercase tracking-widest text-gray-500 italic">{{ hint.type }}</span>
-                                    </div>
-                                    
-                                    <div v-if="hint.type === 'image'" class="rounded-xl overflow-hidden border border-white/10">
-                                        <img :src="hint.content" class="w-full h-auto object-cover max-h-48" alt="Indice visuel" />
-                                    </div>
-                                    <p v-else class="text-sm font-bold leading-relaxed text-gray-200 italic">
-                                        "{{ hint.content }}"
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div v-else class="flex-1 flex flex-col items-center justify-center text-center space-y-4">
-                                <AlertTriangle :size="48" class="text-gray-600" />
-                                <p class="text-gray-500 font-black uppercase tracking-widest text-xs">Aucun indice disponible pour cette énigme.</p>
-                            </div>
-
-                            <div class="mt-8 pt-6 border-t border-white/5">
-                                <button @click="showHintsModal = false" class="w-full btn-3d btn-3d-yellow py-4 text-xs font-black shadow-[0_5px_0_#9e6f00] text-black">RETOURNER À L'ÉNIGME</button>
-                            </div>
                         </div>
 
                         <!-- Game Header Details -->
@@ -1103,10 +1051,23 @@ const formatTime = (seconds) => {
                         </div>
 
                         <!-- Riddle Quote Text Box -->
-                        <div class="text-center mb-10 px-4">
+                        <div class="text-center mb-10 px-4 relative">
                             <h2 class="text-xl sm:text-2xl text-white font-black italic leading-relaxed text-glow-green mb-6">
                                 "{{ currentRiddle.description }}"
                             </h2>
+
+                            <!-- Flash Hint Small Label -->
+                            <transition name="fade">
+                                <div v-if="showFlashHint" class="inline-flex flex-col items-center justify-center p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl backdrop-blur-sm animate-bounce shadow-[0_0_20px_rgba(245,158,11,0.1)]">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <Zap :size="14" class="text-amber-500" />
+                                        <span class="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500/70">Indice Flash</span>
+                                    </div>
+                                    <p class="text-lg font-black text-white text-glow-yellow italic">
+                                        {{ currentRiddle.hints?.[0]?.content || currentRiddle.reponse }}
+                                    </p>
+                                </div>
+                            </transition>
 
                             <!-- Riddle Images Gallery -->
                             <div v-if="riddleImages.length > 0" class="flex flex-wrap justify-center gap-4 mt-6">
