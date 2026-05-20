@@ -15,6 +15,11 @@ class GameDataSeeder extends Seeder
      */
     public function run(): void
     {
+        // Nettoyer les tables pour éviter les doublons lors du re-seed (Version compatible PostgreSQL)
+        Riddle::query()->delete();
+        Place::query()->delete();
+        City::query()->delete();
+
         $citiesData = [
             [
                 'name' => 'Cotonou',
@@ -23,8 +28,8 @@ class GameDataSeeder extends Seeder
                 'lng' => 2.4183,
                 'places' => [
                     'Place de l\'Étoile Rouge', 'Stade de l\'Amitié', 'Marché Dantokpa', 'Fidjrossè Plage', 
-                    'Aéroport de Cotonou', 'Cathédrale Notre-Dame', 'Mosquée Centrale', 'Centre Artisanal', 
-                    'Haie Vive', 'Port de Cotonou'
+                    'Cathédrale Notre-Dame', 'Mosquée Centrale', 'Centre Artisanal', 
+                    'Haie Vive', 'Port de Cotonou', 'Palais des Congrès'
                 ]
             ],
             [
@@ -33,90 +38,57 @@ class GameDataSeeder extends Seeder
                 'lat' => 6.4969,
                 'lng' => 2.6288,
                 'places' => [
-                    'Musée Honmé', 'Place Jean Bayol', 'Cathédrale Notre-Dame', 'Grande Mosquée', 
+                    'Musée Honmé', 'Place Jean Bayol', 'Cathédrale Notre-Dame de Porto-Novo', 'Grande Mosquée de Porto-Novo', 
                     'Jardin des Plantes', 'Assemblée Nationale', 'Marché Ouando', 'Pont de Porto-Novo', 
                     'Musée da Silva', 'Place Toffa 1er'
-                ]
-            ],
-            [
-                'name' => 'Parakou',
-                'departement' => 'Borgou',
-                'lat' => 9.3372,
-                'lng' => 2.6303,
-                'places' => [
-                    'Place Tabéra', 'Marché Arigbo', 'Musée en Plein Air', 'Cathédrale Saint Pierre et Saint Paul', 
-                    'Université de Parakou', 'Gare Ferroviaire', 'Mosquée de Yéboubéri', 'Palais Royal', 
-                    'Hôpital Boko', 'Aérodrome de Parakou'
-                ]
-            ],
-            [
-                'name' => 'Abomey',
-                'departement' => 'Zou',
-                'lat' => 7.1829,
-                'lng' => 1.9912,
-                'places' => [
-                    'Palais Royaux d\'Abomey', 'Place Goho', 'Musée Historique', 'Marché Moundi', 
-                    'Temple des Vodoun', 'Village Artisanal', 'Statue du Roi Béhanzin', 'Forêt Sacrée', 
-                    'Palais de Djimè', 'Palais d\'Agonglo'
-                ]
-            ],
-            [
-                'name' => 'Ouidah',
-                'departement' => 'Atlantique',
-                'lat' => 6.3644,
-                'lng' => 2.0833,
-                'places' => [
-                    'Porte du Non-Retour', 'Temple des Pythons', 'Musée d\'Histoire', 'Basilique', 
-                    'Forêt Sacrée de Kpassè', 'Route des Esclaves', 'Marché de Zobè', 'Place Chacha', 
-                    'Statue de de Souza', 'Villa Ajavon'
                 ]
             ],
         ];
 
         foreach ($citiesData as $cityInfo) {
-            $city = City::firstOrCreate(
-                ['name' => $cityInfo['name']],
-                ['departement' => $cityInfo['departement']]
-            );
+            $city = City::create([
+                'name' => $cityInfo['name'],
+                'departement' => $cityInfo['departement']
+            ]);
 
             foreach ($cityInfo['places'] as $index => $placeName) {
-                // Generate a slight offset for each place to spread them around the city
-                // 0.01 deg is roughly 1km
-                $placeLat = $cityInfo['lat'] + (rand(-30, 30) / 1000);
-                $placeLng = $cityInfo['lng'] + (rand(-30, 30) / 1000);
+                $placeLat = $cityInfo['lat'] + (rand(-20, 20) / 1000);
+                $placeLng = $cityInfo['lng'] + (rand(-20, 20) / 1000);
 
-                $place = Place::firstOrCreate(
-                    ['nom' => $placeName, 'city_id' => $city->id],
-                    [
-                        'ville' => $city->name,
-                        'departement' => $city->departement,
-                        'verified_description' => "Un lieu emblématique de " . $city->name . " à découvrir.",
-                        'lat' => $placeLat,
-                        'lng' => $placeLng,
-                        'rayon_marge' => 50,
-                        'marge_validation_gps' => 50,
-                        'is_active' => true,
-                        // Pseudo random image matching city vibe
-                        'image' => 'https://source.unsplash.com/800x600/?' . urlencode('benin,' . $city->name . ',' . $placeName)
-                    ]
-                );
+                $place = Place::create([
+                    'nom' => $placeName,
+                    'city_id' => $city->id,
+                    'ville' => $city->name,
+                    'departement' => $city->departement,
+                    'verified_description' => "Un lieu historique et culturel majeur de la ville de " . $city->name . ". Ce site est un pilier du patrimoine béninois.",
+                    'lat' => $placeLat,
+                    'lng' => $placeLng,
+                    'rayon_marge' => 50,
+                    'marge_validation_gps' => 50,
+                    'is_active' => true,
+                    'image' => 'https://images.unsplash.com/photo-1590001158193-42cc73bd1f91?auto=format&fit=crop&q=80&w=800'
+                ]);
 
-                // Create 15 Riddles for this Place (5 Facile, 5 Moyen, 5 Difficile)
+                // Pour chaque lieu, créer 10 énigmes par niveau (Total 30 énigmes par lieu)
                 for ($level = 1; $level <= 3; $level++) {
-                    for ($i = 1; $i <= 5; $i++) {
-                        $difficultyText = $level === 1 ? 'Facile' : ($level === 2 ? 'Intermédiaire' : 'Difficile');
-                        
+                    $difficultyText = $level === 1 ? 'Facile' : ($level === 2 ? 'Intermédiaire' : 'Difficile');
+                    
+                    for ($i = 1; $i <= 10; $i++) {
+                        $options = [
+                            $place->nom,
+                            "Lieu Mystère " . ($i + 1),
+                            "Site Historique " . ($i + 2),
+                            "Monument de " . $city->name
+                        ];
+                        shuffle($options);
+
                         Riddle::create([
                             'place_id' => $place->id,
                             'niveau' => $level,
-                            'description' => "[$difficultyText] Énigme #$i : Qu'est-ce qui caractérise ce lieu historique à {$city->name} ?",
+                            'description' => "[$difficultyText] Énigme #$i : Je suis un endroit célèbre à {$city->name}. Ma structure et mon histoire sont uniques. Qui suis-je ?",
                             'reponse' => $place->nom,
-                            'mcq_options' => $level < 3 ? json_encode([
-                                $place->nom,
-                                "Faux lieu de " . $city->name . " 1",
-                                "Faux lieu de " . $city->name . " 2",
-                                "Faux lieu de " . $city->name . " 3"
-                            ]) : null
+                            // Désormais, mcq_options est rempli pour TOUS les niveaux (même le niveau 3)
+                            'mcq_options' => json_encode($options)
                         ]);
                     }
                 }

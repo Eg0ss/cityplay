@@ -92,6 +92,7 @@ watch([currentPlaceIndex], () => {
 // État de décision intermédiaire ('win', 'lose', 'already_solved' ou null)
 const decisionState = ref(null);
 const alreadySolvedMessage = ref('');
+const isNavigating = ref(false);
 
 let timerInterval = null;
 const sessionEndHandled = ref(false);
@@ -413,6 +414,15 @@ watch(() => localSessionData.value.attempts, (newAttempts) => {
     }
 }, { deep: true });
 
+// Synchronisation de localSessionData avec props.session lors des reloads Inertia
+watch(() => props.session, (newSession) => {
+    if (newSession) {
+        localSessionData.value.attempts = newSession.attempts || [];
+        localSessionData.value.players = newSession.players || [];
+        localSessionData.value.statut = newSession.statut;
+    }
+}, { deep: true });
+
 watch(
     () => props.session.statut,
     (statut, prev) => {
@@ -580,21 +590,28 @@ const submitGaming = async () => {
 };
 
 // Choix : Passer au lieu suivant
-const goToNextPlace = () => {
+const goToNextPlace = async () => {
+    if (isNavigating.value) return;
+    isNavigating.value = true;
+    
     playClick();
+    
     if (props.session.statut === 'termine') {
         finishSessionRedirect();
+        isNavigating.value = false;
         return;
     }
     
     const nextRiddleLogic = () => {
-        if (currentPlayer.value && (currentPlayer.value.global_mode === 'gaming' || currentPlayer.value.global_mode === 'decouverte')) {
-            startRiddle(currentPlayer.value.global_mode);
+        const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
+        if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
+            startRiddle(player.global_mode);
         } else {
             // Mode mixte : isPlaying reste false pour afficher le choix du mode
             isPlaying.value = false;
             decisionState.value = null;
         }
+        isNavigating.value = false;
     };
 
     if (props.session.type === 'participants') {
@@ -605,19 +622,27 @@ const goToNextPlace = () => {
             toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 6000 });
             setTimeout(() => {
                 router.get(route('game.dashboard'));
+                isNavigating.value = false;
             }, 3000);
         } else {
-            nextRiddleLogic();
+            // Un petit délai pour s'assurer que les computed props se mettent à jour
+            setTimeout(() => {
+                nextRiddleLogic();
+            }, 50);
         }
     } else {
         if (hasNextPlace.value) {
             currentPlaceIndex.value++;
             decisionState.value = null;
-            nextRiddleLogic();
+            // Un petit délai pour s'assurer que les computed props se mettent à jour
+            setTimeout(() => {
+                nextRiddleLogic();
+            }, 50);
         } else {
             toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 6000 });
             setTimeout(() => {
                 router.get(route('game.dashboard'));
+                isNavigating.value = false;
             }, 3000);
         }
     }
@@ -830,8 +855,11 @@ const formatTime = (seconds) => {
                                 </div>
                                 
                                 <div class="flex flex-col gap-3 w-full max-w-xs">
-                                    <button @click="goToNextPlace" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
-                                        <CheckCircle2 :size="18" class="mr-2 inline" />
+                                    <button @click="goToNextPlace" 
+                                        :disabled="isNavigating"
+                                        class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b] disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <CheckCircle2 v-if="!isNavigating" :size="18" class="mr-2 inline" />
+                                        <RotateCcw v-else :size="18" class="mr-2 inline animate-spin" />
                                         {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
                                     </button>
                                 </div>
@@ -873,9 +901,17 @@ const formatTime = (seconds) => {
                                          <RotateCcw :size="18" />
                                          Autre énigme sur ce lieu
                                      </button>
-                                    <button @click="goToNextPlace" class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2">
-                                        Passer au lieu suivant
-                                        <ChevronRight :size="18" />
+                                    <button @click="goToNextPlace" 
+                                        :disabled="isNavigating"
+                                        class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2 disabled:opacity-50">
+                                        <template v-if="!isNavigating">
+                                            Passer au lieu suivant
+                                            <ChevronRight :size="18" />
+                                        </template>
+                                        <template v-else>
+                                            Chargement...
+                                            <RotateCcw :size="18" class="animate-spin" />
+                                        </template>
                                     </button>
                                     <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100">
                                         Abandonner
@@ -890,9 +926,16 @@ const formatTime = (seconds) => {
                                 <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">{{ alreadySolvedMessage || 'Un coéquipier ou challenger a déjà répondu avec succès.' }}</p>
                                 
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
-                                    <button @click="goToNextPlace" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2">
-                                        Passer au lieu suivant
-                                        <ChevronRight :size="18" />
+                                    <button @click="goToNextPlace" 
+                                        :disabled="isNavigating"
+                                        class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50">
+                                        <template v-if="!isNavigating">
+                                            Passer au lieu suivant
+                                            <ChevronRight :size="18" />
+                                        </template>
+                                        <template v-else>
+                                            <RotateCcw :size="18" class="animate-spin" />
+                                        </template>
                                     </button>
                                     <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
                                         <LogOut :size="14" />
@@ -1046,9 +1089,11 @@ const formatTime = (seconds) => {
 
                         <!-- COLUMN ACTION : Gaming (Couch Selection) -->
                         <div v-if="modeChoisi === 'gaming'" class="space-y-6">
-                            <!-- Difficult Text input answer -->
-                            <div v-if="session.level === 'difficile'" class="space-y-4">
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 text-center">Quel est le nom de ce lieu ?</label>
+                            <!-- Difficult Text input answer OR if MCQ options are missing -->
+                            <div v-if="session.level === 'difficile' || parsedMcqOptions.length === 0" class="space-y-4">
+                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 text-center">
+                                    {{ parsedMcqOptions.length === 0 ? 'Aucun choix disponible : Saisissez le nom du lieu' : 'Quel est le nom de ce lieu ?' }}
+                                </label>
                                 <input v-model="userAnswer" type="text" placeholder="Entrez la réponse exacte..." 
                                     @keydown="playKey"
                                     @keydown.enter="submitGaming"
