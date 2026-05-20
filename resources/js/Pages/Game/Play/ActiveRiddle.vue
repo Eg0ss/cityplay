@@ -1,18 +1,18 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
-import { 
-    Trophy, 
-    CheckCircle2, 
-    Pause, 
-    Play, 
-    LogOut, 
-    Map as MapIcon, 
-    MapPin, 
-    Gamepad2, 
-    Skull, 
-    RotateCcw, 
-    AlertTriangle, 
-    Compass, 
+import {
+    Trophy,
+    CheckCircle2,
+    Pause,
+    Play,
+    LogOut,
+    Map as MapIcon,
+    MapPin,
+    Gamepad2,
+    Skull,
+    RotateCcw,
+    AlertTriangle,
+    Compass,
     Rocket,
     Clock,
     Target,
@@ -57,6 +57,7 @@ const totalTime = ref(0);
 const isPaused = ref(false);
 const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
+const transportMode = ref('auto'); // 'pied', 'velo', 'voiture', 'auto'
 
 // État des indices
 const riddleHints = ref([]);
@@ -90,6 +91,14 @@ watch([currentPlaceIndex, currentRiddleInPlaceIndex], () => {
     showHintsModal.value = false;
 });
 
+// Recalculer le temps quand le moyen de locomotion change en mode découverte
+watch(transportMode, () => {
+    if (modeChoisi.value === 'decouverte' && isPlaying.value) {
+        totalTime.value = calculateChronoTimeForDiscovery();
+        timeLeft.value = totalTime.value;
+    }
+});
+
 // État de décision intermédiaire ('win', 'lose', 'already_solved' ou null)
 const decisionState = ref(null);
 const alreadySolvedMessage = ref('');
@@ -110,7 +119,7 @@ const sessionLeaderboard = computed(() => {
         const sessionPoints = localSessionData.value.attempts
             ?.filter(att => att.user_id === player.user_id && att.status === 'gagne')
             ?.reduce((sum, att) => sum + (att.points_earned || 0), 0) || 0;
-            
+
         return {
             id: player.id,
             user_id: player.user_id,
@@ -163,7 +172,7 @@ const finishSessionRedirect = (message) => {
 // Trouver la première énigme non tentée dans le mode participants
 const selectFirstUnattemptedRiddle = () => {
     if (props.session.type !== 'participants') return;
-    
+
     for (let pIdx = 0; pIdx < props.placesWithRiddles.length; pIdx++) {
         const place = props.placesWithRiddles[pIdx];
         for (let rIdx = 0; rIdx < (place.riddles?.length || 0); rIdx++) {
@@ -179,7 +188,7 @@ const selectFirstUnattemptedRiddle = () => {
             }
         }
     }
-    
+
     // Si toutes les énigmes ont été tentées, on affiche l'écran de fin
     currentPlaceIndex.value = props.placesWithRiddles.length;
 };
@@ -270,19 +279,19 @@ const recordAttemptOnBackend = async (status, pointsEarned) => {
             }
             return false;
         }
-        
+
         if (response.data && response.data.already_solved) {
-            toast.add({ 
-                severity: 'warn', 
-                summary: 'Énigme déjà clôturée ⚠️', 
-                detail: response.data.message, 
-                life: 6000 
+            toast.add({
+                severity: 'warn',
+                summary: 'Énigme déjà clôturée ⚠️',
+                detail: response.data.message,
+                life: 6000
             });
-            decisionState.value = 'already_solved'; 
+            decisionState.value = 'already_solved';
             alreadySolvedMessage.value = response.data.message;
             return false;
         }
-        
+
         // Force Inertia to update the local session state immediately!
         await router.reload({ only: ['session'] });
         return true;
@@ -320,7 +329,7 @@ onMounted(() => {
                     }
                     if (e.session.statut) {
                         localSessionData.value.statut = e.session.statut;
-                        
+
                         // Vérifier si la session est terminée
                         if (e.session.statut === 'termine' && props.session.statut !== 'termine') {
                             finishSessionRedirect();
@@ -389,17 +398,17 @@ watch(() => localSessionData.value.attempts, (newAttempts) => {
             const gameRiddle = att.game_riddle || att.gameRiddle;
             return gameRiddle?.riddle_id === currentRiddle.value.id;
         });
-        
+
         if (activeAttempt && !decisionState.value) {
             // Ignorer si c'est la tentative locale (déjà gérée par les handlers de QCM / GPS)
             if (activeAttempt.user_id === page.props.auth.user.id) {
                 return;
             }
-            
+
             // Si c'est une tentative faite par un autre participant
             decisionState.value = 'already_solved';
             clearInterval(timerInterval);
-            
+
             if (activeAttempt.status === 'gagne') {
                 alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un participant'} a résolu cette énigme ! Progression partagée. 🟢`;
             } else {
@@ -421,7 +430,7 @@ watch(
 // Calculer la distance en kilomètres par rapport au lieu cible (Formule de Haversine)
 const distanceToPlace = computed(() => {
     if (!userCoords.value.lat || !userCoords.value.lng || !currentPlace.value) return null;
-    
+
     const lat1 = userCoords.value.lat;
     const lon1 = userCoords.value.lng;
     const lat2 = currentPlace.value.latitude;
@@ -430,37 +439,46 @@ const distanceToPlace = computed(() => {
     const R = 6371; // Rayon de la Terre en km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    
-    const a = 
+
+    const a =
         Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
         Math.sin(dLon/2) * Math.sin(dLon/2);
-        
+
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c; // Distance en km
 });
 
-// Moyen de transport recommandé
-const recommendedTransport = computed(() => {
-    const dist = distanceToPlace.value;
-    if (dist === null) return 'Calcul...';
-    const meters = dist * 1000;
-    if (meters < 200) return '🚶 À pied (Tout proche !)';
-    if (meters < 1000) return '🏃 Marche rapide / Course';
-    if (meters < 3000) return '🚴 Vélo / Trottinette';
-    return '🚗 Voiture / Transports en commun';
+// Moyen de transport sélectionné
+const selectedTransportLabel = computed(() => {
+    const labels = {
+        'pied': '🚶 À pied',
+        'velo': '� Vélo / Trottinette',
+        'voiture': '🚗 Voiture / Transports',
+        'auto': '🚴 Vélo (auto)'
+    };
+    return labels[transportMode.value] || labels['auto'];
 });
 
-// Temps recommandé en secondes basé sur la distance
+// Temps recommandé en secondes basé sur la distance et du moyen de locomotion
 const calculateChronoTimeForDiscovery = () => {
     const dist = distanceToPlace.value;
     if (dist === null) return 600; // 10 minutes par défaut
     const meters = dist * 1000;
-    
-    if (meters < 200) return 180; // 3 min
-    if (meters < 1000) return 480; // 8 min
-    if (meters < 3000) return 900; // 15 min
-    return 1800; // 30 min max
+
+    // Vitesses moyennes en m/s: pied=1.4, velo=5, voiture=13.9
+    const speeds = {
+        'pied': 1.4,
+        'velo': 5,
+        'voiture': 13.9,
+        'auto': 5 // par défaut vélo
+    };
+
+    const speed = speeds[transportMode.value] || speeds['auto'];
+    const timeInSeconds = (meters / speed) * 1.2; // +20% de marge
+
+    // Limiter entre 3 min et 60 min
+    return Math.max(180, Math.min(3600, Math.round(timeInSeconds)));
 };
 
 // Initialisation d'une énigme
@@ -479,7 +497,7 @@ const startRiddle = (mode) => {
     } else {
         totalTime.value = calculateChronoTimeForDiscovery();
     }
-    
+
     timeLeft.value = totalTime.value;
     startChrono();
 };
@@ -543,11 +561,11 @@ const submitDiscovery = async () => {
     if (distanceInMeters <= margin) {
         await handleWin();
     } else {
-        toast.add({ 
-            severity: 'error', 
-            summary: 'Lieu trop éloigné', 
-            detail: `Vous êtes à environ ${Math.round(distanceInMeters)}m de la cible (marge requise : ${margin}m).`, 
-            life: 6000 
+        toast.add({
+            severity: 'error',
+            summary: 'Lieu trop éloigné',
+            detail: `Vous êtes à environ ${Math.round(distanceInMeters)}m de la cible (marge requise : ${margin}m).`,
+            life: 6000
         });
     }
 };
@@ -560,8 +578,24 @@ const submitQcm = (option) => {
 
 const submitGaming = async () => {
     playClick();
-    const answer = userAnswer.value.trim().toLowerCase();
-    const correctAnswer = currentRiddle.value.reponse.trim().toLowerCase();
+
+    // Normalisation des réponses pour une comparaison plus flexible
+    const normalizeAnswer = (str) => {
+        return str
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Supprimer les accents
+            .replace(/[^a-z0-9\s]/g, '') // Garder seulement lettres, chiffres et espaces
+            .replace(/\s+/g, ' ') // Remplacer les espaces multiples par un seul
+            .trim();
+    };
+
+    const answer = normalizeAnswer(userAnswer.value);
+    const correctAnswer = normalizeAnswer(currentRiddle.value.reponse);
+
+    console.log('Réponse utilisateur:', answer);
+    console.log('Réponse correcte:', correctAnswer);
 
     if (answer === correctAnswer) {
         await handleWin();
@@ -581,12 +615,12 @@ const goToNextPlace = () => {
         selectFirstUnattemptedRiddle();
         decisionState.value = null;
         isPlaying.value = false;
-        
+
         const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
         if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
             startRiddle(player.global_mode);
         }
-        
+
         if (currentPlaceIndex.value >= props.placesWithRiddles.length) {
             toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 6000 });
             setTimeout(() => {
@@ -599,7 +633,7 @@ const goToNextPlace = () => {
             currentRiddleInPlaceIndex.value = 0;
             decisionState.value = null;
             isPlaying.value = false;
-            
+
             const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
             if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
                 startRiddle(player.global_mode);
@@ -619,7 +653,7 @@ const loadAnotherRiddle = () => {
         currentRiddleInPlaceIndex.value++;
         decisionState.value = null;
         isPlaying.value = false;
-        
+
         const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
         if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
             startRiddle(player.global_mode);
@@ -659,11 +693,11 @@ const formatTime = (seconds) => {
     <AuthenticatedLayout title="En Jeu">
         <Toast position="top-right" />
         <div class="min-h-screen text-white font-sans flex flex-col relative overflow-hidden">
-            
+
             <!-- Main Game Play Area -->
             <main class="relative z-10 flex-1 flex flex-col items-center justify-center p-4">
                 <div class="max-w-3xl w-full">
-                    
+
                     <!-- Live Competitive Scoreboard (Lobby Mode support) -->
                     <div v-if="session.type !== 'solo'" class="mb-6 panel-glass p-5 border border-[#26272F] animate-fade-in-up">
                         <div class="flex items-center justify-between mb-4 border-b border-[#26272F] pb-2">
@@ -673,9 +707,9 @@ const formatTime = (seconds) => {
                             </div>
                             <span class="text-[8px] bg-[#2fc276]/10 border border-[#2fc276]/20 text-[#2fc276] px-2.5 py-0.5 rounded-lg font-black uppercase tracking-widest animate-pulse text-glow-green">En Direct</span>
                         </div>
-                        
+
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div v-for="(p, idx) in sessionLeaderboard" :key="p.id" 
+                            <div v-for="(p, idx) in sessionLeaderboard" :key="p.id"
                                 class="flex items-center gap-3 bg-[#1C1D24] p-3 rounded-xl border border-[#26272F]"
                                 :class="p.user_id === page.props.auth.user.id ? 'border-[#2fc276]/40 bg-[#2fc276]/5 glow-green' : ''">
                                 <div class="w-8 h-8 rounded-full border-2 border-[#2fc276] bg-[#0D0E12] text-[#2fc276] flex items-center justify-center font-black text-xs">
@@ -694,7 +728,7 @@ const formatTime = (seconds) => {
                             Objectif coop : {{ participantsTeamAnswered }} / {{ participantsTeamTarget }} énigmes clôturées par l'équipe
                         </p>
                     </div>
-                    
+
                     <!-- Contrôles pause / quitter (accessibles pendant toute l'énigme, hors overlays) -->
                     <div
                         v-if="isPlaying && currentRiddle"
@@ -751,7 +785,7 @@ const formatTime = (seconds) => {
                         <h2 class="text-3xl font-black uppercase italic tracking-tighter text-white mb-10">
                             CHOISISSEZ VOTRE <span class="text-[#2fc276]">MODE</span> DE RÉSOLUTION
                         </h2>
-                        
+
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
                             <!-- Decouverte Adventure Card -->
                             <div class="bg-[#1C1D24] p-8 rounded-3xl border-2 border-[#f3a900]/30 hover:border-[#f3a900] hover:bg-[#f3a900]/5 transition-all duration-300 relative group flex flex-col items-center">
@@ -763,7 +797,7 @@ const formatTime = (seconds) => {
                                     C'est parti !
                                 </button>
                             </div>
-                            
+
                             <!-- Gaming couch Card -->
                             <div class="bg-[#1C1D24] p-8 rounded-3xl border-2 border-[#2c72f6]/30 hover:border-[#2c72f6] hover:bg-[#2c72f6]/5 transition-all duration-300 relative group flex flex-col items-center">
                                 <Gamepad2 :size="64" class="mb-4 text-[#2c72f6] transform group-hover:scale-105 group-hover:-rotate-6 transition-transform" />
@@ -779,10 +813,10 @@ const formatTime = (seconds) => {
 
                     <!-- Active Riddle Board Console -->
                     <div v-if="isPlaying && currentRiddle" class="panel-glass p-4 sm:p-8 border border-[#26272F] relative overflow-hidden animate-fade-in-up shadow-2xl">
-                        
+
                         <!-- Overlay intermediate states (Celebration/Failed/Solved) -->
                         <div v-if="decisionState" class="absolute inset-0 bg-[#0D0E12]/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-4 sm:p-8 text-center rounded-3xl">
-                            
+
                             <!-- Win state overlay -->
                             <template v-if="decisionState === 'win'">
                                 <div class="relative mb-6">
@@ -793,8 +827,12 @@ const formatTime = (seconds) => {
                                 <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">
                                     Vous avez résolu cette énigme avec brio et empochez <span class="text-[#f3a900] text-glow-yellow font-black">{{ riddlePoints }} XP</span> !
                                 </p>
-                                
+
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
+                                    <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1]">
+                                        <RotateCcw :size="18" class="mr-2 inline" />
+                                        Autre énigme (même lieu)
+                                    </button>
                                     <button @click="goToNextPlace" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
                                         <CheckCircle2 :size="18" class="mr-2 inline" />
                                         {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
@@ -814,7 +852,7 @@ const formatTime = (seconds) => {
                                 </div>
                                 <h2 class="text-4xl font-black text-[#ea4335] text-glow-red uppercase italic tracking-tighter mb-2">Échec de l'énigme</h2>
                                 <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">Le chrono s'est écoulé ou vous avez soumis une mauvaise réponse. Choisissez votre destin :</p>
-                                
+
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
                                      <button @click="fetchHints" class="btn-3d btn-3d-yellow w-full py-4 text-sm shadow-[0_5px_0_#9e6f00] flex items-center justify-center gap-2">
                                          <Zap :size="18" />
@@ -840,7 +878,7 @@ const formatTime = (seconds) => {
                                 <AlertTriangle :size="80" class="text-[#f3a900] mb-6" />
                                 <h2 class="text-4xl font-black text-[#f3a900] text-glow-yellow uppercase italic tracking-tighter mb-2">Énigme Clôturée</h2>
                                 <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">{{ alreadySolvedMessage || 'Un coéquipier ou challenger a déjà répondu avec succès.' }}</p>
-                                
+
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
                                     <button @click="goToNextPlace" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2">
                                         Passer au lieu suivant
@@ -861,41 +899,41 @@ const formatTime = (seconds) => {
                             <button @click="togglePause" class="btn-3d btn-3d-yellow px-8 py-3.5 text-xs text-[#0A0B0E] font-black shadow-[0_5px_0_#9e6f00]">REPRENDRE</button>
                         </div>
 
-                        <!-- Hints overlay -->
-                        <div v-if="showHintsModal" class="absolute inset-0 bg-[#0D0E12]/98 backdrop-blur-xl z-40 flex flex-col p-6 sm:p-10 rounded-3xl border-2 border-amber-500/20">
-                            <div class="flex items-center justify-between mb-8">
+                        <!-- Hints side panel -->
+                        <div v-if="showHintsModal" class="absolute right-0 top-0 bottom-0 w-full sm:w-96 bg-[#0D0E12]/98 backdrop-blur-xl z-40 flex flex-col border-l-2 border-amber-500/20 shadow-2xl">
+                            <div class="flex items-center justify-between p-4 border-b border-white/5">
                                 <div class="flex items-center gap-3">
-                                    <Zap :size="24" class="text-amber-500 animate-pulse" />
-                                    <h2 class="text-2xl font-black uppercase italic tracking-tighter text-white">Protocole d'aide</h2>
+                                    <Zap :size="20" class="text-amber-500 animate-pulse" />
+                                    <h2 class="text-lg font-black uppercase italic tracking-tighter text-white">Protocole d'aide</h2>
                                 </div>
-                                <button @click="showHintsModal = false" class="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
-                                    <X :size="20" />
+                                <button @click="showHintsModal = false" class="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
+                                    <X :size="16" />
                                 </button>
                             </div>
 
-                            <div v-if="riddleHints.length > 0" class="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-                                <div v-for="(hint, index) in riddleHints" :key="hint.id" class="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-3 animate-fade-in-up" :style="{ animationDelay: (index * 0.1) + 's' }">
+                            <div v-if="riddleHints.length > 0" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                                <div v-for="(hint, index) in riddleHints" :key="hint.id" class="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2 animate-fade-in-up" :style="{ animationDelay: (index * 0.1) + 's' }">
                                     <div class="flex items-center justify-between">
                                         <span class="text-[8px] font-black uppercase tracking-[0.3em] text-amber-500">INDICE #{{ index + 1 }} • {{ hint.difficulty_level }}</span>
                                         <span class="text-[8px] font-black uppercase tracking-widest text-gray-500 italic">{{ hint.type }}</span>
                                     </div>
-                                    
-                                    <div v-if="hint.type === 'image'" class="rounded-xl overflow-hidden border border-white/10">
-                                        <img :src="hint.content" class="w-full h-auto object-cover max-h-48" alt="Indice visuel" />
+
+                                    <div v-if="hint.type === 'image'" class="rounded-lg overflow-hidden border border-white/10">
+                                        <img :src="hint.content" class="w-full h-auto object-cover max-h-32" alt="Indice visuel" />
                                     </div>
-                                    <p v-else class="text-sm font-bold leading-relaxed text-gray-200 italic">
+                                    <p v-else class="text-xs font-bold leading-relaxed text-gray-200 italic">
                                         "{{ hint.content }}"
                                     </p>
                                 </div>
                             </div>
-                            
-                            <div v-else class="flex-1 flex flex-col items-center justify-center text-center space-y-4">
-                                <AlertTriangle :size="48" class="text-gray-600" />
-                                <p class="text-gray-500 font-black uppercase tracking-widest text-xs">Aucun indice disponible pour cette énigme.</p>
+
+                            <div v-else class="flex-1 flex flex-col items-center justify-center text-center space-y-4 p-4">
+                                <AlertTriangle :size="32" class="text-gray-600" />
+                                <p class="text-gray-500 font-black uppercase tracking-widest text-[10px]">Aucun indice disponible pour cette énigme.</p>
                             </div>
 
-                            <div class="mt-8 pt-6 border-t border-white/5">
-                                <button @click="showHintsModal = false" class="w-full btn-3d btn-3d-yellow py-4 text-xs font-black shadow-[0_5px_0_#9e6f00] text-black">RETOURNER À L'ÉNIGME</button>
+                            <div class="p-4 border-t border-white/5">
+                                <button @click="showHintsModal = false" class="w-full btn-3d btn-3d-yellow py-3 text-[10px] font-black shadow-[0_4px_0_#9e6f00] text-black">RETOURNER À L'ÉNIGME</button>
                             </div>
                         </div>
 
@@ -917,7 +955,7 @@ const formatTime = (seconds) => {
                                     </span>
                                 </div>
                             </div>
-                            
+
                             <!-- Chrono (Découverte) -->
                             <div v-if="modeChoisi === 'decouverte'" class="flex items-center justify-center sm:justify-start gap-4">
                                 <div class="flex items-center gap-2 bg-[#1C1D24] border border-[#26272F] px-4 py-2 rounded-xl">
@@ -961,7 +999,7 @@ const formatTime = (seconds) => {
                                         </linearGradient>
                                     </defs>
                                 </svg>
-                                
+
                                 <!-- Compass Details -->
                                 <div class="text-center z-10 flex flex-col items-center">
                                     <Compass :size="24" class="mb-1 text-[#2fc276] transition-transform duration-1000 ease-linear" :style="{ transform: `rotate(${compassRotation}deg)` }" />
@@ -984,13 +1022,38 @@ const formatTime = (seconds) => {
 
                         <!-- COLUMN ACTION : Découverte (Physical Validation) -->
                         <div v-if="modeChoisi === 'decouverte'" class="space-y-6">
-                            <div class="bg-[#1C1D24] border border-[#26272F] p-5 rounded-2xl text-center">
-                                <p class="text-xs font-black uppercase text-gray-500 tracking-wider mb-2">Transport Conseillé</p>
-                                <span class="inline-block px-4 py-2 bg-[#0D0E12] rounded-xl border border-[#26272F] text-xs font-black text-white">
-                                    {{ recommendedTransport }}
-                                </span>
+                            <!-- Transport Mode Selector -->
+                            <div class="bg-[#1C1D24] border border-[#26272F] p-5 rounded-2xl">
+                                <p class="text-xs font-black uppercase text-gray-500 tracking-wider mb-3 text-center">Choisissez votre moyen de locomotion</p>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button
+                                        @click="transportMode = 'pied'"
+                                        :class="transportMode === 'pied' ? 'border-[#2fc276] bg-[#2fc276]/10' : 'border-[#26272F] bg-[#0D0E12]'"
+                                        class="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all hover:border-[#2fc276]/50">
+                                        <span class="text-2xl">🚶</span>
+                                        <span class="text-[9px] font-black uppercase">À pied</span>
+                                    </button>
+                                    <button
+                                        @click="transportMode = 'velo'"
+                                        :class="transportMode === 'velo' ? 'border-[#2fc276] bg-[#2fc276]/10' : 'border-[#26272F] bg-[#0D0E12]'"
+                                        class="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all hover:border-[#2fc276]/50">
+                                        <span class="text-2xl">🚴</span>
+                                        <span class="text-[9px] font-black uppercase">Vélo</span>
+                                    </button>
+                                    <button
+                                        @click="transportMode = 'voiture'"
+                                        :class="transportMode === 'voiture' ? 'border-[#2fc276] bg-[#2fc276]/10' : 'border-[#26272F] bg-[#0D0E12]'"
+                                        class="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all hover:border-[#2fc276]/50">
+                                        <span class="text-2xl">🚗</span>
+                                        <span class="text-[9px] font-black uppercase">Voiture</span>
+                                    </button>
+                                </div>
+                                <div class="mt-3 text-center">
+                                    <span class="text-[10px] font-black text-gray-400">Mode sélectionné: </span>
+                                    <span class="text-[10px] font-black text-[#2fc276]">{{ selectedTransportLabel }}</span>
+                                </div>
                             </div>
-                            
+
                             <button @click="submitDiscovery" class="btn-3d btn-3d-green w-full py-5 text-lg font-black shadow-[0_6px_0_#1e7d4b] tracking-widest">
                                 📍 JE SUIS SUR PLACE (VALIDER GPS)
                             </button>
@@ -1001,7 +1064,7 @@ const formatTime = (seconds) => {
                             <!-- Difficult Text input answer -->
                             <div v-if="session.level === 'difficile'" class="space-y-4">
                                 <label class="block text-xs font-black uppercase tracking-widest text-gray-500 text-center">Quel est le nom de ce lieu ?</label>
-                                <input v-model="userAnswer" type="text" placeholder="Entrez la réponse exacte..." 
+                                <input v-model="userAnswer" type="text" placeholder="Entrez la réponse exacte..."
                                     @keydown="playKey"
                                     @keydown.enter="submitGaming"
                                     class="w-full bg-[#0D0E12] border-2 border-[#26272F] focus:border-[#2fc276] focus:ring-0 rounded-2xl p-4.5 text-lg text-center text-white font-black uppercase tracking-widest transition-colors">
@@ -1010,7 +1073,7 @@ const formatTime = (seconds) => {
                                     <Rocket :size="18" />
                                 </button>
                             </div>
-                            
+
                             <!-- Easy/Intermediate MCQ grids -->
                             <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <button v-for="option in parsedMcqOptions" :key="option"
