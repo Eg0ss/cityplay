@@ -53,6 +53,7 @@ const modeChoisi = ref(null); // Pour le mode 'mixte'
 const isPlaying = ref(false);
 const timeLeft = ref(0);
 const totalTime = ref(0);
+const endTime = ref(null); // Timestamp de fin attendu
 const isPaused = ref(false);
 const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
@@ -189,6 +190,10 @@ const currentRiddle = computed(() => {
     return currentPlace.value?.riddle;
 });
 
+const riddleImages = computed(() => {
+    return currentRiddle.value?.images || [];
+});
+
 const parsedMcqOptions = computed(() => {
     if (!currentRiddle.value?.mcq_options) return [];
     try {
@@ -304,6 +309,8 @@ onMounted(() => {
     // Démarrer la musique de fond dès le montage (sans interaction requise via autoplay)
     playBackgroundMusic('game');
 
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     // Écouter le canal du jeu via Laravel Echo (seulement si disponible)
     if (window.Echo) {
         window.Echo.channel(`game.${props.session.lien_token}`)
@@ -380,6 +387,7 @@ onUnmounted(() => {
     if (window.Echo) {
         window.Echo.leave(`game.${props.session.lien_token}`);
     }
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
     stopBackgroundMusic();
     if (watchId) navigator.geolocation.clearWatch(watchId);
     clearInterval(timerInterval);
@@ -499,6 +507,7 @@ const startRiddle = (mode) => {
     }
     
     timeLeft.value = totalTime.value;
+    endTime.value = Date.now() + (totalTime.value * 1000);
     userAnswer.value = ''; // Reset answer
     startChrono();
 };
@@ -506,19 +515,44 @@ const startRiddle = (mode) => {
 const startChrono = () => {
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
-        if (!isPaused.value && timeLeft.value > 0) {
-            timeLeft.value--;
-            // Sons d'alerte chrono
-            if (timeLeft.value <= 5 && timeLeft.value > 0) {
-                playCountdown();
-            } else if (timeLeft.value <= 10 && timeLeft.value > 5) {
-                playTick();
+        if (!isPaused.value) {
+            const now = Date.now();
+            const remaining = Math.ceil((endTime.value - now) / 1000);
+            
+            if (remaining > 0) {
+                // Si le temps a changé de manière significative (plus de 1s), on met à jour
+                // Cela gère le cas où le navigateur a throttlé le setInterval
+                if (remaining !== timeLeft.value) {
+                    timeLeft.value = remaining;
+                    
+                    // Sons d'alerte chrono
+                    if (timeLeft.value <= 5 && timeLeft.value > 0) {
+                        playCountdown();
+                    } else if (timeLeft.value <= 10 && timeLeft.value > 5) {
+                        playTick();
+                    }
+                }
+            } else {
+                timeLeft.value = 0;
+                clearInterval(timerInterval);
+                handleLose();
             }
-        } else if (timeLeft.value <= 0) {
+        }
+    }, 200); // Check plus fréquent pour plus de précision
+};
+
+const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && isPlaying.value && !isPaused.value && !decisionState.value) {
+        // Recalculer le temps restant immédiatement au retour sur l'onglet
+        const now = Date.now();
+        const remaining = Math.ceil((endTime.value - now) / 1000);
+        timeLeft.value = Math.max(0, remaining);
+        
+        if (timeLeft.value <= 0) {
             clearInterval(timerInterval);
             handleLose();
         }
-    }, 1000);
+    }
 };
 
 const togglePause = () => {
@@ -528,6 +562,8 @@ const togglePause = () => {
         pauseBackgroundMusic();
         toast.add({ severity: 'warn', summary: 'Chrono suspendu', detail: 'La pause est active.', life: 2500 });
     } else {
+        // Recalculer endTime pour compenser le temps passé en pause
+        endTime.value = Date.now() + (timeLeft.value * 1000);
         resumeBackgroundMusic();
         toast.add({ severity: 'info', summary: 'Reprise', detail: 'Le chrono a repris.', life: 2000 });
     }
@@ -1068,9 +1104,22 @@ const formatTime = (seconds) => {
 
                         <!-- Riddle Quote Text Box -->
                         <div class="text-center mb-10 px-4">
-                            <h2 class="text-xl sm:text-2xl text-white font-black italic leading-relaxed text-glow-green">
+                            <h2 class="text-xl sm:text-2xl text-white font-black italic leading-relaxed text-glow-green mb-6">
                                 "{{ currentRiddle.description }}"
                             </h2>
+
+                            <!-- Riddle Images Gallery -->
+                            <div v-if="riddleImages.length > 0" class="flex flex-wrap justify-center gap-4 mt-6">
+                                <div v-for="(img, idx) in riddleImages" :key="idx" 
+                                    class="relative group overflow-hidden rounded-2xl border-2 border-white/10 hover:border-[#2fc276]/50 transition-all duration-300 shadow-lg">
+                                    <img :src="img.image_path.startsWith('http') ? img.image_path : `/storage/${img.image_path}`" 
+                                        class="w-full h-40 sm:h-48 object-cover transform group-hover:scale-110 transition-transform duration-500" 
+                                        alt="Visuel de l'énigme" />
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                                        <span class="text-[10px] font-black uppercase tracking-widest text-white">Cliquer pour agrandir</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- COLUMN ACTION : Découverte (Physical Validation) -->
