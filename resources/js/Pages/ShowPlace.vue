@@ -53,36 +53,36 @@ const checkAnswer = () => {
                         </p>
                     </div>
 
-                    <div v-if="!enigmaSolved" class="space-y-6">
-                        <div class="relative">
-                            <input 
-                                v-model="answer"
-                                type="text" 
-                                class="w-full dark:bg-white/5 bg-gray-50 border-2 dark:border-white/5 border-gray-100 rounded-[2rem] py-6 px-8 text-xl lg:text-2xl focus:ring-2 focus:ring-[#FF9F1C] focus:border-transparent transition-all font-black uppercase tracking-widest dark:text-white text-gray-900" 
-                                placeholder="Entrez le code..." 
-                                @keyup.enter="checkAnswer"
-                            />
-                            <div class="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-20">
-                                <span class="text-2xl">⌨️</span>
+                    <transition name="fade" mode="out-in">
+                        <div v-if="!enigmaSolved" key="unsolved" class="space-y-6">
+                            <div class="relative">
+                                <input 
+                                    v-model="answer"
+                                    type="text" 
+                                    class="w-full dark:bg-white/5 bg-gray-50 border-2 dark:border-white/5 border-gray-100 rounded-[2rem] py-6 px-8 text-xl lg:text-2xl focus:ring-2 focus:ring-[#FF9F1C] focus:border-transparent transition-all font-black uppercase tracking-widest dark:text-white text-gray-900" 
+                                    placeholder="Entrez le code..." 
+                                    @keyup.enter="checkAnswer"
+                                />
+                                <div class="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-20">
+                                    <span class="text-2xl">⌨️</span>
+                                </div>
                             </div>
+                            
+                            <transition name="fade">
+                                <p v-if="error" class="text-red-500 font-black uppercase text-[10px] tracking-[0.2em] px-6">
+                                    ❌ Erreur de décryptage. Tentative échouée.
+                                </p>
+                            </transition>
+
+                            <button 
+                                @click="checkAnswer"
+                                class="w-full rounded-[2rem] bg-[#FF9F1C] py-6 text-xs font-black uppercase tracking-[0.4em] text-black shadow-xl shadow-[#FF9F1C]/20 transition-all hover:scale-[1.02] active:scale-95"
+                            >
+                                Soumettre la Réponse
+                            </button>
                         </div>
-                        
-                        <transition name="fade">
-                            <p v-if="error" class="text-red-500 font-black uppercase text-[10px] tracking-[0.2em] px-6">
-                                ❌ Erreur de décryptage. Tentative échouée.
-                            </p>
-                        </transition>
 
-                        <button 
-                            @click="checkAnswer"
-                            class="w-full rounded-[2rem] bg-[#FF9F1C] py-6 text-xs font-black uppercase tracking-[0.4em] text-black shadow-xl shadow-[#FF9F1C]/20 transition-all hover:scale-[1.02] active:scale-95"
-                        >
-                            Soumettre la Réponse
-                        </button>
-                    </div>
-
-                    <transition name="fade">
-                        <div v-else class="dark:bg-[#4CAF50]/10 bg-[#4CAF50]/5 p-8 lg:p-10 rounded-[2.5rem] border-2 border-dashed border-[#4CAF50]/30 text-[#4CAF50] space-y-4">
+                        <div v-else key="solved" class="dark:bg-[#4CAF50]/10 bg-[#4CAF50]/5 p-8 lg:p-10 rounded-[2.5rem] border-2 border-dashed border-[#4CAF50]/30 text-[#4CAF50] space-y-4">
                             <div class="flex items-center gap-4">
                                 <span class="text-4xl">🏆</span>
                                 <h4 class="text-2xl lg:text-3xl font-black uppercase italic tracking-tighter">Succès Déverrouillé !</h4>

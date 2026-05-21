@@ -137,7 +137,7 @@ onMounted(() => {
                     </div>
                     <div class="flex flex-col">
                         <span class="text-2xl font-black uppercase italic tracking-tighter leading-none dark:text-white text-gray-900 group-hover:text-[#FF9F1C] transition-colors">Cityplay</span>
-                        <span class="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF9F1C] mt-1">Control Center</span>
+                        <!-- <span class="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF9F1C] mt-1">Control Center</span> -->
                     </div>
                 </Link>
             </div>
@@ -199,7 +199,7 @@ onMounted(() => {
                         <span class="text-xl">
                             <Globe :size="20" />
                         </span>
-                        <span class="font-bold uppercase text-xs tracking-wider">Site Public</span>
+                        <span class="font-bold uppercase text-xs tracking-wider">Page accueil</span>
                     </Link>
                 </div>
             </nav>

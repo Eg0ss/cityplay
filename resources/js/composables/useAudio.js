@@ -110,13 +110,13 @@ const playGameStart = () => {
 
 const TRACKS = {
     lobby: {
-        // Musique d'ambiance légère — libre de droits (Pixabay)
-        url: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_8cb22f9a6f.mp3',
+        // Musique d'ambiance légère - Source alternative plus permissive
+        url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
         name: '🎵 Ambiance Lobby',
     },
     game: {
-        // Musique de jeu tendue — libre de droits (Pixabay)
-        url: 'https://cdn.pixabay.com/download/audio/2023/06/08/audio_0e8c49e2e5.mp3',
+        // Musique de jeu tendue - Source alternative plus permissive
+        url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
         name: '🎮 Thème de Jeu',
     },
 };

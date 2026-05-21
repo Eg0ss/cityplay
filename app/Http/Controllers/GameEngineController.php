@@ -76,23 +76,23 @@ class GameEngineController extends Controller
 
         // 5. Calcul des paliers d'XP et niveaux de grade
         $levelName = "Aspirant";
-        $nextLevelName = "Explorateur";
+        $nextLevelName = "Explorateur 🦁";
         $xpMin = 0;
         $xpMax = 200;
 
         if ($totalPoints >= 1000) {
-            $levelName = "Légende du Bénin";
+            $levelName = "Légende du Bénin 👑";
             $nextLevelName = "Niveau Maximum";
             $xpMin = 1000;
             $xpMax = 1000;
         } elseif ($totalPoints >= 500) {
-            $levelName = "Guide Aventure";
-            $nextLevelName = "Légende du Bénin";
+            $levelName = "Guide Aventure 🧙‍♂️";
+            $nextLevelName = "Légende du Bénin 👑";
             $xpMin = 500;
             $xpMax = 1000;
         } elseif ($totalPoints >= 200) {
-            $levelName = "Explorateur";
-            $nextLevelName = "Guide Aventure";
+            $levelName = "Explorateur 🦁";
+            $nextLevelName = "Guide Aventure 🧙‍♂️";
             $xpMin = 200;
             $xpMax = 500;
         }
@@ -148,12 +148,27 @@ class GameEngineController extends Controller
     public function setup()
     {
         $cities = \App\Models\City::orderBy('name', 'asc')->get()->map(function ($city) {
-            $riddlesCount = \App\Models\Riddle::whereIn('place_id', $city->places->pluck('id'))->count();
+            $placeIds = $city->places->pluck('id');
+            
+            // Compter le nombre total d'énigmes
+            $riddlesCount = \App\Models\Riddle::whereIn('place_id', $placeIds)->count();
+            
+            // Compter le nombre d'énigmes par niveau
+            $riddlesByLevel = \App\Models\Riddle::whereIn('place_id', $placeIds)
+                ->selectRaw('niveau, COUNT(*) as count')
+                ->groupBy('niveau')
+                ->pluck('count', 'niveau');
+            
             return [
                 'id' => $city->id,
                 'name' => $city->name,
                 'departement' => $city->departement,
                 'riddles_count' => $riddlesCount,
+                'riddles_by_level' => [
+                    'facile' => $riddlesByLevel->get(1, 0),
+                    'intermediaire' => $riddlesByLevel->get(2, 0),
+                    'difficile' => $riddlesByLevel->get(3, 0),
+                ],
             ];
         });
 
@@ -185,22 +200,7 @@ class GameEngineController extends Controller
         ];
         $niveauInt = $levelMapping[$validated['level']];
 
-        // 1. Trouver toutes les énigmes disponibles dans la ville pour ce niveau
-        $allRiddlesInCity = Riddle::whereHas('place', function($query) use ($validated) {
-            $query->where('city_id', $validated['location_id']);
-        })->where('niveau', $niveauInt)->get();
-
-        // S'il n'y a pas d'énigmes pour cette ville et ce niveau
-        if ($allRiddlesInCity->isEmpty()) {
-            return redirect()->back()->with('error', "Il n'y a pas d'énigme disponible pour le niveau " . $validated['level'] . " dans cette ville. La mairie se hâtera d'y ajouter des énigmes palpitantes ! 🏛️");
-        }
-
-        // Ajuster le nombre d'énigmes demandées selon ce qui est disponible
-        $requestedCount = $validated['riddles_count'];
-        $availableCount = $allRiddlesInCity->count();
-        $actualRiddlesCount = min($requestedCount, $availableCount);
-
-        // 2. Trouver les lieux les plus proches qui APPARTIENNENT STRICTEMENT à la ville choisie et qui ONT des énigmes de ce niveau
+        // 1. Trouver les lieux les plus proches qui APPARTIENNENT STRICTEMENT à la ville choisie et qui ONT des énigmes de ce niveau
         $lat = $validated['user_lat'];
         $lng = $validated['user_lng'];
 
@@ -214,7 +214,12 @@ class GameEngineController extends Controller
                 $query->where('niveau', $niveauInt);
             })
             ->orderBy('distance', 'asc')
-            ->get();
+            ->get(); // Récupérer tous les lieux disponibles
+
+        // S'il n'y a pas de lieux avec énigmes pour cette ville et ce niveau
+        if ($closestPlaces->isEmpty()) {
+            return redirect()->back()->with('error', "Il n'y a pas d'énigme disponible pour le niveau " . $validated['level'] . " dans cette ville. La mairie se hâtera d'y ajouter des énigmes palpitantes ! 🏛️");
+        }
 
         $token = Str::random(10);
         $session = GameSession::create([
@@ -224,7 +229,7 @@ class GameEngineController extends Controller
             'level' => $validated['level'],
             'location_type' => $validated['location_type'],
             'location_id' => $validated['location_id'],
-            'riddles_count' => $actualRiddlesCount,
+            'riddles_count' => $validated['riddles_count'], // Garder le nombre demandé
             'type' => $validated['type'],
             'challenger_mode' => $validated['challenger_mode'],
         ]);
@@ -237,30 +242,55 @@ class GameEngineController extends Controller
             'global_mode' => $validated['global_mode']
         ]);
 
-        // 3. Sélectionner les énigmes en priorisant les lieux les plus proches
+        // 2. Sélectionner le nombre exact d'énigmes demandé en parcourant les lieux
         $usedRiddleIds = collect();
-        $riddlesSelected = 0;
-
-        foreach ($closestPlaces as $place) {
-            if ($riddlesSelected >= $actualRiddlesCount) break;
-
-            // Prendre toutes les énigmes de ce lieu du bon niveau
-            $placeRiddles = Riddle::where('place_id', $place->id)
+        $riddlesCreated = 0;
+        $targetCount = $validated['riddles_count'];
+        
+        // Boucler sur les lieux jusqu'à avoir le nombre d'énigmes demandé
+        $placeIndex = 0;
+        while ($riddlesCreated < $targetCount && $placeIndex < $closestPlaces->count()) {
+            $place = $closestPlaces[$placeIndex];
+            
+            // Récupérer une énigme non utilisée de ce lieu
+            $riddle = Riddle::where('place_id', $place->id)
                 ->where('niveau', $niveauInt)
                 ->whereNotIn('id', $usedRiddleIds)
                 ->inRandomOrder()
-                ->get();
-
-            foreach ($placeRiddles as $riddle) {
-                if ($riddlesSelected >= $actualRiddlesCount) break;
-
+                ->first();
+            
+            if ($riddle) {
                 $usedRiddleIds->push($riddle->id);
                 GameRiddle::create([
                     'session_id' => $session->id,
                     'riddle_id' => $riddle->id,
                 ]);
-                $riddlesSelected++;
+                $riddlesCreated++;
             }
+            
+            // Passer au lieu suivant (ou revenir au début si on a parcouru tous les lieux)
+            $placeIndex++;
+            if ($placeIndex >= $closestPlaces->count() && $riddlesCreated < $targetCount) {
+                // Si on a parcouru tous les lieux mais qu'on n'a pas assez d'énigmes,
+                // on recommence depuis le début pour prendre d'autres énigmes des mêmes lieux
+                $placeIndex = 0;
+                
+                // Vérifier s'il reste des énigmes disponibles
+                $remainingRiddles = Riddle::whereIn('place_id', $closestPlaces->pluck('id'))
+                    ->where('niveau', $niveauInt)
+                    ->whereNotIn('id', $usedRiddleIds)
+                    ->count();
+                
+                if ($remainingRiddles == 0) {
+                    // Plus d'énigmes disponibles, on arrête
+                    break;
+                }
+            }
+        }
+        
+        // Mettre à jour le nombre réel d'énigmes créées si différent
+        if ($riddlesCreated < $targetCount) {
+            $session->update(['riddles_count' => $riddlesCreated]);
         }
 
         return redirect()->route('game.lobby', ['token' => $token]);
@@ -281,7 +311,7 @@ class GameEngineController extends Controller
         $gameRiddle = GameRiddle::where('session_id', $validated['session_id'])
             ->where('riddle_id', $validated['riddle_id'])
             ->first();
-
+        
         if (!$gameRiddle) {
             $gameRiddle = GameRiddle::create([
                 'session_id' => $validated['session_id'],
@@ -304,7 +334,7 @@ class GameEngineController extends Controller
             $alreadyAttempted = GamePlayerRiddleAttempt::where('game_session_id', $session->id)
                 ->where('game_riddle_id', $gameRiddle->id)
                 ->exists();
-
+                
             if ($alreadyAttempted) {
                 return response()->json([
                     'success' => false,
@@ -312,10 +342,34 @@ class GameEngineController extends Controller
                     'message' => "Désolé ! Un autre participant de la session a déjà clôturé cette énigme !"
                 ]);
             }
+        } elseif ($session->type === 'challengers' && $session->challenger_mode === 'reponse_par_membre') {
+            $alreadyAttempted = GamePlayerRiddleAttempt::where('game_session_id', $session->id)
+                ->where('game_riddle_id', $gameRiddle->id)
+                ->exists();
+                
+            if ($alreadyAttempted) {
+                return response()->json([
+                    'success' => false,
+                    'already_solved' => true,
+                    'message' => "Trop tard ! Un challenger a déjà répondu à cette énigme."
+                ]);
+            }
+        } elseif ($session->type === 'challengers' && $session->challenger_mode === 'reponse_par_tous') {
+            $alreadyAttemptedByUser = GamePlayerRiddleAttempt::where('game_session_id', $session->id)
+                ->where('game_riddle_id', $gameRiddle->id)
+                ->where('user_id', auth()->id())
+                ->exists();
+                
+            if ($alreadyAttemptedByUser) {
+                return response()->json([
+                    'success' => false,
+                    'already_solved' => true,
+                    'message' => "Vous avez déjà répondu à cette énigme."
+                ]);
+            }
         }
 
-        // En mode participants: chaque joueur ne gagne des points que s'il résout l'énigme
-        // Les autres joueurs ne gagnent pas de points (pas de cumul)
+        // En mode participants ou challengers (reponse_par_membre): chaque joueur ne gagne des points que s'il résout l'énigme
         $pointsToAward = 0;
         if ($validated['status'] === 'gagne') {
             $pointsToAward = $validated['points'];
@@ -343,7 +397,22 @@ class GameEngineController extends Controller
         }
 
         $sessionFinished = false;
-        if ($session->type === 'participants') {
+        
+        // Logique de fin de session selon le type
+        if ($session->type === 'solo') {
+            // En mode solo : vérifier si le joueur a répondu au nombre d'énigmes configuré
+            $userAttempts = GamePlayerRiddleAttempt::where('game_session_id', $session->id)
+                ->where('user_id', auth()->id())
+                ->count();
+            
+            $targetCount = (int) $session->riddles_count;
+            
+            if ($userAttempts >= $targetCount) {
+                $session->update(['statut' => 'termine']);
+                $sessionFinished = true;
+            }
+        } elseif ($session->type === 'participants' || ($session->type === 'challengers' && $session->challenger_mode === 'reponse_par_membre')) {
+            // En mode participants ou challenger (membre): vérifier si toutes les énigmes ont été résolues par l'équipe/groupe
             $sessionRiddlesInPlay = GameRiddle::where('session_id', $session->id)->count();
             $targetAnswered = min(max((int) $session->riddles_count, 0), $sessionRiddlesInPlay);
 
@@ -358,6 +427,18 @@ class GameEngineController extends Controller
                     $session->update(['statut' => 'termine']);
                     $sessionFinished = true;
                 }
+            }
+        } elseif ($session->type === 'challengers' && $session->challenger_mode === 'reponse_par_tous') {
+            // En mode challenger (tous): vérifier si TOUS les joueurs ont répondu à TOUTES les énigmes
+            $playersCount = $session->players()->count();
+            $sessionRiddlesCount = GameRiddle::where('session_id', $session->id)->count();
+            $totalAttemptsRequired = $playersCount * $sessionRiddlesCount;
+            
+            $totalAttempts = GamePlayerRiddleAttempt::where('game_session_id', $session->id)->count();
+            
+            if ($totalAttempts >= $totalAttemptsRequired) {
+                $session->update(['statut' => 'termine']);
+                $sessionFinished = true;
             }
         }
 
@@ -375,7 +456,7 @@ class GameEngineController extends Controller
     public function lobby($token)
     {
         $session = GameSession::with('players.user')->where('lien_token', $token)->firstOrFail();
-
+        
         if ($session->type === 'solo') {
             // Lancer la partie directement
             $session->update(['statut' => 'en_cours']);
@@ -384,7 +465,7 @@ class GameEngineController extends Controller
 
         // Vérifier si l'utilisateur actuel est déjà inscrit dans cette session
         $currentPlayer = $session->players->firstWhere('user_id', auth()->id());
-
+        
         if (!$currentPlayer) {
             // Si la session n'est pas pleine, ajouter le joueur
             if ($session->players->count() < $session->max_joueurs) {
@@ -397,7 +478,7 @@ class GameEngineController extends Controller
                     'statut' => 'pret',
                     'global_mode' => $globalMode
                 ]);
-
+                
                 // Recharger la session avec le nouveau joueur
                 $session = GameSession::with('players.user')->where('lien_token', $token)->firstOrFail();
 
@@ -419,7 +500,7 @@ class GameEngineController extends Controller
     {
         $session = GameSession::where('lien_token', $token)->firstOrFail();
         $session->update(['statut' => 'en_cours']);
-
+        
         // Déclencher l'événement de démarrage de partie pour rediriger les participants !
         event(new \App\Events\LobbyUpdated($session));
 
@@ -429,7 +510,7 @@ class GameEngineController extends Controller
     // Affiche l'interface de jeu dynamique
     public function play($token)
     {
-        $session = GameSession::with(['gameRiddles.riddle.place', 'players.user', 'attempts.gameRiddle', 'attempts.user'])
+        $session = GameSession::with(['gameRiddles.riddle.place.riddles', 'gameRiddles.riddle.images', 'gameRiddles.riddle.hints', 'players.user', 'attempts.gameRiddle', 'attempts.user'])
             ->where('lien_token', $token)
             ->firstOrFail();
 
@@ -438,31 +519,31 @@ class GameEngineController extends Controller
                 ->with('success', 'Cette session de jeu est terminée. Bravo à l\'équipe !');
         }
 
-        // Trouver les IDs des lieux de cette session dans l'ordre de distance initial
-        $placeIds = $session->gameRiddles->pluck('riddle.place_id')->unique()->values();
-
-        $levelMapping = [
-            'facile' => 1,
-            'intermediaire' => 2,
-            'difficile' => 3
-        ];
-        $niveauInt = $levelMapping[$session->level];
-
-        // Récupérer tous les lieux avec TOUTES leurs énigmes du niveau choisi
-        $places = \App\Models\Place::with(['riddles' => function($query) use ($niveauInt) {
-                $query->where('niveau', $niveauInt);
-            }])
-            ->whereIn('id', $placeIds)
-            ->get();
-
-        // Réordonner les lieux selon l'ordre initial calculé par proximité (les IDs de $placeIds)
-        $placesSorted = $placeIds->map(function ($id) use ($places) {
-            return $places->firstWhere('id', $id);
-        })->filter()->values();
+        // Construire une structure de quêtes (Steps) avec l'énigme et son lieu associé
+        $gameSteps = [];
+        
+        // Charger les relations nécessaires pour éviter les requêtes N+1 et permettre l'accès instantané aux indices
+        $session->load(['gameRiddles.riddle.hints', 'gameRiddles.riddle.images', 'gameRiddles.riddle.place']);
+        
+        foreach ($session->gameRiddles as $gameRiddle) {
+            $riddle = $gameRiddle->riddle;
+            $place = $riddle->place;
+            
+            $gameSteps[] = [
+                'id' => $place->id,
+                'nom' => $place->nom,
+                'latitude' => $place->lat,
+                'longitude' => $place->lng,
+                'rayon_marge' => $place->rayon_marge,
+                'image' => $place->image,
+                'verified_description' => $place->verified_description,
+                'riddle' => $riddle // Contient maintenant hints et images
+            ];
+        }
 
         return Inertia::render('Game/Play/ActiveRiddle', [
             'session' => $session,
-            'placesWithRiddles' => $placesSorted
+            'gameSteps' => $gameSteps
         ]);
     }
 
@@ -470,7 +551,7 @@ class GameEngineController extends Controller
     public function getHints($riddleId)
     {
         $riddle = Riddle::findOrFail($riddleId);
-
+        
         $hints = $riddle->hints()
             ->select('id', 'type', 'content', 'difficulty_level', 'order')
             ->orderBy('order')

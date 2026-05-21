@@ -121,6 +121,7 @@ const reverseGeocode = async (lat, lng) => {
 };
 
 // Surveillance du nom pour la recherche
+let searchTimeout = null
 watch(() => form.nom, (newVal, oldVal) => {
     // Si le champ est vide, on vide les suggestions immédiatement
     if (!newVal) {
@@ -128,11 +129,15 @@ watch(() => form.nom, (newVal, oldVal) => {
         return;
     }
     
-    // On ne lance la recherche que si le changement vient de l'utilisateur
-    // (pas d'une sélection de suggestion ou reverse geocode)
-    if (showForm.value && newVal !== oldVal && suggestions.value.length === 0 && !isSearching.value) {
-        searchLocation();
-    }
+    //On annule la recherche précédente si l'utilisateur continue de taper
+    clearTimeout(searchTimeout);
+
+    //On attend 500ms de calme avant de lancer la recherche
+    searchTimeout = setTimeout(() => {
+        if (showForm.value && !isSearching.value) {
+            searchLocation();
+        }
+    }, 500);
 });
 
 // Surveillance des coordonnées pour mettre à jour la carte manuellement
@@ -151,9 +156,7 @@ watch([() => form.lat, () => form.lng], ([newLat, newLng]) => {
     }
 });
 
-/**
- * Initialisation de la carte interactive pour la sélection GPS
- */
+//Initialisation de la carte interactive pour la sélection GPS
 const initMap = () => {
     // S'assurer que Leaflet est chargé (via le CDN dans le template)
     if (typeof L === 'undefined') {
@@ -440,7 +443,7 @@ const confirmDelete = (place) => {
                             <!-- Colonne Droite : Radar Géo-Spatial -->
                             <div class="space-y-8">
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Radar Satellite</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Localisation map</label>
                                     <div id="map-selector" class="w-full h-[350px] lg:h-[450px] rounded-[2rem] border-4 dark:border-white/5 border-gray-100 overflow-hidden shadow-inner"></div>
                                 </div>
 
@@ -463,7 +466,7 @@ const confirmDelete = (place) => {
                         <div class="pt-8 border-t dark:border-white/5 border-gray-100">
                             <button @click="submit" :disabled="form.processing || !form.nom" 
                                 class="w-full group flex items-center justify-center gap-4 bg-white text-black px-10 py-8 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm shadow-[0_0_50px_rgba(255,255,255,0.1)] hover:scale-[1.02] transition-all disabled:opacity-30">
-                                INITIALISER LE LIEU DANS LA MATRICE
+                                INITIALISER LE LIEU
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
                             </button>
                         </div>
@@ -499,6 +502,10 @@ const confirmDelete = (place) => {
                                     class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border">
                                     {{ place.is_active ? 'Opérationnel' : 'Hors-Ligne' }}
                                 </span>
+                                <Link :href="route('admin.places.generate_session', { place: place.id })" method="post" as="button"
+                                    class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-blue-500/20 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all">
+                                    Générer Lien Partage
+                                </Link>
                             </div>
                             <div class="flex flex-wrap items-center gap-4 lg:gap-6 text-gray-500 font-bold text-[8px] lg:text-[10px] uppercase tracking-widest">
                                 <span class="flex items-center gap-2">
@@ -572,41 +579,14 @@ const confirmDelete = (place) => {
     transform: translateX(-20px);
 }
 
-/* Personnalisation Dark Mode pour Leaflet */
+/* Personnalisation pour Leaflet */
 :deep(.leaflet-container) {
-    background: #000 !important;
+    background: #f8fafc !important;
     border-radius: 1.5rem;
 }
 :deep(.leaflet-tile) {
-    filter: brightness(0.8) contrast(1.2);
-}
-.dark :deep(.leaflet-tile) {
-    filter: invert(100%) hue-rotate(180deg) brightness(0.9) contrast(0.9);
-}
-:deep(.leaflet-control-attribution) {
-    display: none;
-}
-</style>
-
-<style scoped>
-.fade-enter-active, .fade-leave-active {
-    transition: all 0.5s ease;
-}
-.fade-enter-from, .fade-leave-to {
-    opacity: 0;
-    transform: translateY(-20px);
-}
-
-/* Custom Leaflet Dark Mode Adjustments */
-:deep(.leaflet-container) {
-    background: #000 !important;
-    border-radius: 2rem;
-}
-:deep(.leaflet-tile) {
-    filter: brightness(0.8) contrast(1.2);
-}
-.dark :deep(.leaflet-tile) {
-    filter: invert(100%) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+    /* Style clair naturel (Capture 1) */
+    filter: none;
 }
 :deep(.leaflet-control-attribution) {
     display: none;

@@ -6,6 +6,7 @@ use App\Models\Place;
 use App\Models\Riddle;
 use App\Models\User;
 use App\Models\City;
+use App\Http\Requests\RiddleRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,12 +15,17 @@ class AdminController extends Controller
     //dashboard admin
     public function dashboard()
     {
+        $totalRiddles = Riddle::count();
+        $solvedRiddles = Riddle::whereHas('gameRiddles', function($q){ 
+            $q->whereNotNull('repondu_par'); 
+        })->count();
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
                 'users_count' => User::count(),
                 'places_count' => Place::count(),
-                'riddles_count' => Riddle::count(),
-                'solved_count' => 0,
+                'riddles_count' => $totalRiddles,
+                'solved_count' => $totalRiddles > 0 ? round(($solvedRiddles / $totalRiddles) * 100) : 0,
             ],
             'recent_places' => Place::with('city')->latest()->take(5)->get(),
         ]);
@@ -193,18 +199,15 @@ class AdminController extends Controller
     }
 
     // Ajouter une énigme
-    public function storeRiddle(Request $request, Place $place)
+    public function storeRiddle(RiddleRequest $request, Place $place)
     {
         $validated = $request->validate([
             'niveau' => 'required|integer|between:1,3',
             'description' => 'required|string',
             'reponse' => 'required|string|max:255',
             'mcq_options' => 'nullable|array',
-            'images.*' => 'nullable|image|max:2048',
-            'hints' => 'nullable|array',
-            'hints.*.type' => 'required|string|in:text,image,keyword,description',
-            'hints.*.content' => 'required|string',
-            'hints.*.difficulty_level' => 'nullable|string|in:easy,medium,hard',
+            'hint_keyword' => 'nullable|string|max:255',
+            'hint_images.*' => 'nullable|image|max:2048',
         ]);
 
         // Filtrer les options vides pour ne pas stocker de tableau de chaînes vides
@@ -218,7 +221,6 @@ class AdminController extends Controller
             }
         }
 
-        // Créer l'énigme
         $riddle = $place->riddles()->create([
             'niveau' => $validated['niveau'],
             'description' => $validated['description'],
@@ -226,21 +228,25 @@ class AdminController extends Controller
             'mcq_options' => $validated['mcq_options'] ?? null,
         ]);
 
-        // Stocker les images
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('riddles', 'public');
-                $riddle->images()->create(['image_path' => $path]);
-            }
+        // Sauvegarder le mot-clé d'indice
+        if (!empty($validated['hint_keyword'])) {
+            $riddle->hints()->create([
+                'type' => 'keyword',
+                'content' => $validated['hint_keyword'],
+                'difficulty_level' => 'easy',
+                'order' => 1,
+            ]);
         }
 
-        if (isset($validated['hints'])) {
-            foreach ($validated['hints'] as $index => $hintData) {
+        // Sauvegarder les images d'indice
+        if ($request->hasFile('hint_images')) {
+            foreach ($request->file('hint_images') as $index => $image) {
+                $path = $image->store('hints', 'public');
                 $riddle->hints()->create([
-                    'type' => $hintData['type'],
-                    'content' => $hintData['content'],
-                    'difficulty_level' => $hintData['difficulty_level'] ?? 'easy',
-                    'order' => $index + 1,
+                    'type' => 'image',
+                    'content' => '/storage/' . $path,
+                    'difficulty_level' => 'medium',
+                    'order' => $index + 2,
                 ]);
             }
         }
@@ -249,18 +255,15 @@ class AdminController extends Controller
     }
 
     // Modifier une énigme
-    public function updateRiddle(Request $request, Riddle $enigma)
+    public function updateRiddle(RiddleRequest $request, Riddle $enigma)
     {
         $validated = $request->validate([
             'niveau' => 'required|integer|between:1,3',
             'description' => 'required|string',
             'reponse' => 'required|string|max:255',
             'mcq_options' => 'nullable|array',
-            'images.*' => 'nullable|image|max:2048',
-            'hints' => 'nullable|array',
-            'hints.*.type' => 'required|string|in:text,image,keyword,description',
-            'hints.*.content' => 'required|string',
-            'hints.*.difficulty_level' => 'nullable|string|in:easy,medium,hard',
+            'hint_keyword' => 'nullable|string|max:255',
+            'hint_images.*' => 'nullable|image|max:2048',
         ]);
 
         if (isset($validated['mcq_options'])) {
@@ -280,26 +283,58 @@ class AdminController extends Controller
             'mcq_options' => $validated['mcq_options'] ?? null,
         ]);
 
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('riddles', 'public');
-                $enigma->images()->create(['image_path' => $path]);
-            }
-        }
-
         // Mettre à jour les indices
-        if (isset($validated['hints'])) {
-            $enigma->hints()->delete(); // On simplifie en supprimant/recréant
-            foreach ($validated['hints'] as $index => $hintData) {
+        if (!empty($validated['hint_keyword']) || $request->hasFile('hint_images')) {
+            // Pour simplifier, on supprime les anciens indices de type keyword/image
+            $enigma->hints()->whereIn('type', ['keyword', 'image'])->delete();
+
+            if (!empty($validated['hint_keyword'])) {
                 $enigma->hints()->create([
-                    'type' => $hintData['type'],
-                    'content' => $hintData['content'],
-                    'difficulty_level' => $hintData['difficulty_level'] ?? 'easy',
-                    'order' => $index + 1,
+                    'type' => 'keyword',
+                    'content' => $validated['hint_keyword'],
+                    'difficulty_level' => 'easy',
+                    'order' => 1,
                 ]);
+            }
+
+            if ($request->hasFile('hint_images')) {
+                foreach ($request->file('hint_images') as $index => $image) {
+                    $path = $image->store('hints', 'public');
+                    $enigma->hints()->create([
+                        'type' => 'image',
+                        'content' => '/storage/' . $path,
+                        'difficulty_level' => 'medium',
+                        'order' => $index + 2,
+                    ]);
+                }
             }
         }
 
         return back()->with('success', 'Énigme mise à jour avec succès.');
+    }
+
+    // Générer un lien de session rapide pour un lieu
+    public function generateSession(Place $place)
+    {
+        $token = str()->random(10);
+        $session = \App\Models\GameSession::create([
+            'statut' => 'en_attente',
+            'lien_token' => $token,
+            'max_joueurs' => 10,
+            'level' => 'facile',
+            'location_type' => 'place',
+            'location_id' => $place->id,
+            'riddles_count' => $place->riddles()->count(),
+            'type' => 'participants',
+        ]);
+
+        \App\Models\GamePlayer::create([
+            'session_id' => $session->id,
+            'user_id' => auth()->id(),
+            'statut' => 'pret',
+            'global_mode' => 'mixte'
+        ]);
+
+        return redirect()->route('game.lobby', ['token' => $token])->with('success', 'Lien de session généré pour ce lieu !');
     }
 }

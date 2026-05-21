@@ -8,7 +8,21 @@ import {
     Moon, 
     Sun,
     ChevronLeft,
-    Rocket
+    Rocket,
+    ShieldCheck,
+    Terminal,
+    Database,
+    Zap,
+    LogIn,
+    Compass,
+    Target,
+    UserPlus,
+    Search,
+    Play,
+    PenTool,
+    Image as ImageIcon,
+    Layers,
+    LayoutDashboard
 } from 'lucide-vue-next';
 
 const isDark = ref(true);
@@ -35,10 +49,20 @@ onMounted(() => {
     updateTheme();
 });
 
-const steps = [
-    { title: "Choisissez un lieu", desc: "Explorez la carte et sélectionnez un monument ou un endroit emblématique du Bénin.", icon: markRaw(MapPin) },
-    { title: "Résolvez l'énigme", desc: "Utilisez les indices textuels et visuels pour deviner l'histoire ou le nom caché.", icon: markRaw(Puzzle) },
-    { title: "Gagnez des points", desc: "Accumulez des points pour chaque bonne réponse et grimpez dans le classement mondial.", icon: markRaw(Trophy) },
+const adminSteps = [
+    { title: "Accès au Terminal", desc: "Connexion sécurisée au tableau de bord pour superviser les statistiques et les utilisateurs.", icon: markRaw(LayoutDashboard) },
+    { title: "Gestion des Cités", desc: "Configuration des villes et départements pour organiser l'univers de jeu par régions.", icon: markRaw(Database) },
+    { title: "Déploiement des Lieux", desc: "Placement précis des points d'intérêt sur la carte interactive via les coordonnées GPS.", icon: markRaw(MapPin) },
+    { title: "Forge d'Énigmes", desc: "Conception de défis uniques avec validation des réponses et niveaux de difficulté.", icon: markRaw(PenTool) },
+    { title: "Système d'Indices", desc: "Intégration d'aides visuelles et textuelles multi-images pour guider les joueurs.", icon: markRaw(Search) },
+];
+
+const playerSteps = [
+    { title: "Inscription & Profil", desc: "Création de compte et personnalisation pour suivre l'évolution de l'XP et des badges.", icon: markRaw(UserPlus) },
+    { title: "Exploration & Choix", desc: "Découverte des villes disponibles sur la carte immersive du Bénin pour choisir une mission.", icon: markRaw(Compass) },
+    { title: "Modes de Jeu", desc: "Sélection entre Solo, Coopération (Participants) ou Compétition (Challengers).", icon: markRaw(Layers) },
+    { title: "Lobby & Phase de Jeu", desc: "Salle d'attente en temps réel et résolution d'énigmes chronométrées sur les sites historiques.", icon: markRaw(Play) },
+    { title: "Triomphe & Classement", desc: "Validation des succès, gain de points XP et ascension dans le classement national.", icon: markRaw(Trophy) },
 ];
 </script>
 
@@ -61,28 +85,58 @@ const steps = [
             </button>
         </nav>
 
-        <div class="max-w-7xl mx-auto px-6 space-y-24">
+        <div class="max-w-7xl mx-auto px-6 space-y-32">
             <!-- Hero -->
             <div class="text-center space-y-6">
                 <h1 class="text-5xl lg:text-8xl font-black tracking-tighter uppercase italic leading-none">
-                    LE GUIDE DE <br /><span class="text-[#FF9F1C]">L'EXPLORATEUR</span>
+                    PROTOCOLE DE <br /><span class="text-[#FF9F1C]">L'AVENTURE</span>
                 </h1>
                 <p class="text-xl font-medium dark:text-gray-400 text-gray-600 max-w-2xl mx-auto">
-                    Devenez un maître de la découverte en suivant notre protocole d'aventure en trois phases.
+                    Découvrez comment fonctionne la matrice Cityplay, de la création des défis à la gloire du classement.
                 </p>
             </div>
 
-            <!-- Steps -->
-            <div class="grid gap-10 md:grid-cols-3">
-                <div v-for="(step, i) in steps" :key="i" 
-                    class="dark:bg-[#111113] bg-white p-12 rounded-[3rem] border dark:border-white/5 border-gray-100 shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden">
-                    <div class="absolute -top-4 -right-4 text-8xl opacity-5 font-black italic">0{{ i + 1 }}</div>
-                    
-                    <div class="h-20 w-20 dark:bg-white/5 bg-gray-50 rounded-[2rem] flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 border dark:border-white/10 border-gray-200">
-                        <component :is="step.icon" :size="40" class="text-[#FF9F1C]" />
+            <!-- Part 1: Admin Workflow -->
+            <div class="space-y-16">
+                <div class="flex items-center gap-6">
+                    <div class="h-px flex-1 dark:bg-white/10 bg-gray-200"></div>
+                    <h2 class="text-2xl font-black uppercase tracking-[0.3em] text-[#FF9F1C] italic">01. TERMINAL ADMINISTRATEUR</h2>
+                    <div class="h-px flex-1 dark:bg-white/10 bg-gray-200"></div>
+                </div>
+
+                <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
+                    <div v-for="(step, i) in adminSteps" :key="i" 
+                        class="dark:bg-[#111113] bg-white p-8 rounded-[2.5rem] border dark:border-white/5 border-gray-100 shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden">
+                        <div class="absolute -top-4 -right-4 text-6xl opacity-5 font-black italic">0{{ i + 1 }}</div>
+                        
+                        <div class="h-14 w-14 dark:bg-white/5 bg-gray-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border dark:border-white/10 border-gray-200">
+                            <component :is="step.icon" :size="28" class="text-[#FF9F1C]" />
+                        </div>
+                        <h3 class="text-lg font-black uppercase italic tracking-tighter mb-3 dark:text-white text-gray-900">{{ step.title }}</h3>
+                        <p class="text-[11px] dark:text-gray-500 text-gray-500 font-medium leading-relaxed">{{ step.desc }}</p>
                     </div>
-                    <h3 class="text-3xl font-black uppercase italic tracking-tighter mb-4 dark:text-white text-gray-900">{{ step.title }}</h3>
-                    <p class="text-lg dark:text-gray-500 text-gray-500 font-medium leading-relaxed">{{ step.desc }}</p>
+                </div>
+            </div>
+
+            <!-- Part 2: Player Workflow -->
+            <div class="space-y-16">
+                <div class="flex items-center gap-6">
+                    <div class="h-px flex-1 dark:bg-white/10 bg-gray-200"></div>
+                    <h2 class="text-2xl font-black uppercase tracking-[0.3em] text-[#87d74e] italic">02. HUB DES JOUEURS</h2>
+                    <div class="h-px flex-1 dark:bg-white/10 bg-gray-200"></div>
+                </div>
+
+                <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
+                    <div v-for="(step, i) in playerSteps" :key="i" 
+                        class="dark:bg-[#111113] bg-white p-8 rounded-[2.5rem] border dark:border-white/5 border-gray-100 shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden">
+                        <div class="absolute -top-4 -right-4 text-6xl opacity-5 font-black italic">0{{ i + 1 }}</div>
+                        
+                        <div class="h-14 w-14 dark:bg-white/5 bg-gray-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border dark:border-white/10 border-gray-200">
+                            <component :is="step.icon" :size="28" class="text-[#87d74e]" />
+                        </div>
+                        <h3 class="text-lg font-black uppercase italic tracking-tighter mb-3 dark:text-white text-gray-900">{{ step.title }}</h3>
+                        <p class="text-[11px] dark:text-gray-500 text-gray-500 font-medium leading-relaxed">{{ step.desc }}</p>
+                    </div>
                 </div>
             </div>
 

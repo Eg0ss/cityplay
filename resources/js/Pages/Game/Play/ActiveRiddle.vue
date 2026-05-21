@@ -40,7 +40,7 @@ const {
 
 const props = defineProps({
     session: Object,
-    placesWithRiddles: Array
+    gameSteps: Array
 });
 
 const page = usePage();
@@ -49,46 +49,34 @@ const confirm = useConfirm();
 
 // État local du jeu
 const currentPlaceIndex = ref(0);
-const currentRiddleInPlaceIndex = ref(0);
 const modeChoisi = ref(null); // Pour le mode 'mixte'
 const isPlaying = ref(false);
 const timeLeft = ref(0);
 const totalTime = ref(0);
+const endTime = ref(null); // Timestamp de fin attendu
 const isPaused = ref(false);
 const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
 const transportMode = ref('auto'); // 'pied', 'velo', 'voiture', 'auto'
 
 // État des indices
-const riddleHints = ref([]);
-const showHintsModal = ref(false);
-const isFetchingHints = ref(false);
+const showFlashHint = ref(false);
 
-const fetchHints = async () => {
-    if (riddleHints.value.length > 0) {
-        showHintsModal.value = true;
-        return;
-    }
-
-    try {
-        isFetchingHints.value = true;
-        const response = await axios.get(route('game.hints', { riddleId: currentRiddle.value.id }));
-        if (response.data.success) {
-            riddleHints.value = response.data.hints;
-            showHintsModal.value = true;
-        }
-    } catch (e) {
-        console.error("Erreur lors de la récupération des indices:", e);
-        toast.add({ severity: 'error', summary: 'Erreur', detail: 'Impossible de charger les indices.', life: 3000 });
-    } finally {
-        isFetchingHints.value = false;
-    }
+const triggerHint = () => {
+    if (showFlashHint.value) return;
+    
+    playClick();
+    showFlashHint.value = true;
+    
+    // Fermer l'indice automatiquement après 1 seconde
+    setTimeout(() => {
+        showFlashHint.value = false;
+    }, 1000);
 };
 
-// Réinitialiser les indices quand on change d'énigme
-watch([currentPlaceIndex, currentRiddleInPlaceIndex], () => {
-    riddleHints.value = [];
-    showHintsModal.value = false;
+// Réinitialiser l'état quand on change d'énigme
+watch([currentPlaceIndex], () => {
+    showFlashHint.value = false;
 });
 
 // Recalculer le temps quand le moyen de locomotion change en mode découverte
@@ -102,6 +90,7 @@ watch(transportMode, () => {
 // État de décision intermédiaire ('win', 'lose', 'already_solved' ou null)
 const decisionState = ref(null);
 const alreadySolvedMessage = ref('');
+const isNavigating = ref(false);
 
 let timerInterval = null;
 const sessionEndHandled = ref(false);
@@ -162,43 +151,44 @@ const finishSessionRedirect = (message) => {
         severity: 'success',
         summary: 'Session terminée ! 🏆',
         detail: message || 'L\'équipe a atteint l\'objectif d\'énigmes. Bravo !',
-        life: 5000,
+        life: 2000,
     });
     setTimeout(() => {
         router.get(route('game.dashboard'));
-    }, 1800);
+    }, 300);
 };
 
 // Trouver la première énigme non tentée dans le mode participants
 const selectFirstUnattemptedRiddle = () => {
     if (props.session.type !== 'participants') return;
-
-    for (let pIdx = 0; pIdx < props.placesWithRiddles.length; pIdx++) {
-        const place = props.placesWithRiddles[pIdx];
-        for (let rIdx = 0; rIdx < (place.riddles?.length || 0); rIdx++) {
-            const riddle = place.riddles[rIdx];
-            const attempted = localSessionData.value.attempts?.some(att => {
-                const gameRiddle = att.game_riddle || att.gameRiddle;
-                return gameRiddle?.riddle_id === riddle.id;
-            });
-            if (!attempted) {
-                currentPlaceIndex.value = pIdx;
-                currentRiddleInPlaceIndex.value = rIdx;
-                return;
-            }
+    
+    for (let pIdx = 0; pIdx < props.gameSteps.length; pIdx++) {
+        const step = props.gameSteps[pIdx];
+        const riddle = step.riddle;
+        const attempted = localSessionData.value.attempts?.some(att => {
+            const gameRiddle = att.game_riddle || att.gameRiddle;
+            return gameRiddle?.riddle_id === riddle.id;
+        });
+        if (!attempted) {
+            currentPlaceIndex.value = pIdx;
+            return;
         }
     }
 
     // Si toutes les énigmes ont été tentées, on affiche l'écran de fin
-    currentPlaceIndex.value = props.placesWithRiddles.length;
+    currentPlaceIndex.value = props.gameSteps.length;
 };
 
 const currentPlace = computed(() => {
-    return props.placesWithRiddles?.[currentPlaceIndex.value];
+    return props.gameSteps?.[currentPlaceIndex.value];
 });
 
 const currentRiddle = computed(() => {
-    return currentPlace.value?.riddles?.[currentRiddleInPlaceIndex.value];
+    return currentPlace.value?.riddle;
+});
+
+const riddleImages = computed(() => {
+    return currentRiddle.value?.images || [];
 });
 
 const parsedMcqOptions = computed(() => {
@@ -222,25 +212,27 @@ const riddlePoints = computed(() => {
 
 // Vérification de la disponibilité d'autres énigmes pour ce lieu
 const hasMoreRiddlesForPlace = computed(() => {
-    return currentPlace.value?.riddles?.length > currentRiddleInPlaceIndex.value + 1;
+    // Dans le nouveau système, chaque étape est une énigme unique. 
+    // On ne propose "une autre énigme sur ce lieu" que s'il y a d'autres étapes avec le même lieu ID plus loin.
+    return props.gameSteps?.some((step, index) => index > currentPlaceIndex.value && step.id === currentPlace.value?.id);
 });
 
 // Vérification de la présence d'un lieu suivant
 const hasNextPlace = computed(() => {
-    return props.placesWithRiddles?.length > currentPlaceIndex.value + 1;
+    return props.gameSteps?.length > currentPlaceIndex.value + 1;
 });
 
-// Total des énigmes affichées (lieux) — en participants, l'objectif affiché suit la config session
+// Total des étapes (énigmes)
 const totalGamePlacesCount = computed(() => {
     if (props.session.type === 'participants' && participantsTeamTarget.value > 0) {
         return participantsTeamTarget.value;
     }
-    return props.placesWithRiddles?.length || 0;
+    return props.gameSteps?.length || 0;
 });
 
 const currentRiddleNumber = computed(() => {
     if (props.session.type !== 'participants') {
-        return Math.min(currentPlaceIndex.value + 1, props.placesWithRiddles?.length || 0);
+        return Math.min(currentPlaceIndex.value + 1, props.gameSteps?.length || 0);
     }
     return Math.min(participantsTeamAnswered.value + 1, participantsTeamTarget.value || 1);
 });
@@ -314,6 +306,8 @@ onMounted(() => {
     // Démarrer la musique de fond dès le montage (sans interaction requise via autoplay)
     playBackgroundMusic('game');
 
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     // Écouter le canal du jeu via Laravel Echo (seulement si disponible)
     if (window.Echo) {
         window.Echo.channel(`game.${props.session.lien_token}`)
@@ -372,7 +366,12 @@ onMounted(() => {
                 userCoords.value.lat = position.coords.latitude;
                 userCoords.value.lng = position.coords.longitude;
             },
-            (error) => console.warn("Erreur de suivi GPS:", error),
+            (error) => {
+                // On ne loggue l'erreur que si ce n'est pas un refus explicite (Permission Denied)
+                if (error.code !== 1) {
+                    console.warn("Erreur de suivi GPS:", error);
+                }
+            },
             { enableHighAccuracy: true }
         );
     }
@@ -385,6 +384,7 @@ onUnmounted(() => {
     if (window.Echo) {
         window.Echo.leave(`game.${props.session.lien_token}`);
     }
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
     stopBackgroundMusic();
     if (watchId) navigator.geolocation.clearWatch(watchId);
     clearInterval(timerInterval);
@@ -392,29 +392,39 @@ onUnmounted(() => {
 
 // Détecter si l'énigme active actuelle (currentRiddle) a été clôturée par un autre joueur
 watch(() => localSessionData.value.attempts, (newAttempts) => {
-    if (props.session.type === 'participants' && newAttempts && currentRiddle.value) {
-        // Rechercher une tentative pour l'énigme active
-        const activeAttempt = newAttempts.find(att => {
-            const gameRiddle = att.game_riddle || att.gameRiddle;
-            return gameRiddle?.riddle_id === currentRiddle.value.id;
-        });
-
-        if (activeAttempt && !decisionState.value) {
-            // Ignorer si c'est la tentative locale (déjà gérée par les handlers de QCM / GPS)
-            if (activeAttempt.user_id === page.props.auth.user.id) {
-                return;
-            }
-
-            // Si c'est une tentative faite par un autre participant
-            decisionState.value = 'already_solved';
-            clearInterval(timerInterval);
-
-            if (activeAttempt.status === 'gagne') {
-                alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un participant'} a résolu cette énigme ! Progression partagée. 🟢`;
-            } else {
-                alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un participant'} a tenté et échoué sur cette énigme. 🔴`;
+    if (newAttempts && currentRiddle.value) {
+        // En mode participants ou challenger (réponse par membre), on verrouille l'énigme si quelqu'un a déjà répondu
+        if (props.session.type === 'participants' || (props.session.type === 'challengers' && props.session.challenger_mode === 'reponse_par_membre')) {
+            const activeAttempt = newAttempts.find(att => {
+                const gameRiddle = att.game_riddle || att.gameRiddle;
+                return gameRiddle?.riddle_id === currentRiddle.value.id;
+            });
+            
+            if (activeAttempt && !decisionState.value) {
+                // Ignorer si c'est la tentative locale
+                if (activeAttempt.user_id === page.props.auth.user.id) {
+                    return;
+                }
+                
+                decisionState.value = 'already_solved';
+                clearInterval(timerInterval);
+                
+                if (activeAttempt.status === 'gagne') {
+                    alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un joueur'} a résolu cette énigme ! 🟢`;
+                } else {
+                    alreadySolvedMessage.value = `${activeAttempt.user?.name || 'Un joueur'} a échoué sur cette énigme. Elle est désormais verrouillée. 🔴`;
+                }
             }
         }
+    }
+}, { deep: true });
+
+// Synchronisation de localSessionData avec props.session lors des reloads Inertia
+watch(() => props.session, (newSession) => {
+    if (newSession) {
+        localSessionData.value.attempts = newSession.attempts || [];
+        localSessionData.value.players = newSession.players || [];
+        localSessionData.value.statut = newSession.statut;
     }
 }, { deep: true });
 
@@ -481,6 +491,10 @@ const calculateChronoTimeForDiscovery = () => {
     return Math.max(180, Math.min(3600, Math.round(timeInSeconds)));
 };
 
+const currentPlayer = computed(() => {
+    return props.session.players?.find(p => p.user_id === page.props.auth.user.id);
+});
+
 // Initialisation d'une énigme
 const startRiddle = (mode) => {
     // Initialiser l'AudioContext au premier geste utilisateur
@@ -499,25 +513,52 @@ const startRiddle = (mode) => {
     }
 
     timeLeft.value = totalTime.value;
+    endTime.value = Date.now() + (totalTime.value * 1000);
+    userAnswer.value = ''; // Reset answer
     startChrono();
 };
 
 const startChrono = () => {
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
-        if (!isPaused.value && timeLeft.value > 0) {
-            timeLeft.value--;
-            // Sons d'alerte chrono
-            if (timeLeft.value <= 5 && timeLeft.value > 0) {
-                playCountdown();
-            } else if (timeLeft.value <= 10 && timeLeft.value > 5) {
-                playTick();
+        if (!isPaused.value) {
+            const now = Date.now();
+            const remaining = Math.ceil((endTime.value - now) / 1000);
+            
+            if (remaining > 0) {
+                // Si le temps a changé de manière significative (plus de 1s), on met à jour
+                // Cela gère le cas où le navigateur a throttlé le setInterval
+                if (remaining !== timeLeft.value) {
+                    timeLeft.value = remaining;
+                    
+                    // Sons d'alerte chrono
+                    if (timeLeft.value <= 5 && timeLeft.value > 0) {
+                        playCountdown();
+                    } else if (timeLeft.value <= 10 && timeLeft.value > 5) {
+                        playTick();
+                    }
+                }
+            } else {
+                timeLeft.value = 0;
+                clearInterval(timerInterval);
+                handleLose();
             }
-        } else if (timeLeft.value <= 0) {
+        }
+    }, 200); // Check plus fréquent pour plus de précision
+};
+
+const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && isPlaying.value && !isPaused.value && !decisionState.value) {
+        // Recalculer le temps restant immédiatement au retour sur l'onglet
+        const now = Date.now();
+        const remaining = Math.ceil((endTime.value - now) / 1000);
+        timeLeft.value = Math.max(0, remaining);
+        
+        if (timeLeft.value <= 0) {
             clearInterval(timerInterval);
             handleLose();
         }
-    }, 1000);
+    }
 };
 
 const togglePause = () => {
@@ -525,10 +566,10 @@ const togglePause = () => {
     isPaused.value = !isPaused.value;
     if (isPaused.value) {
         pauseBackgroundMusic();
-        toast.add({ severity: 'warn', summary: 'Chrono suspendu', detail: 'La pause est active.', life: 2500 });
     } else {
+        // Recalculer endTime pour compenser le temps passé en pause
+        endTime.value = Date.now() + (timeLeft.value * 1000);
         resumeBackgroundMusic();
-        toast.add({ severity: 'info', summary: 'Reprise', detail: 'Le chrono a repris.', life: 2000 });
     }
 };
 
@@ -605,58 +646,76 @@ const submitGaming = async () => {
 };
 
 // Choix : Passer au lieu suivant
-const goToNextPlace = () => {
+const goToNextPlace = async () => {
+    if (isNavigating.value) return;
+    isNavigating.value = true;
+    
     playClick();
+    
     if (props.session.statut === 'termine') {
         finishSessionRedirect();
         return;
     }
-    if (props.session.type === 'participants') {
-        selectFirstUnattemptedRiddle();
-        decisionState.value = null;
-        isPlaying.value = false;
-
+    
+    const nextRiddleLogic = () => {
         const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
         if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
             startRiddle(player.global_mode);
+        } else {
+            // Mode mixte : isPlaying reste false pour afficher le choix du mode
+            isPlaying.value = false;
+            decisionState.value = null;
         }
+        isNavigating.value = false;
+    };
 
-        if (currentPlaceIndex.value >= props.placesWithRiddles.length) {
-            toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 6000 });
+    if (props.session.type === 'participants') {
+        selectFirstUnattemptedRiddle();
+        decisionState.value = null;
+        
+        if (currentPlaceIndex.value >= props.gameSteps.length) {
+            toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 2000 });
             setTimeout(() => {
                 router.get(route('game.dashboard'));
-            }, 3000);
+                isNavigating.value = false;
+            }, 300);
+        } else {
+            // Un petit délai pour s'assurer que les computed props se mettent à jour
+            setTimeout(() => {
+                nextRiddleLogic();
+            }, 50);
         }
     } else {
         if (hasNextPlace.value) {
             currentPlaceIndex.value++;
-            currentRiddleInPlaceIndex.value = 0;
             decisionState.value = null;
-            isPlaying.value = false;
-
-            const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
-            if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
-                startRiddle(player.global_mode);
-            }
+            // Un petit délai pour s'assurer que les computed props se mettent à jour
+            setTimeout(() => {
+                nextRiddleLogic();
+            }, 50);
         } else {
-            toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 6000 });
+            toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 2000 });
             setTimeout(() => {
                 router.get(route('game.dashboard'));
-            }, 3000);
+                isNavigating.value = false;
+            }, 300);
         }
     }
 };
 
 // Choix : Autre énigme pour le même lieu
 const loadAnotherRiddle = () => {
-    if (hasMoreRiddlesForPlace.value) {
-        currentRiddleInPlaceIndex.value++;
+    // On cherche la prochaine étape qui a le même lieu
+    const nextStepIndex = props.gameSteps.findIndex((step, index) => index > currentPlaceIndex.value && step.id === currentPlace.value?.id);
+    
+    if (nextStepIndex !== -1) {
+        currentPlaceIndex.value = nextStepIndex;
         decisionState.value = null;
-        isPlaying.value = false;
-
-        const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
-        if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
-            startRiddle(player.global_mode);
+        
+        if (currentPlayer.value && (currentPlayer.value.global_mode === 'gaming' || currentPlayer.value.global_mode === 'decouverte')) {
+            startRiddle(currentPlayer.value.global_mode);
+        } else {
+            isPlaying.value = false;
         }
     } else {
         toast.add({ severity: 'warn', summary: 'Énigmes épuisées', detail: 'Plus d\'énigmes de ce niveau pour ce lieu.', life: 4000 });
@@ -736,12 +795,11 @@ const formatTime = (seconds) => {
                     >
                         <button
                             type="button"
-                            @click="fetchHints"
-                            :disabled="isFetchingHints"
+                            @click="triggerHint"
+                            :disabled="showFlashHint"
                             class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500/20 transition-all disabled:opacity-50"
                         >
-                            <Zap v-if="!isFetchingHints" :size="16" />
-                            <RotateCcw v-else :size="16" class="animate-spin" />
+                            <Zap :size="16" />
                             Indice
                         </button>
                         <button
@@ -819,56 +877,99 @@ const formatTime = (seconds) => {
 
                             <!-- Win state overlay -->
                             <template v-if="decisionState === 'win'">
-                                <div class="relative mb-6">
+                                <div class="relative mb-4">
                                     <div class="absolute inset-0 bg-[#2fc276]/20 blur-2xl rounded-full"></div>
-                                    <Trophy :size="80" class="text-[#2fc276] relative animate-bounce" />
+                                    <Trophy :size="60" class="text-[#2fc276] relative animate-bounce" />
                                 </div>
-                                <h2 class="text-4xl font-black text-[#2fc276] text-glow-green uppercase italic tracking-tighter mb-2">Énigme Résolue !</h2>
-                                <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">
-                                    Vous avez résolu cette énigme avec brio et empochez <span class="text-[#f3a900] text-glow-yellow font-black">{{ riddlePoints }} XP</span> !
+                                <h2 class="text-3xl font-black text-[#2fc276] text-glow-green uppercase italic tracking-tighter mb-1">Énigme Résolue !</h2>
+                                <p class="text-xs text-gray-400 font-bold mb-4">
+                                    Vous avez empoché <span class="text-[#f3a900] text-glow-yellow font-black">{{ riddlePoints }} XP</span> !
                                 </p>
 
-                                <div class="flex flex-col gap-4 w-full max-w-xs">
-                                    <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1]">
-                                        <RotateCcw :size="18" class="mr-2 inline" />
-                                        Autre énigme (même lieu)
-                                    </button>
-                                    <button @click="goToNextPlace" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b]">
-                                        <CheckCircle2 :size="18" class="mr-2 inline" />
+                                <!-- Lieu Info Card -->
+                                <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 text-left animate-fade-in-up">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-lg bg-[#2fc276]/10 flex items-center justify-center border border-[#2fc276]/20">
+                                            <MapPin :size="20" class="text-[#2fc276]" />
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-black text-white uppercase">{{ currentPlace?.nom }}</h4>
+                                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Secret Dévoilé</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-300 leading-relaxed italic mb-4">
+                                        "{{ currentPlace?.verified_description || 'Un lieu emblématique chargé d\'histoire à découvrir.' }}"
+                                    </p>
+                                    <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.lat},${currentPlace?.lng}`" 
+                                       target="_blank"
+                                       class="flex items-center justify-center gap-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all">
+                                        <Compass :size="14" />
+                                        Ouvrir l'itinéraire GPS
+                                    </a>
+                                </div>
+                                
+                                <div class="flex flex-col gap-3 w-full max-w-xs">
+                                    <button @click="goToNextPlace" 
+                                        :disabled="isNavigating"
+                                        class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b] disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <CheckCircle2 v-if="!isNavigating" :size="18" class="mr-2 inline" />
+                                        <RotateCcw v-else :size="18" class="mr-2 inline animate-spin" />
                                         {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
-                                    </button>
-                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318]">
-                                        <LogOut :size="14" class="mr-2 inline" />
-                                        Quitter la partie
                                     </button>
                                 </div>
                             </template>
 
                             <!-- Lose state overlay -->
                             <template v-if="decisionState === 'lose'">
-                                <div class="relative mb-6">
+                                <div class="relative mb-4">
                                     <div class="absolute inset-0 bg-red-500/20 blur-2xl rounded-full"></div>
-                                    <Skull :size="80" class="text-red-500 relative animate-pulse" />
+                                    <Skull :size="60" class="text-red-500 relative animate-pulse" />
                                 </div>
-                                <h2 class="text-4xl font-black text-[#ea4335] text-glow-red uppercase italic tracking-tighter mb-2">Échec de l'énigme</h2>
-                                <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">Le chrono s'est écoulé ou vous avez soumis une mauvaise réponse. Choisissez votre destin :</p>
+                                <h2 class="text-3xl font-black text-[#ea4335] text-glow-red uppercase italic tracking-tighter mb-1">Échec</h2>
+                                <p class="text-xs text-gray-400 font-bold mb-4">Le chrono s'est écoulé ou la réponse était fausse.</p>
 
-                                <div class="flex flex-col gap-4 w-full max-w-xs">
-                                     <button @click="fetchHints" class="btn-3d btn-3d-yellow w-full py-4 text-sm shadow-[0_5px_0_#9e6f00] flex items-center justify-center gap-2">
-                                         <Zap :size="18" />
-                                         Voir un indice
-                                     </button>
+                                <!-- Lieu Info Card (Même en cas d'échec, on apprend !) -->
+                                <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 text-left animate-fade-in-up">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                                            <MapPin :size="20" class="text-red-400" />
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-black text-white uppercase">{{ currentPlace?.nom }}</h4>
+                                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Le saviez-vous ?</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-300 leading-relaxed italic mb-4 line-clamp-3">
+                                        "{{ currentPlace?.verified_description || 'Un lieu emblématique chargé d\'histoire à découvrir.' }}"
+                                    </p>
+                                    <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.lat},${currentPlace?.lng}`" 
+                                       target="_blank"
+                                       class="flex items-center justify-center gap-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all">
+                                        <Compass :size="14" />
+                                        S'y rendre quand même
+                                    </a>
+                                </div>
+                                
+                                <div class="flex flex-col gap-3 w-full max-w-xs">
                                      <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2">
                                          <RotateCcw :size="18" />
                                          Autre énigme sur ce lieu
                                      </button>
-                                    <button @click="goToNextPlace" class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2">
-                                        Passer au lieu suivant
-                                        <ChevronRight :size="18" />
+                                    <button @click="goToNextPlace" 
+                                        :disabled="isNavigating"
+                                        class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2 disabled:opacity-50">
+                                        <template v-if="!isNavigating">
+                                            {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
+                                            <ChevronRight v-if="hasNextPlace" :size="18" />
+                                            <CheckCircle2 v-else :size="18" />
+                                        </template>
+                                        <template v-else>
+                                            Chargement...
+                                            <RotateCcw :size="18" class="animate-spin" />
+                                        </template>
                                     </button>
-                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
-                                        <LogOut :size="18" />
-                                        Abandonner la partie
+                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100">
+                                        Abandonner
                                     </button>
                                 </div>
                             </template>
@@ -880,9 +981,17 @@ const formatTime = (seconds) => {
                                 <p class="text-sm text-gray-400 font-bold mb-10 max-w-md">{{ alreadySolvedMessage || 'Un coéquipier ou challenger a déjà répondu avec succès.' }}</p>
 
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
-                                    <button @click="goToNextPlace" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2">
-                                        Passer au lieu suivant
-                                        <ChevronRight :size="18" />
+                                    <button @click="goToNextPlace" 
+                                        :disabled="isNavigating"
+                                        class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50">
+                                        <template v-if="!isNavigating">
+                                            {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
+                                            <ChevronRight v-if="hasNextPlace" :size="18" />
+                                            <CheckCircle2 v-else :size="18" />
+                                        </template>
+                                        <template v-else>
+                                            <RotateCcw :size="18" class="animate-spin" />
+                                        </template>
                                     </button>
                                     <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
                                         <LogOut :size="14" />
@@ -897,44 +1006,6 @@ const formatTime = (seconds) => {
                             <Pause :size="80" class="text-[#f3a900] mb-6 animate-pulse" />
                             <h2 class="text-3xl font-black uppercase italic tracking-tighter text-[#f3a900] text-glow-yellow mb-8">Jeu en Pause</h2>
                             <button @click="togglePause" class="btn-3d btn-3d-yellow px-8 py-3.5 text-xs text-[#0A0B0E] font-black shadow-[0_5px_0_#9e6f00]">REPRENDRE</button>
-                        </div>
-
-                        <!-- Hints side panel -->
-                        <div v-if="showHintsModal" class="absolute right-0 top-0 bottom-0 w-full sm:w-96 bg-[#0D0E12]/98 backdrop-blur-xl z-40 flex flex-col border-l-2 border-amber-500/20 shadow-2xl">
-                            <div class="flex items-center justify-between p-4 border-b border-white/5">
-                                <div class="flex items-center gap-3">
-                                    <Zap :size="20" class="text-amber-500 animate-pulse" />
-                                    <h2 class="text-lg font-black uppercase italic tracking-tighter text-white">Protocole d'aide</h2>
-                                </div>
-                                <button @click="showHintsModal = false" class="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
-                                    <X :size="16" />
-                                </button>
-                            </div>
-
-                            <div v-if="riddleHints.length > 0" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                                <div v-for="(hint, index) in riddleHints" :key="hint.id" class="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2 animate-fade-in-up" :style="{ animationDelay: (index * 0.1) + 's' }">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-[8px] font-black uppercase tracking-[0.3em] text-amber-500">INDICE #{{ index + 1 }} • {{ hint.difficulty_level }}</span>
-                                        <span class="text-[8px] font-black uppercase tracking-widest text-gray-500 italic">{{ hint.type }}</span>
-                                    </div>
-
-                                    <div v-if="hint.type === 'image'" class="rounded-lg overflow-hidden border border-white/10">
-                                        <img :src="hint.content" class="w-full h-auto object-cover max-h-32" alt="Indice visuel" />
-                                    </div>
-                                    <p v-else class="text-xs font-bold leading-relaxed text-gray-200 italic">
-                                        "{{ hint.content }}"
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div v-else class="flex-1 flex flex-col items-center justify-center text-center space-y-4 p-4">
-                                <AlertTriangle :size="32" class="text-gray-600" />
-                                <p class="text-gray-500 font-black uppercase tracking-widest text-[10px]">Aucun indice disponible pour cette énigme.</p>
-                            </div>
-
-                            <div class="p-4 border-t border-white/5">
-                                <button @click="showHintsModal = false" class="w-full btn-3d btn-3d-yellow py-3 text-[10px] font-black shadow-[0_4px_0_#9e6f00] text-black">RETOURNER À L'ÉNIGME</button>
-                            </div>
                         </div>
 
                         <!-- Game Header Details -->
@@ -1014,10 +1085,36 @@ const formatTime = (seconds) => {
                         </div>
 
                         <!-- Riddle Quote Text Box -->
-                        <div class="text-center mb-10 px-4">
-                            <h2 class="text-xl sm:text-2xl text-white font-black italic leading-relaxed text-glow-green">
+                        <div class="text-center mb-10 px-4 relative">
+                            <h2 class="text-xl sm:text-2xl text-white font-black italic leading-relaxed text-glow-green mb-6">
                                 "{{ currentRiddle.description }}"
                             </h2>
+
+                            <!-- Flash Hint Small Label -->
+                            <transition name="fade">
+                                <div v-if="showFlashHint" class="inline-flex flex-col items-center justify-center p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl backdrop-blur-sm animate-bounce shadow-[0_0_20px_rgba(245,158,11,0.1)]">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <Zap :size="14" class="text-amber-500" />
+                                        <span class="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500/70">Indice Flash</span>
+                                    </div>
+                                    <p class="text-lg font-black text-white text-glow-yellow italic">
+                                        {{ currentRiddle.hints?.[0]?.content || currentRiddle.reponse }}
+                                    </p>
+                                </div>
+                            </transition>
+
+                            <!-- Riddle Images Gallery -->
+                            <div v-if="riddleImages.length > 0" class="flex flex-wrap justify-center gap-4 mt-6">
+                                <div v-for="(img, idx) in riddleImages" :key="idx" 
+                                    class="relative group overflow-hidden rounded-2xl border-2 border-white/10 hover:border-[#2fc276]/50 transition-all duration-300 shadow-lg">
+                                    <img :src="img.image_path.startsWith('http') ? img.image_path : `/storage/${img.image_path}`" 
+                                        class="w-full h-40 sm:h-48 object-cover transform group-hover:scale-110 transition-transform duration-500" 
+                                        alt="Visuel de l'énigme" />
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                                        <span class="text-[10px] font-black uppercase tracking-widest text-white">Cliquer pour agrandir</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- COLUMN ACTION : Découverte (Physical Validation) -->
@@ -1061,10 +1158,12 @@ const formatTime = (seconds) => {
 
                         <!-- COLUMN ACTION : Gaming (Couch Selection) -->
                         <div v-if="modeChoisi === 'gaming'" class="space-y-6">
-                            <!-- Difficult Text input answer -->
-                            <div v-if="session.level === 'difficile'" class="space-y-4">
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 text-center">Quel est le nom de ce lieu ?</label>
-                                <input v-model="userAnswer" type="text" placeholder="Entrez la réponse exacte..."
+                            <!-- Difficult Text input answer OR if MCQ options are missing -->
+                            <div v-if="session.level === 'difficile' || parsedMcqOptions.length === 0" class="space-y-4">
+                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 text-center">
+                                    {{ parsedMcqOptions.length === 0 ? 'Aucun choix disponible : Saisissez le nom du lieu' : 'Quel est le nom de ce lieu ?' }}
+                                </label>
+                                <input v-model="userAnswer" type="text" placeholder="Entrez la réponse exacte..." 
                                     @keydown="playKey"
                                     @keydown.enter="submitGaming"
                                     class="w-full bg-[#0D0E12] border-2 border-[#26272F] focus:border-[#2fc276] focus:ring-0 rounded-2xl p-4.5 text-lg text-center text-white font-black uppercase tracking-widest transition-colors">

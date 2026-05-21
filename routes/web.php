@@ -18,7 +18,6 @@ Route::get('/', function () {
     ]);
 });
 
-
 Route::get('/comment-jouer', [PageController::class, 'howToPlay'])->name('how-to-play');
 Route::get('/explorer', [PageController::class, 'explore'])->name('explore');
 Route::get('/classement', [PageController::class, 'leaderboard'])->name('leaderboard');
@@ -28,7 +27,7 @@ Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 Route::get('/lieux/{id}', [PageController::class, 'showPlace'])->name('places.show');
 
 Route::get('/dashboard', function (Request $request) {
-    if ($request->user()->role === 'admin') {
+    if ($request->user()->is_admin) {
         return redirect()->route('admin.dashboard');
     }
     // Rediriger les joueurs vers le nouveau tableau de bord Gaming
@@ -75,6 +74,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('/places/{place}/toggle', [AdminController::class, 'togglePlace'])->name('places.toggle');
     Route::get('/places/{place}/enigmas', [AdminController::class, 'riddles'])->name('enigmas');
     Route::post('/places/{place}/enigmas', [AdminController::class, 'storeRiddle'])->name('enigmas.store');
+    Route::post('/places/{place}/generate-session', [AdminController::class, 'generateSession'])->name('places.generate_session');
 });
 
 Route::middleware('auth')->group(function () {
