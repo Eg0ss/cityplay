@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::dropIfExists('places');
         Schema::create('places', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('city_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('city_id')->nullable()->constrained()->onDelete('sdet null');
             $table->string('nom');
             $table->string('ville')->nullable();
             $table->string('departement')->nullable();
