@@ -221,6 +221,7 @@ const handleOutsideClick = (e) => {
     }
 };
 
+//si on clique en dehors, ferme de formulaire
 onMounted(() => {
     if (showForm.value) {
         window.addEventListener('click', handleOutsideClick);
