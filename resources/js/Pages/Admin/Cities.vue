@@ -198,7 +198,7 @@ const progressWidth = computed(() => {
                                     />
                                 </div>
                                 <button @click="nextStep" :disabled="!form.name" class="group flex items-center gap-4 bg-[#FF9F1C] text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-all disabled:opacity-30">
-                                    CONFIRMER L'IDENTITÉ
+                                    CONTINUER
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:translate-x-2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                                 </button>
                             </div>
@@ -210,7 +210,7 @@ const progressWidth = computed(() => {
                                     <h3 class="text-3xl font-black uppercase italic tracking-tighter">DEPARTEMENT <span class="text-[#FF9F1C]">RATACHE</span></h3>
                                 </div>
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Département</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Département (Optionnel)</label>
                                     <input 
                                         v-model="form.departement" 
                                         type="text" 
@@ -221,8 +221,8 @@ const progressWidth = computed(() => {
                                 </div>
                                 <div class="flex gap-4">
                                     <button @click="prevStep" class="px-8 py-6 rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
-                                    <button @click="nextStep" :disabled="!form.departement" class="group flex-1 flex items-center justify-center gap-4 bg-[#FF9F1C] text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-all disabled:opacity-30">
-                                        CONFIRMER LE DEPARTEMENT
+                                    <button @click="nextStep" class="group flex-1 flex items-center justify-center gap-4 bg-[#FF9F1C] text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-all">
+                                        CONTINUER
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:translate-x-2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                                     </button>
                                 </div>
@@ -235,7 +235,7 @@ const progressWidth = computed(() => {
                                     <h3 class="text-3xl font-black uppercase italic tracking-tighter">DESCRIPTION DE LA <span class="text-[#FF9F1C]">CITÉ</span></h3>
                                 </div>
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Séquence d'introduction (Description)</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Séquence d'introduction (Description - Optionnelle)</label>
                                     <textarea 
                                         v-model="form.description" 
                                         rows="4"
@@ -246,8 +246,8 @@ const progressWidth = computed(() => {
                                 </div>
                                 <div class="flex gap-4">
                                     <button @click="prevStep" class="px-8 py-6 rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
-                                    <button @click="submit" :disabled="form.processing || !form.description" class="group flex-1 flex items-center justify-center gap-4 bg-white text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 transition-all disabled:opacity-30">
-                                        INITIALISER DE LA CITE
+                                    <button @click="submit" :disabled="form.processing" class="group flex-1 flex items-center justify-center gap-4 bg-white text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 transition-all disabled:opacity-30">
+                                        INITIALISER LA CITE
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
                                     </button>
                                 </div>

@@ -144,9 +144,7 @@ watch([() => form.lat, () => form.lng], ([newLat, newLng]) => {
     }
 });
 
-/**
- * Initialisation de la carte
- */
+//Initialisation de la carte
 const initMap = () => {
     // On utilise L de l'objet window (chargé via script tag dans app.blade.php)
     const L = window.L;
@@ -155,6 +153,7 @@ const initMap = () => {
         return;
     }
 
+    //Vérifie que la balise HTML <div id="map-selector">
     const mapContainer = document.getElementById('map-selector');
     if (!mapContainer) return;
 
@@ -163,19 +162,24 @@ const initMap = () => {
         return;
     }
 
+    //creation de la carte et affichage
+
     const initialPos = [parseFloat(form.lat), parseFloat(form.lng)];
 
-    map.value = L.map('map-selector', {
+    map.value = L.map('map-selector', { 
         zoomControl: true,
         scrollWheelZoom: true
     }).setView(initialPos, 13);
 
+    //chercher sur serveurs OpenStreetMap images dessiner les rues, les parcs et les bâtiments.
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map.value);
 
+    //marqueur sur la position initiale
     marker.value = L.marker(initialPos, { draggable: true }).addTo(map.value);
 
+    //ecrouteur dévenement au relachement du marker
     marker.value.on('dragend', async (e) => {
         const { lat, lng } = e.target.getLatLng();
         form.lat = parseFloat(lat).toFixed(6);
@@ -183,6 +187,7 @@ const initMap = () => {
         await reverseGeocode(lat, lng);
     });
 
+    //ecrouteur dévenement au clic sur la carte
     map.value.on('click', async (e) => {
         const { lat, lng } = e.latlng;
         marker.value.setLatLng([lat, lng]);
@@ -208,6 +213,7 @@ watch(showForm, (newVal) => {
     }
 });
 
+//ecrouteur dévenement au clic en dehors de la carte
 const handleOutsideClick = (e) => {
     const searchContainer = document.querySelector('.search-container');
     if (searchContainer && !searchContainer.contains(e.target)) {

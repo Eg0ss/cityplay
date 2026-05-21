@@ -63,8 +63,8 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'departement' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'departement' => 'nullable|string|max:255',
         ]);
 
         $validated['slug'] = str()->slug($validated['name']);
@@ -79,8 +79,8 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'departement' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'departement' => 'nullable|string|max:255',
         ]);
 
         $validated['slug'] = str()->slug($validated['name']);
