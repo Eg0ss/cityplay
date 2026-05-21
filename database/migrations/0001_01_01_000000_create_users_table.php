@@ -18,6 +18,8 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('role')->default('player'); // admin ou player
+            $table->boolean('is_admin')->default(false);
+            $table->boolean('is_partner')->default(false);
             $table->rememberToken();
             $table->timestamps();
         });
@@ -37,6 +39,7 @@ return new class extends Migration
             $table->integer('last_activity')->index();
         });
     }
+
 
     /**
      * Reverse the migrations.

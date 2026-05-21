@@ -15,6 +15,7 @@ return new class extends Migration
             $table->text('description'); // Le texte de l'énigme
             $table->string('reponse'); // La réponse à l'énigme
             $table->json('mcq_options')->nullable(); // Options QCM pour niveaux 1 & 2
+            $table->unsignedBigInteger('indice_id')->nullable(); // Reference à un indice principal (optionnel)
             $table->timestamps();
         });
     }

@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@cityplay.com',
             'password' => Hash::make('password'),
             'role' => 'admin',
+            'is_admin' => true,
         ]);
 
         // Création des 5 Joueurs
@@ -32,8 +33,8 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // $this->call([
-        //     GameDataSeeder::class,
-        // ]);
+        $this->call([
+            GameDataSeeder::class,
+        ]);
     }
 }
