@@ -1,192 +1,198 @@
-# DOCUMENTATION COMPLÈTE DU PROJET CITYPLAY
+# DOCUMENTATION DU PROJET CITYPLAY
 
-Ce document retrace tout le parcours de développement du projet **Cityplay**, une plateforme d'aventure urbaine et de chasses au trésor numérique au Bénin. L'objectif est de permettre à n'importe quel développeur ou curieux de comprendre **quoi**, **où**, **comment** et **pourquoi** chaque élément a été construit.
-
----
-
-## 1. Stack Technique (L'arsenal technologique)
-
-Pour ce projet, nous avons choisi des outils modernes garantissant rapidité, sécurité et une expérience utilisateur fluide.
-
-- **PHP 8.3 + Laravel 11** : Le socle de l'application. Laravel gère la base de données, la sécurité (authentification) et la logique métier.
-- **Vue.js 3 (Composition API)** : Pour créer une interface réactive. Contrairement aux sites classiques, les pages ne se rechargent pas entièrement à chaque clic.
-- **Inertia.js** : Le "pont" magique. Il permet de relier Laravel et Vue.js sans avoir besoin de créer une API complexe (REST ou GraphQL).
-- **Tailwind CSS** : Pour le design. Il permet de créer des interfaces "Gaming" (mode sombre, couleurs vives) rapidement.
-- **PrimeVue** : Une bibliothèque de composants prêts à l'emploi (boutons, formulaires, notifications) pour gagner du temps.
-- **Leaflet.js** : Pour afficher les cartes interactives (OpenStreetMap) sans payer les frais de Google Maps.
+Ce document présente le fonctionnement, l'architecture et les fichiers importants du projet **Cityplay**.
+Il a été mis à jour pour refléter l'organisation actuelle du code, les routes principales, les modèles, les contrôleurs et le frontend.
 
 ---
 
-## 2. Historique de Développement Étape par Étape
+## 1. Vue d'ensemble
 
-### Étape 1 : Initialisation et Fondations
-**Le Rôle :** Mettre en place la structure de base et la sécurité.
-**Le Pourquoi :** Un projet a besoin d'un cadre solide avant d'ajouter des fonctionnalités. L'authentification est la première étape pour savoir qui est qui.
-- **Actions :** Installation de Laravel, configuration d'Inertia et de Laravel Breeze (pour la gestion des comptes utilisateurs).
-- **Fichiers clés :**
-    - [web.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/routes/web.php) : Définition des premières routes.
-    - [app.blade.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/resources/views/app.blade.php) : Le fichier HTML principal qui charge Vue.js.
-- **Logique :** Mise en place du système de rôles (Admin vs Joueur) via une colonne `is_admin` dans la table `users`.
+Cityplay est une application de chasse au trésor urbaine basée sur des lieux et des énigmes, avec :
+- des pages publiques d'information,
+- un moteur de jeu configuré par le joueur,
+- un dashboard de progression,
+- un panneau d'administration pour gérer villes, lieux et énigmes.
 
-### Étape 2 : Architecture de la Base de Données
-**Le Rôle :** Définir comment les données sont stockées.
-**Le Pourquoi :** Pour qu'un jeu fonctionne, il faut que les Villes contiennent des Lieux, et que ces Lieux proposent des Énigmes.
-- **Fichiers (Migrations) :**
-    - [create_cities_table.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/database/migrations/2026_05_15_154520_create_cities_table.php) : Stocke les villes (Cotonou, Ouidah, etc.).
-    - [create_places_table.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/database/migrations/2026_05_13_191207_create_places_table.php) : Stocke les points d'intérêt (Monuments, Parcs).
-    - [create_riddles_table.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/database/migrations/2026_05_13_191209_create_riddles_table.php) : Stocke les questions, réponses et indices.
-- **Modèles :** [Place.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/app/Models/Place.php) et [Riddle.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/app/Models/Riddle.php) gèrent les relations (un lieu a plusieurs énigmes).
-
-### Étape 3 : Le Dashboard Administrateur (Le Centre de Commande)
-**Le Rôle :** Créer une interface pour gérer le contenu du jeu.
-**Le Pourquoi :** L'admin doit pouvoir ajouter des lieux et des énigmes sans toucher au code ou à la base de données directement.
-- **Fichiers :**
-    - [AdminController.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/app/Http/Controllers/AdminController.php) : Gère les créations/modifications/suppressions.
-    - [AdminLayout.vue](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/resources/js/Pages/Admin/AdminLayout.vue) : Design de la barre latérale et du menu.
-- **Logique mise en place :** Sécurisation via le [AdminMiddleware.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/app/Http/Middleware/AdminMiddleware.php). Seuls les administrateurs peuvent accéder aux routes `/admin`.
-
-### Étape 4 : Cartographie et Géo-localisation
-**Le Rôle :** Intégrer des cartes pour placer les lieux.
-**Le Pourquoi :** Cityplay est un jeu basé sur l'exploration réelle. Il faut pouvoir voir où se trouvent les défis.
-- **Bibliothèques :** **Leaflet** pour l'affichage, **Nominatim API** pour transformer une adresse en coordonnées GPS.
-- **Fichiers :** [AllPlaces.vue](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/resources/js/Pages/Admin/AllPlaces.vue).
-- **Logique :** Lorsque l'admin tape le nom d'un lieu, le système interroge OpenStreetMap pour remplir automatiquement la latitude et la longitude.
-
-### Étape 5 : Le Système d'Énigmes par Étapes
-**Le Rôle :** Créer des formulaires de création d'énigmes complexes.
-**Le Pourquoi :** Une énigme n'est pas juste une question. C'est un niveau de difficulté, une réponse, des indices et des images.
-- **Fichiers :** [Enigmas.vue](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/resources/js/Pages/Admin/Enigmas.vue).
-- **Logique :** Formulaire découpé en étapes (Stepper). Nettoyage des données (suppression des options vides dans les QCM) avant l'envoi au serveur.
-
-### Étape 6 : Le Moteur de Jeu (Le Gameplay)
-**Le Rôle :** Permettre aux joueurs de lancer une partie et de répondre aux questions.
-**Le Pourquoi :** C'est le cœur de l'application pour l'utilisateur final.
-- **Fichiers :**
-    - [GameController.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/app/Http/Controllers/GameController.php) : Gère les sessions de jeu.
-    - [GameSession.php](file:///c:/Users/marcel.yessia/Documents/LARAVEL/cityplay/app/Models/GameSession.php) : Suit la progression d'un joueur dans une partie.
-- **Logique :** Création d'un token unique pour chaque partie, calcul des points (100 points par bonne réponse) et gestion des statuts (en attente, en cours, terminé).
+Stack technique:
+- Backend : Laravel 11 (PHP 8.3)
+- Frontend : Vue.js 3 + Inertia.js
+- UI/CSS : Tailwind CSS
+- Carte : Leaflet.js
+- Auth : Laravel Breeze / Inertia
 
 ---
 
-## 3. Structure des Dossiers
+## 2. Structure principale du projet
 
-| Dossier | Contenu |
-| :--- | :--- |
-| `app/Models/` | Définition des objets (Utilisateur, Lieu, Énigme, Session). |
-| `app/Http/Controllers/` | Le "cerveau" PHP qui traite les actions. |
-| `resources/js/Pages/` | Toutes les pages de l'application (Vue.js). |
-| `resources/js/Components/` | Petits morceaux réutilisables (Boutons, Modales). |
-| `database/migrations/` | Le plan de construction de la base de données. |
-| `routes/web.php` | Le plan de circulation (URLs) du site. |
+### Fichiers principaux
+- `routes/web.php` : définition des routes publiques, jeu et admin.
+- `app/Http/Controllers/GameEngineController.php` : logique de création de jeu, lobby, play, score et progression.
+- `app/Http/Controllers/AdminController.php` : gestion des villes, lieux et énigmes.
+- `app/Http/Controllers/PageController.php` : pages statiques publiques (blog, contact, explore, etc.).
+- `resources/views/app.blade.php` : layout principal Inertia.
+- `resources/js/app.js` : point d'entrée JavaScript de l'application.
+- `resources/js/Pages` : pages Vue/Inertia de l'application.
 
----
-
-## 4. Bibliothèques et Dépendances
-
-### Backend (PHP/Laravel)
-- `laravel/breeze` : Système d'authentification prêt à l'emploi.
-- `inertiajs/inertia-laravel` : Connexion avec Vue.js.
-
-### Frontend (JS/Vue)
-- `primevue` : Pour les composants d'interface élégants.
-- `lucide-vue-next` : Pour les icônes modernes (radar, épée, carte).
-- `axios` : Pour envoyer des données au serveur sans recharger la page.
-- `leaflet` : Pour les cartes interactives.
+### Dossiers importants
+- `app/Models/` : modèles Eloquent.
+- `app/Http/Controllers/` : contrôleurs Laravel.
+- `database/migrations/` : migrations de base de données.
+- `resources/js/Pages/` : pages utilisateur et admin.
+- `resources/js/Components/` : composants Vue réutilisables.
 
 ---
 
-## 5. Logiques Particulières
+## 3. Base de données et tables principales
 
-1.  **Mode Sombre (Dark Mode)** : L'application est forcée en mode sombre pour une esthétique "Gaming/Aventure".
-2.  **Validation Automatique** : Les réponses aux énigmes sont comparées sans tenir compte des majuscules/minuscules pour être plus souple avec les joueurs.
-3.  **Nettoyage des QCM** : Lors de la création d'une énigme, si l'admin laisse des cases de choix vides, le code les retire automatiquement avant de sauvegarder.
+### Tables essentielles
+- `users` : comptes des joueurs et administrateurs.
+- `cities` : villes dans lesquelles se déroulent les jeux.
+- `places` : lieux géolocalisés associés à une ville.
+- `riddles` : énigmes, questions et réponses.
+- `riddle_images` : images attachées aux énigmes.
+- `hints` : indices liés aux énigmes.
+- `game_sessions` : sessions de jeu créées par les joueurs.
+- `game_players` : inscription des utilisateurs aux sessions.
+- `game_riddles` : association des énigmes aux sessions.
+- `game_player_riddle_attempts` : tentatives des joueurs sur chaque énigme.
+- `scores` : points gagnés par les joueurs.
 
----
-*Document mis à jour le 20 mai 2026 par l'assistant IA pour Cityplay.*
-
----
-
-## Rapport synthétique technique (version courte)
-
-Objectif: fournir une vue d'ensemble claire pour un développeur souhaitant comprendre le projet, son architecture et où trouver chaque fonctionnalité.
-
-- Application: jeu d'exploration/énigmes géolocalisées (Cityplay).
-- Backend: Laravel (Eloquent, migrations, events, broadcast).
-- Frontend: Inertia + Vue.js (pages et composants dans `resources/js`).
-
----
-
-## 1. Fichiers et points d'entrée importants
-
-- Routes principales: [routes/web.php](routes/web.php)
-- Layout serveur / Inertia: [resources/views/app.blade.php](resources/views/app.blade.php)
-- Point d'entrée JS: [resources/js/app.js](resources/js/app.js) et [resources/js/bootstrap.js](resources/js/bootstrap.js)
-- Pages Inertia principales: [resources/js/Pages](resources/js/Pages)
+### Migrations clés
+- `database/migrations/0001_01_01_000000_create_users_table.php`
+- `database/migrations/2026_05_15_154520_create_cities_table.php`
+- `database/migrations/2026_05_13_191207_create_places_table.php`
+- `database/migrations/2026_05_13_191209_create_riddles_table.php`
+- `database/migrations/2026_05_15_120736_create_game_sessions_table.php`
+- `database/migrations/2026_05_15_120756_create_game_players_table.php`
+- `database/migrations/2026_05_15_120758_create_game_riddles_table.php`
+- `database/migrations/2026_05_18_091626_create_game_player_riddle_attempts_table.php`
+- `database/migrations/2026_05_15_120800_create_scores_table.php`
 
 ---
 
-## 2. Base de données (migrations clés)
+## 4. Modèles Eloquent importants
 
-Les migrations décrivent le modèle de données central:
+### `User` (`app/Models/User.php`)
+- Attributs : `name`, `email`, `password`, `role`.
+- Relations :
+  - `gameSessions()` : sessions auxquelles l'utilisateur est lié via `game_players`.
+  - `scores()` : points gagnés.
+  - `gamePlayers()` : inscriptions aux sessions.
 
-- `users`: comptes joueurs/admins — [database/migrations/0001_01_01_000000_create_users_table.php](database/migrations/0001_01_01_000000_create_users_table.php)
-- `cities`: villes couvertes — [database/migrations/2026_05_15_154520_create_cities_table.php](database/migrations/2026_05_15_154520_create_cities_table.php)
-- `places`: lieux géolocalisés (lat/lng, marges) — [database/migrations/2026_05_13_191207_create_places_table.php](database/migrations/2026_05_13_191207_create_places_table.php)
-- `riddles`: énigmes (niveau, description, reponse, mcq_options) — [database/migrations/2026_05_13_191209_create_riddles_table.php](database/migrations/2026_05_13_191209_create_riddles_table.php)
-- `riddle_images`, `hints` — images et indices associés aux énigmes
-- `game_sessions`, `game_players`, `game_riddles`, `game_player_riddle_attempts`, `scores` — tables de gameplay/score
+### `City` (`app/Models/City.php`)
+- Attributs : `name`, `description`, `slug`, `departement`.
+- Relation : `places()`.
 
-Remarque: des migrations additionnelles existent (modifications de colonnes, index, champs optionnels). Voir le dossier [database/migrations](database/migrations) pour l'historique complet.
+### `Place` (`app/Models/Place.php`)
+- Attributs : `nom`, `image`, `ville`, `city_id`, `departement`, `lat`, `lng`, `rayon_marge`, `marge_validation_gps`, `is_active`, `verified_description`.
+- Relation : `riddles()`.
 
----
+### `Riddle` (`app/Models/Riddle.php`)
+- Attributs : `place_id`, `niveau`, `description`, `reponse`, `mcq_options`, `indice_id`.
+- Relations : `place()`, `images()`, `gameRiddles()`, `hints()`.
+- `mcq_options` est casté en `array`.
 
-## 3. Modèles Eloquent (résumé)
+### `GameSession` (`app/Models/GameSession.php`)
+- Attributs : `statut`, `lien_token`, `max_joueurs`, `level`, `location_type`, `location_id`, `riddles_count`, `type`, `challenger_mode`.
+- Relations : `players()`, `attempts()`, `users()`, `gameRiddles()`, `riddles()`, `scores()`.
 
-- `User` — relations: `gameSessions()` (via `game_players`), `scores()`, `gamePlayers()` — [app/Models/User.php](app/Models/User.php)
-- `City` — `places()` — [app/Models/City.php](app/Models/City.php)
-- `Place` — champs gps, `riddles()` — [app/Models/Place.php](app/Models/Place.php)
-- `Riddle` — `images()`, `hints()`, `gameRiddles()` — [app/Models/Riddle.php](app/Models/Riddle.php)
-- `GameSession` — `players()`, `gameRiddles()`, `attempts()`, `scores()` — [app/Models/GameSession.php](app/Models/GameSession.php)
-- `GamePlayer`, `GameRiddle`, `GamePlayerRiddleAttempt`, `Score` — modèles opérationnels pour gérer inscriptions, tentatives et points.
+### `GamePlayer` (`app/Models/GamePlayer.php`)
+- Attributs : `session_id`, `user_id`, `mode_choisi`, `statut`, `global_mode`.
+- Relations : `session()`, `user()`.
 
-Ces modèles implémentent la logique relationnelle principale entre sessions, joueurs, lieux et énigmes.
+### `GameRiddle` (`app/Models/GameRiddle.php`)
+- Attributs : `session_id`, `riddle_id`, `repondu_par`, `verrouille_a`.
+- Relations : `session()`, `riddle()`, `solver()`.
 
----
+### `GamePlayerRiddleAttempt` (`app/Models/GamePlayerRiddleAttempt.php`)
+- Garde la trace des tentatives, du statut et des points.
+- Relations : `session()`, `user()`, `gameRiddle()`.
 
-## 4. Contrôleurs et logique métier
-
-- `GameEngineController` — logique métier du gameplay: création de session, sélection d'énigmes par proximité/niveau (Haversine), lobby multijoueur, enregistrement continu des résultats, dashboard joueur et progression. Utilise les événements `GameUpdated` et `LobbyUpdated`. Voir [app/Http/Controllers/GameEngineController.php](app/Http/Controllers/GameEngineController.php)
-- `GameController` — actions liées aux sessions simples et soumission de réponses. Voir [app/Http/Controllers/GameController.php](app/Http/Controllers/GameController.php)
-- `AdminController` — CRUD villes, lieux, énigmes; upload d'images; nettoyage des options QCM; gestion des indices. Voir [app/Http/Controllers/AdminController.php](app/Http/Controllers/AdminController.php)
-- `PageController` — pages publiques (Inertia) : HowToPlay, Explore, Leaderboard, etc. Voir [app/Http/Controllers/PageController.php](app/Http/Controllers/PageController.php)
-
-Sécurité: routes `game.*` protégées par `auth, verified`; routes `admin.*` protégées par middleware `admin`.
-
----
-
-## 5. Frontend (Inertia + Vue)
-
-- Pages clés: `resources/js/Pages/Game/Setup/Index.vue`, `Game/Play/Lobby.vue`, `Game/Play/ActiveRiddle.vue`, `Game/Dashboard.vue`, `Game/Progression.vue`.
-- Composants UI réutilisables dans `resources/js/Components` (boutons, modales, formulaires).
-- Auth: pages dans `resources/js/Pages/Auth`.
-- Entrée: [resources/js/app.js](resources/js/app.js) initialise Inertia et monteur Vue.
-
-Remarque: le rendu côté client utilise Inertia pour naviguer sans rechargement complet; la logique temps réel est gérée via events/broadcasting côté serveur et via listeners dans le frontend (bootstrap.js / store.js).
+### `Score` (`app/Models/Score.php`)
+- Attributs : `session_id`, `user_id`, `points`, `temps_resolution`.
+- Relations : `session()`, `user()`.
 
 ---
 
-## 6. Points techniques et recommandations
+## 5. Routes et navigation principale
 
-- Événements temps réel: confirmer la configuration de `broadcasting.php` et les credentials Pusher/Redis pour la prod.
-- Géo‑calculs: la sélection d'énigmes utilise une formule de distance (Haversine) en SQL; envisager l'ajout d'index ou d'une couche géo spécifique si la table `places` devient grande.
-- Stockage des images: usage du disque `public` via `Storage::disk('public')`; ne pas oublier `php artisan storage:link` en déploiement.
-- Validation & sécurité: vérifier le middleware `admin` et les règles `authorize` côté contrôleur si sensibles.
+### Routes publiques
+- `/` : page d'accueil Inertia.
+- `/comment-jouer`, `/explorer`, `/classement`, `/blog`, `/a-propos`, `/contact` : pages d'information.
+- `/lieux/{id}` : page de détail d'un lieu.
+
+### Routes de jeu (`/game/...`)
+- `/game/dashboard` : dashboard joueur.
+- `/game/setup` : configuration d'une session.
+- `/game/progression` : progression et historique.
+- `/game/sessions` : création de session (POST).
+- `/game/lobby/{token}` : salle d'attente.
+- `/game/lobby/{token}/start` : démarrer la partie.
+- `/game/play/{token}` : interface de jeu.
+- `/game/play/record` : enregistrement des résultats (POST).
+
+### Routes admin (`/admin/...`)
+- Gestion villes : `/admin/cities`.
+- Gestion lieux : `/admin/places` et `/admin/cities/{city}/places`.
+- Gestion énigmes : `/admin/enigmas` et `/admin/places/{place}/enigmas`.
+- Actions CRUD : création, mise à jour, suppression des villes, lieux et énigmes.
+
+### Routes utilisateur
+- `/profile` : édition de profil (authentifié).
+- Auth : routes Laravel Breeze dans `routes/auth.php`.
+
+### Sécurité
+- `auth`, `verified` : protègent les routes de jeu.
+- `admin` middleware : protège les routes admin.
 
 ---
 
-## 7. Où commencer si vous reprisez le projet
+## 6. Frontend Inertia & Vue
 
-1. Installer dépendances et builder assets:
+### Pages clés
+- `resources/js/Pages/Welcome.vue`
+- `resources/js/Pages/ShowPlace.vue`
+- `resources/js/Pages/Explore.vue`
+- `resources/js/Pages/Leaderboard.vue`
+- `resources/js/Pages/Game/Dashboard.vue`
+- `resources/js/Pages/Game/Setup/Index.vue`
+- `resources/js/Pages/Game/Progression.vue`
+- `resources/js/Pages/Game/Play/Lobby.vue`
+- `resources/js/Pages/Game/Play/ActiveRiddle.vue`
+- `resources/js/Pages/Admin/Dashboard.vue`
+- `resources/js/Pages/Admin/Cities.vue`
+- `resources/js/Pages/Admin/Places.vue`
+- `resources/js/Pages/Admin/Enigmas.vue`
+- `resources/js/Pages/Admin/AllPlaces.vue`
+- `resources/js/Pages/Admin/AllEnigmas.vue`
+
+### Composants importants
+- `resources/js/Components/PrimaryButton.vue`
+- `resources/js/Components/SecondaryButton.vue`
+- `resources/js/Components/Modal.vue`
+- `resources/js/Components/TextInput.vue`
+- `resources/js/Components/Dropdown.vue`
+- `resources/js/Components/ResponsiveNavLink.vue`
+
+### Entrée JavaScript
+- `resources/js/app.js`
+- `resources/js/bootstrap.js`
+- `resources/js/store.js`
+
+---
+
+## 7. Points techniques à connaître
+
+- Les sessions de jeu sont créées avec un token unique (`lien_token`).
+- La sélection d'énigmes dans `GameEngineController` utilise la distance géographique pour prioriser les lieux proches.
+- Les points sont enregistrés dans `scores` seulement quand le joueur gagne.
+- La progression montre les tentatives et les badges basés sur les points cumulés.
+- Les indices sont récupérés via `GameEngineController::getHints()` et exposés en JSON.
+- Les images de lieux et d'énigmes sont stockées dans le disque `public` (via `Storage::disk('public')`).
+
+---
+
+## 8. Installation et démarrage
 
 ```bash
 composer install
@@ -194,18 +200,21 @@ npm install
 npm run build
 php artisan migrate
 php artisan storage:link
+php artisan serve
 ```
 
-2. Créer un compte admin (via Seeder ou DB) pour accéder à `/admin`.
-3. Tester une partie: créer une `City` → ajouter `Place`(s) avec coordonnées → ajouter quelques `Riddle` → lancer `game/setup` et créer une session.
+Ensuite, connectez-vous avec un utilisateur admin ou créez un compte, puis testez : créer une ville, ajouter un lieu, ajouter une énigme, lancer une session de jeu.
 
 ---
 
-## 8. Souhaitez-vous que je :
+## 9. À vérifier après mise à jour
 
-- Génère un fichier `REPORT_DEVELOPER.md` plus détaillé (diagramme ER + explication des tables), ou
-- Analyse une partie spécifique (sécurité, performance, tests), ou
-- Liste et documente chaque endpoint API et payload attendu pour le frontend.
+- `config/broadcasting.php` si vous utilisez les événements en temps réel.
+- `config/filesystems.php` pour le disque `public`.
+- `routes/auth.php` pour l'authentification utilisateur.
+- `app/Http/Middleware/AdminMiddleware.php` pour la protection admin.
 
-Répondez simplement par l'option souhaitée et je m'en occupe.
+---
+
+*Document mis à jour le 21 mai 2026 par l'assistant IA.*
 
