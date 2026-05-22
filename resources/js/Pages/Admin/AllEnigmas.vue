@@ -22,6 +22,7 @@ const searchQuery = ref('');
 const selectedPlaceFilter = ref('');
 const showCreateModal = ref(false);
 
+// Ouvrir le modal de création pour un lieu
 const openCreateForPlace = () => {
     if (!selectedPlaceFilter.value) {
         toast.add({ 
@@ -35,6 +36,7 @@ const openCreateForPlace = () => {
     router.visit(route('admin.enigmas', { place: selectedPlaceFilter.value }));
 };
 
+// Filtrer les énigmes 
 const filteredEnigmas = computed(() => {
     let result = [...props.enigmas];
 
