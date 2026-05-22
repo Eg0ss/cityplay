@@ -4,7 +4,7 @@ import AdminLayout from './AdminLayout.vue';
 // Importation des utilitaires Inertia pour la gestion du head, des liens et des formulaires
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 // Importation des hooks Vue pour la réactivité et la surveillance
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 
@@ -34,9 +34,19 @@ const form = useForm({
 });
 
 // Gérer le changement de fichiers pour les images d'indice
+const hintPreviews = ref([]);
 const onHintImagesChange = (e) => {
-    form.hint_images = Array.from(e.target.files);
+    const files = Array.from(e.target.files);
+    form.hint_images = files;
+    
+    // Nettoyer les anciennes URLs
+    hintPreviews.value.forEach(url => URL.revokeObjectURL(url));
+    hintPreviews.value = files.map(file => URL.createObjectURL(file));
 };
+
+onUnmounted(() => {
+    hintPreviews.value.forEach(url => URL.revokeObjectURL(url));
+});
 
 // Surveillance du niveau pour adapter les options QCM (pas de QCM au niveau 3)
 watch(() => form.niveau, (newVal) => {
@@ -181,10 +191,10 @@ const confirmDelete = (enigma) => {
                         <span class="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#FF9F1C] truncate">SECTEUR : {{ place.city?.name.toUpperCase() }}</span>
                     </div>
                     <h1 class="text-3xl md:text-6xl font-black tracking-tighter uppercase italic leading-none dark:text-white text-gray-900">
-                        QUEST <span class="text-[#FF9F1C]">EDITOR</span>
+                        GESTION <span class="text-[#FF9F1C]">ENIGMES</span>
                     </h1>
                     <p class="text-gray-500 font-bold uppercase tracking-[0.2em] text-[8px] md:text-[10px] mt-2 md:mt-4 truncate">
-                        UNITÉ CIBLE : <span class="dark:text-white text-gray-900">{{ place.nom.toUpperCase() }}</span>
+                        LIEU CIBLE : <span class="dark:text-white text-gray-900">{{ place.nom.toUpperCase() }}</span>
                     </p>
                 </div>
                 <!-- Bouton d'activation de l'atelier -->
@@ -296,14 +306,27 @@ const confirmDelete = (enigma) => {
                                 <div class="space-y-8">
                                     <!-- Indice Images (Multiples) -->
                                     <div class="space-y-4">
-                                        <label class="block text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Images d'indice (Optionnel - Plusieurs fichiers possibles)</label>
-                                        <div class="relative group">
+                                        <label class="block text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Images d'indice (Multiples)</label>
+                                        <div class="relative group min-h-[150px]">
                                             <input type="file" multiple @change="onHintImagesChange" 
                                                 class="absolute inset-0 opacity-0 cursor-pointer z-20" />
-                                            <div class="dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-[2rem] py-12 md:py-20 px-6 md:px-8 text-center group-hover:border-[#FF9F1C]/50 transition-all">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-4 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                                                <p class="text-xs font-black uppercase tracking-widest dark:text-white text-gray-900">Images d'indice</p>
-                                                <p class="text-[10px] text-gray-500 uppercase font-bold mt-2">{{ form.hint_images.length > 0 ? form.hint_images.length + ' IMAGE(S) PRÊTE(S)' : 'CHARGER DES INDICES VISUELS' }}</p>
+                                            <div class="min-h-[150px] dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-3xl flex flex-col items-center justify-center p-6 group-hover:border-[#FF9F1C]/50 transition-all overflow-hidden relative">
+                                                <template v-if="form.hint_images.length === 0">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mb-2 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                                                    <p class="text-[10px] font-black uppercase tracking-widest dark:text-white text-gray-900">Charger des images</p>
+                                                </template>
+                                                <template v-else>
+                                                    <!-- Prévisualisation des images -->
+                                                    <div class="grid grid-cols-4 gap-2 w-full mb-4">
+                                                        <div v-for="(url, idx) in hintPreviews" :key="idx" class="aspect-square rounded-lg overflow-hidden border border-white/10">
+                                                            <img :src="url" class="w-full h-full object-cover" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-center">
+                                                        <p class="text-[10px] font-black text-[#FF9F1C] uppercase drop-shadow-md">{{ form.hint_images.length }} FICHIER(S) SÉLECTIONNÉ(S)</p>
+                                                        <p class="text-[8px] text-white font-bold uppercase mt-1 drop-shadow-md">Cliquer pour changer la sélection</p>
+                                                    </div>
+                                                </template>
                                             </div>
                                         </div>
                                     </div>
@@ -329,8 +352,8 @@ const confirmDelete = (enigma) => {
                     </div>
 
                     <!-- Éléments HUD décoratifs -->
-                    <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em] animate-pulse">Core Sync: 100%</div>
-                    <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Step {{ currentStep }} / 05</div>
+                    <!-- <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em] animate-pulse">Core Sync: 100%</div> -->
+                    <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Etape {{ currentStep }} / 05</div>
                 </div>
             </transition>
 

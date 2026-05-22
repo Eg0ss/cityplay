@@ -147,7 +147,7 @@ class GameEngineController extends Controller
     // Affiche le processus de configuration de partie avec la liste des villes
     public function setup()
     {
-        $cities = \App\Models\City::orderBy('name', 'asc')->get()->map(function ($city) {
+        $cities = \App\Models\City::where('status', 'active')->orderBy('name', 'asc')->get()->map(function ($city) {
             $placeIds = $city->places->pluck('id');
             
             // Compter le nombre total d'énigmes

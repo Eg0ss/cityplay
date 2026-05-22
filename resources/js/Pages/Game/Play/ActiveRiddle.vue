@@ -1129,7 +1129,6 @@ const formatTime = (seconds) => {
         </div>
     </AuthenticatedLayout>
 </template>
-
 <style scoped>
 .animate-fade-in-up {
     animation: fadeInUp 0.5s ease-out forwards;
@@ -1162,3 +1161,4 @@ const formatTime = (seconds) => {
     }
 }
 </style>
+

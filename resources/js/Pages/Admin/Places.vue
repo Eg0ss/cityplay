@@ -2,9 +2,9 @@
 // Importation du layout de base pour l'administration
 import AdminLayout from './AdminLayout.vue';
 // Importation des utilitaires Inertia pour la gestion du head, des liens et des formulaires
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
 // Importation des hooks Vue pour la réactivité, les cycles de vie et le prochain tick
-import { ref, onMounted, nextTick, watch, computed } from 'vue';
+import { ref, onMounted, nextTick, watch, computed, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
@@ -20,6 +20,7 @@ const confirm = useConfirm();
 const searchQuery = ref('');
 const isEditing = ref(false);
 const editingPlaceId = ref(null);
+const loadingPlaceId = ref(null);
 
 const filteredPlaces = computed(() => {
     if (!searchQuery.value) return props.places;
@@ -41,6 +42,7 @@ const form = useForm({
     lat: 6.3667,              // Latitude par défaut (Cotonou)
     lng: 2.4333,              // Longitude par défaut
     rayon_marge: 5,           // Rayon de détection par défaut
+    marge_validation_gps: 10, // Marge de validation GPS (en mètres)
 });
 
 // Références pour la gestion de la carte Leaflet
@@ -48,11 +50,26 @@ const map = ref(null);
 const marker = ref(null);
 const suggestions = ref([]);
 const isSearching = ref(false);
+const imagePreview = ref(null);
 
 // Gestion du changement de fichier image
 const onFileChange = (e) => {
-    form.image = e.target.files[0];
+    const file = e.target.files[0];
+    form.image = file;
+    
+    // Nettoyer l'ancienne URL pour éviter les fuites de mémoire
+    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+    
+    if (file) {
+        imagePreview.value = URL.createObjectURL(file);
+    } else {
+        imagePreview.value = null;
+    }
 };
+
+onUnmounted(() => {
+    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+});
 
 /**
  * Fonction de géocodage pour obtenir des suggestions
@@ -256,6 +273,7 @@ const openEditForm = (place) => {
     form.lat = place.lat;
     form.lng = place.lng;
     form.rayon_marge = place.rayon_marge;
+    form.marge_validation_gps = place.marge_validation_gps || 10;
     form.image = null;
     showForm.value = true;
 };
@@ -334,16 +352,16 @@ const confirmDelete = (place) => {
                     <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#FF9F1C] mb-4">
                         <Link :href="route('admin.cities')" class="hover:underline flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                            MATRICE
+                            RETOUR AUX VILLES
                         </Link>
                         <span class="opacity-30">/</span>
                         <span class="text-white">{{ city.name }}</span>
                     </div>
                     <h1 class="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-none dark:text-white text-gray-900">
-                        RADAR <span class="text-[#FF9F1C]">GÉO-SPATIAL</span>
+                        UNIVERS DES <span class="text-[#FF9F1C]">LIEUX</span>
                     </h1>
                     <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4">
-                        CONFIGURATION DES BALISES : UNITÉ {{ city.name.toUpperCase() }}
+                        CONFIGURATION DES LIEUX : POUR {{ city.name.toUpperCase() }}
                     </p>
                 </div>
 
@@ -419,14 +437,20 @@ const confirmDelete = (place) => {
                                     <div class="relative group h-[200px]">
                                         <input type="file" @change="onFileChange" 
                                             class="absolute inset-0 opacity-0 cursor-pointer z-20" />
-                                        <div class="h-full dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-3xl flex flex-col items-center justify-center p-4 group-hover:border-[#FF9F1C]/50 transition-all overflow-hidden">
+                                        <div class="h-full dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-3xl flex flex-col items-center justify-center p-4 group-hover:border-[#FF9F1C]/50 transition-all overflow-hidden relative">
                                             <template v-if="!form.image">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mb-2 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                                                 <p class="text-[10px] font-black uppercase tracking-widest dark:text-white text-gray-900">Charger un fichier</p>
                                             </template>
                                             <template v-else>
-                                                <p class="text-[10px] font-black text-[#FF9F1C] uppercase truncate max-w-full px-4">{{ form.image.name }}</p>
-                                                <p class="text-[8px] text-gray-500 uppercase mt-1">Cliquer pour changer le fichier</p>
+                                                <!-- Prévisualisation de l'image -->
+                                                <div v-if="imagePreview" class="absolute inset-0 z-10">
+                                                    <img :src="imagePreview" class="w-full h-full object-cover opacity-50 group-hover:opacity-30 transition-opacity" />
+                                                </div>
+                                                <div class="relative z-20 text-center">
+                                                    <p class="text-[10px] font-black text-[#FF9F1C] uppercase truncate max-w-full px-4 drop-shadow-md">{{ form.image.name }}</p>
+                                                    <p class="text-[8px] text-white font-bold uppercase mt-1 drop-shadow-md">Cliquer pour changer le fichier</p>
+                                                </div>
                                             </template>
                                         </div>
                                     </div>
@@ -459,6 +483,14 @@ const confirmDelete = (place) => {
                                             class="w-full bg-transparent border-none p-0 font-mono font-black text-[#FF9F1C] focus:ring-0 text-sm" />
                                     </div>
                                 </div>
+
+                                <div class="grid grid-cols-1 gap-4">
+                                    <div class="p-4 rounded-2xl dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-200">
+                                        <label class="block text-[8px] font-black uppercase text-gray-500 mb-1">MARGE VALIDATION GPS (M)</label>
+                                        <input v-model="form.marge_validation_gps" type="number" min="1"
+                                            class="w-full bg-transparent border-none p-0 font-mono font-black text-green-500 focus:ring-0 text-sm" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -473,8 +505,8 @@ const confirmDelete = (place) => {
                     </div>
 
                     <!-- Éléments HUD décoratifs -->
-                    <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em] animate-pulse">GPS Signal: Locked</div>
-                    <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Unit stable</div>
+                    <!-- <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em] animate-pulse">GPS Signal: Locked</div> -->
+                    <!-- <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Unit stable</div> -->
                 </div>
             </transition>
 
@@ -503,8 +535,11 @@ const confirmDelete = (place) => {
                                     {{ place.is_active ? 'Opérationnel' : 'Hors-Ligne' }}
                                 </span>
                                 <Link :href="route('admin.places.generate_session', { place: place.id })" method="post" as="button"
-                                    class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-blue-500/20 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all">
-                                    Générer Lien Partage
+                                    @click="loadingPlaceId = 'session-' + place.id"
+                                    :disabled="loadingPlaceId === 'session-' + place.id"
+                                    class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-blue-500/20 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <template v-if="loadingPlaceId === 'session-' + place.id">Génération...</template>
+                                    <template v-else>Générer Lien Partage</template>
                                 </Link>
                             </div>
                             <div class="flex flex-wrap items-center gap-4 lg:gap-6 text-gray-500 font-bold text-[8px] lg:text-[10px] uppercase tracking-widest">
@@ -524,18 +559,29 @@ const confirmDelete = (place) => {
                     <div class="flex items-center gap-4 w-full lg:w-auto">
                         <!-- Accès aux énigmes -->
                         <Link :href="route('admin.enigmas', { place: place.id })" 
+                            @click="loadingPlaceId = place.id"
+                            :class="{ 'opacity-50 pointer-events-none cursor-not-allowed': loadingPlaceId === place.id }"
                             class="group/btn flex-1 lg:flex-none flex items-center justify-center gap-3 dark:bg-white/5 bg-gray-100 px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-[#FF9F1C] hover:text-black dark:text-white text-gray-700">
-                            MATRICE ÉNIGMES
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                            <template v-if="loadingPlaceId === place.id">
+                                <svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                CHARGEMENT...
+                            </template>
+                            <template v-else>
+                                ÉNIGMES
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                            </template>
                         </Link>
                         <!-- Modification -->
-                        <button @click="openEditForm(place)" 
-                            class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-blue-500/50 hover:text-blue-500 transition-all group/btn">
+                        <button @click="openEditForm(place)" :disabled="form.processing"
+                            class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-blue-500/50 hover:text-blue-500 transition-all group/btn disabled:opacity-50 disabled:cursor-not-allowed">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                         </button>
                         <!-- Suppression -->
-                        <button @click="confirmDelete(place)" 
-                            class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-red-500/50 hover:text-red-500 transition-all group/btn">
+                        <button @click="confirmDelete(place)" :disabled="form.processing"
+                            class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-red-500/50 hover:text-red-500 transition-all group/btn disabled:opacity-50 disabled:cursor-not-allowed">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                         </button>
                     </div>

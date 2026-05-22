@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from './AdminLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 
@@ -21,6 +21,58 @@ const confirm = useConfirm();
 const searchQuery = ref('');
 const selectedPlaceFilter = ref('');
 const showCreateModal = ref(false);
+const showEditModal = ref(false);
+const loadingEnigmaId = ref(null);
+const editingEnigmaId = ref(null);
+
+const form = useForm({
+    niveau: 1,
+    description: '',
+    reponse: '',
+    mcq_options: ['', '', '', ''],
+    hint_keyword: '',
+});
+
+const openEditModal = (enigma) => {
+    editingEnigmaId.value = enigma.id;
+    form.niveau = enigma.niveau;
+    form.description = enigma.description;
+    form.reponse = enigma.reponse;
+    form.mcq_options = enigma.mcq_options || ['', '', '', ''];
+    
+    // Charger le mot-clé d'indice si présent
+    form.hint_keyword = '';
+    if (enigma.hints) {
+        const keywordHint = enigma.hints.find(h => h.type === 'keyword');
+        if (keywordHint) form.hint_keyword = keywordHint.content;
+    }
+    
+    showEditModal.value = true;
+};
+
+const submitEdit = () => {
+    form.post(route('admin.enigmas.update', { enigma: editingEnigmaId.value }), {
+        onSuccess: () => {
+            showEditModal.value = false;
+            form.reset();
+            toast.add({ 
+                severity: 'success', 
+                summary: 'Matrice Mise à Jour', 
+                detail: 'L\'énigme a été mise à jour avec succès.', 
+                life: 3000 
+            });
+        },
+    });
+};
+
+// Surveillance du niveau pour adapter les options QCM
+watch(() => form.niveau, (newVal) => {
+    if (newVal === 3) {
+        form.mcq_options = [];
+    } else if (form.mcq_options.length === 0) {
+        form.mcq_options = ['', '', '', ''];
+    }
+});
 
 const openCreateForPlace = () => {
     if (!selectedPlaceFilter.value) {
@@ -86,7 +138,7 @@ const confirmDelete = (enigma) => {
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
                     <h1 class="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-none dark:text-white text-gray-900">
-                        MATRICE <span class="text-[#FF9F1C]">ÉNIGMES</span>
+                        UNIVERS <span class="text-[#FF9F1C]">ÉNIGMES</span>
                     </h1>
                     <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4">
                         LISTE INTÉGRALE DES DÉFIS DÉPLOYÉS SUR LE RÉSEAU
@@ -163,6 +215,77 @@ const confirmDelete = (enigma) => {
                 </div>
             </transition>
 
+            <!-- Modal d'édition d'énigme -->
+            <transition name="step-fade">
+                <div v-if="showEditModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+                    <div class="w-full max-w-2xl dark:bg-[#111113] bg-white rounded-[2.5rem] p-10 border dark:border-white/5 border-gray-100 shadow-2xl relative overflow-y-auto max-h-[90vh]">
+                        <button @click="showEditModal = false" class="absolute top-8 right-8 text-gray-500 hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                        
+                        <div class="space-y-8">
+                            <div class="space-y-2">
+                                <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Mise à jour</span>
+                                <h3 class="text-3xl font-black uppercase italic tracking-tighter">ÉDITER L'<span class="text-[#FF9F1C]">ÉNIGME</span></h3>
+                                <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Modifiez les paramètres de ce défi.</p>
+                            </div>
+
+                            <form @submit.prevent="submitEdit" class="space-y-6">
+                                <div class="grid grid-cols-2 gap-6">
+                                    <!-- Niveau -->
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Niveau de difficulté</label>
+                                        <select v-model="form.niveau" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all">
+                                            <option :value="1">LVL 1 - FACILE</option>
+                                            <option :value="2">LVL 2 - INTERMÉDIAIRE</option>
+                                            <option :value="3">LVL 3 - LÉGENDAIRE</option>
+                                        </select>
+                                    </div>
+                                    <!-- Réponse -->
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Réponse attendue</label>
+                                        <input v-model="form.reponse" type="text" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all" />
+                                    </div>
+                                </div>
+
+                                <!-- Description -->
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Énoncé de l'énigme</label>
+                                    <textarea v-model="form.description" rows="4" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-4 px-6 text-sm font-bold italic tracking-tight focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all"></textarea>
+                                </div>
+
+                                <!-- Options QCM (Seulement LVL 1 & 2) -->
+                                <div v-if="form.niveau < 3" class="space-y-4">
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Options QCM (Fausse pistes)</label>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div v-for="(opt, index) in form.mcq_options" :key="index" class="relative">
+                                            <input v-model="form.mcq_options[index]" type="text" :placeholder="'Option ' + (index + 1)" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-xl py-3 px-4 text-xs font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mot-clé d'indice -->
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Mot-clé d'indice (Optionnel)</label>
+                                    <input v-model="form.hint_keyword" type="text" placeholder="EX: HISTOIRE" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all" />
+                                </div>
+
+                                <div class="flex gap-4 pt-4">
+                                    <button type="button" @click="showEditModal = false" class="flex-1 px-8 py-5 rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-xs hover:bg-gray-100 dark:hover:bg-white/5 transition-all">ANNULER</button>
+                                    <button type="submit" :disabled="form.processing" class="flex-[2] bg-[#FF9F1C] text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3">
+                                        <svg v-if="form.processing" class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        {{ form.processing ? 'MISE À JOUR...' : 'SAUVEGARDER LES MODIFICATIONS' }}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
             <!-- Liste des énigmes -->
             <div v-if="filteredEnigmas.length > 0" class="grid gap-6">
                 <div v-for="enigma in filteredEnigmas" :key="enigma.id" 
@@ -198,11 +321,11 @@ const confirmDelete = (enigma) => {
                         </div>
 
                         <div class="flex lg:flex-col items-center justify-center gap-3">
-                            <Link :href="route('admin.enigmas', { place: enigma.place_id, edit: enigma.id })" 
+                            <button @click="openEditModal(enigma)" 
                                 class="h-14 w-14 dark:bg-white/5 bg-gray-50 rounded-2xl flex items-center justify-center hover:bg-[#FF9F1C] hover:text-black transition-all group shadow-lg"
-                                title="Éditer dans l'atelier">
+                                title="Éditer l'énigme">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                            </Link>
+                            </button>
                             <button @click="confirmDelete(enigma)" 
                                 class="h-14 w-14 dark:bg-white/5 bg-gray-50 rounded-2xl flex items-center justify-center hover:bg-red-500/20 hover:text-red-500 transition-all group shadow-lg text-gray-400"
                                 title="Supprimer">

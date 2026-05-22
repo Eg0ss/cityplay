@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('/cities', [AdminController::class, 'storeCity'])->name('cities.store');
     Route::post('/cities/{city}/update', [AdminController::class, 'updateCity'])->name('cities.update');
     Route::delete('/cities/{city}', [AdminController::class, 'deleteCity'])->name('cities.delete');
+    Route::post('/cities/{city}/toggle', [AdminController::class, 'toggleCityStatus'])->name('cities.toggle');
     
     // Places Management
     Route::get('/places', [AdminController::class, 'allPlaces'])->name('places.all');

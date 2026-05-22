@@ -53,7 +53,7 @@ class AdminController extends Controller
     public function allEnigmas()
     {
         return Inertia::render('Admin/AllEnigmas', [
-            'enigmas' => Riddle::with('place.city', 'images')->latest()->get(),
+            'enigmas' => Riddle::with('place.city', 'images', 'hints')->latest()->get(),
             'places' => Place::orderBy('nom')->get(),
         ]);
     }
@@ -97,6 +97,17 @@ class AdminController extends Controller
         return back()->with('success', 'Ville supprimée de la matrice.');
     }
 
+    // Changer le statut d'une cité
+    public function toggleCityStatus(City $city)
+    {
+        $city->status = $city->status === 'active' ? 'inactive' : 'active';
+        $city->save();
+
+        $message = $city->status === 'active' ? 'La cité a été activée.' : 'La cité a été désactivée.';
+        
+        return back()->with('success', $message);
+    }
+
     // Tous les lieux d'une ville
     public function places(City $city)
     {
@@ -115,6 +126,7 @@ class AdminController extends Controller
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
             'rayon_marge' => 'required|integer',
+            'marge_validation_gps' => 'required|integer|min:1',
             'image' => 'nullable|file|max:2048',
         ]);
 
@@ -137,6 +149,7 @@ class AdminController extends Controller
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
             'rayon_marge' => 'required|integer',
+            'marge_validation_gps' => 'required|integer|min:1',
             'image' => 'nullable|file|max:2048',
         ]);
 
@@ -173,6 +186,7 @@ class AdminController extends Controller
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
             'rayon_marge' => 'required|integer',
+            'marge_validation_gps' => 'required|integer|min:1',
             'image' => 'nullable|file|max:2048',
         ]);
 

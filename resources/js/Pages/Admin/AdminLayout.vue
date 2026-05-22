@@ -1,7 +1,8 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { ref, onMounted, watch } from 'vue';
 import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 import ConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from 'primevue/useconfirm';
 import { 
@@ -34,6 +35,29 @@ const updateTheme = () => {
         document.documentElement.classList.remove('dark');
     }
 };
+
+const toast = useToast();
+const page = usePage();
+
+// Gestion des messages flash
+watch(() => page.props.flash, (flash) => {
+    if (flash?.success) {
+        toast.add({
+            severity: 'success',
+            summary: 'Succès',
+            detail: flash.success,
+            life: 3000
+        });
+    }
+    if (flash?.error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Erreur',
+            detail: flash.error,
+            life: 3000
+        });
+    }
+}, { deep: true, immediate: true });
 
 const confirm = useConfirm();
 
@@ -96,18 +120,18 @@ onMounted(() => {
         </template>
     </ConfirmDialog>
     <div class="min-h-screen font-sans flex overflow-hidden transition-colors duration-300" 
-         :class="isDark ? 'bg-[#0A0A0B] text-white' : 'bg-gray-50 text-gray-900'">
+         :class="isDark ? 'bg-[#171235] text-white' : 'bg-gray-50 text-gray-900'">
         
         <!-- Mobile Header -->
         <header class="lg:hidden fixed top-0 w-full z-[60] px-6 py-4 flex justify-between items-center border-b backdrop-blur-md"
-                :class="isDark ? 'bg-[#0A0A0B]/80 border-white/5' : 'bg-white/80 border-gray-200'">
+                :class="isDark ? 'bg-[#10101c]/80 border-white/5' : 'bg-white/80 border-gray-200'">
             <div class="flex items-center gap-3">
                 <div class="h-10 w-10 flex items-center justify-center">
                     <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                 </div>
                 <div class="flex flex-col">
                     <span class="font-black uppercase italic text-sm tracking-tighter leading-none">Cityplay</span>
-                    <span class="text-[8px] text-[#FF9F1C] font-bold tracking-widest uppercase opacity-80">Admin</span>
+                    <span class="text-[8px] text-[#2fc276] font-bold tracking-widest uppercase opacity-80">Admin</span>
                 </div>
             </div>
             <div class="flex items-center gap-3">
@@ -125,7 +149,7 @@ onMounted(() => {
 
         <!-- Sidebar -->
         <aside :class="[
-                    isDark ? 'bg-[#111113] border-white/5' : 'bg-white border-gray-200',
+                    isDark ? 'bg-[#10101c] border-white/5' : 'bg-white border-gray-200',
                     isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                 ]"
                class="w-72 border-r flex flex-col fixed h-full z-[70] transition-transform duration-500 ease-in-out lg:z-20 shadow-2xl lg:shadow-none">
@@ -136,8 +160,7 @@ onMounted(() => {
                         <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-2xl font-black uppercase italic tracking-tighter leading-none dark:text-white text-gray-900 group-hover:text-[#FF9F1C] transition-colors">Cityplay</span>
-                        <!-- <span class="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF9F1C] mt-1">Control Center</span> -->
+                        <span class="text-2xl font-black uppercase italic tracking-tighter leading-none dark:text-white text-gray-900 group-hover:text-[#2fc276] transition-colors">Cityplay</span>
                     </div>
                 </Link>
             </div>
@@ -145,7 +168,7 @@ onMounted(() => {
             <nav class="flex-1 px-6 py-8 space-y-3">
                 <Link :href="route('admin.dashboard')" 
                     @click="isMobileMenuOpen = false"
-                    :class="route().current('admin.dashboard') ? 'bg-[#FF9F1C] text-black shadow-lg' : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-gray-600 hover:bg-gray-100')" 
+                    :class="route().current('admin.dashboard') ? 'bg-[#2fc276] text-black shadow-lg' : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-gray-600 hover:bg-gray-100')" 
                     class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group">
                     <span class="text-xl">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
@@ -155,7 +178,7 @@ onMounted(() => {
 
                 <Link :href="route('admin.cities')" 
                     @click="isMobileMenuOpen = false"
-                    :class="route().current('admin.cities*') || route().current('admin.cities.places*') ? 'bg-[#FF9F1C] text-black shadow-lg' : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-gray-600 hover:bg-gray-100')" 
+                    :class="route().current('admin.cities*') || route().current('admin.cities.places*') ? 'bg-[#2fc276] text-black shadow-lg' : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-gray-600 hover:bg-gray-100')" 
                     class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group">
                     <span class="text-xl">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V10a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12"/><path d="M18 22H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v4.5"/><path d="M22 22V15a2 2 0 0 0-2-2h-2"/><rect width="4" height="4" x="6" y="12" rx="1"/><rect width="4" height="4" x="10" y="12" rx="1"/></svg>
@@ -165,7 +188,7 @@ onMounted(() => {
 
                 <Link :href="route('admin.places.all')" 
                     @click="isMobileMenuOpen = false"
-                    :class="route().current('admin.places.all') ? 'bg-[#FF9F1C] text-black shadow-lg' : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-gray-600 hover:bg-gray-100')" 
+                    :class="route().current('admin.places.all') ? 'bg-[#2fc276] text-black shadow-lg' : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-gray-600 hover:bg-gray-100')" 
                     class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group">
                     <span class="text-xl">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -175,7 +198,7 @@ onMounted(() => {
 
                 <Link :href="route('admin.enigmas.all')" 
                     @click="isMobileMenuOpen = false"
-                    :class="route().current('admin.enigmas.all') ? 'bg-[#FF9F1C] text-black shadow-lg' : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-gray-600 hover:bg-gray-100')" 
+                    :class="route().current('admin.enigmas.all') ? 'bg-[#2fc276] text-black shadow-lg' : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-gray-600 hover:bg-gray-100')" 
                     class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group">
                     <span class="text-xl">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
@@ -204,9 +227,9 @@ onMounted(() => {
                 </div>
             </nav>
 
-            <div class="p-8 border-t bg-opacity-50" :class="isDark ? 'border-white/5 bg-[#0D0D0F]' : 'border-gray-100 bg-gray-50'">
+            <div class="p-8 border-t bg-opacity-50" :class="isDark ? 'border-white/5 bg-[#0D0D12]' : 'border-gray-100 bg-gray-50'">
                 <div class="flex items-center gap-3 mb-6">
-                    <div class="h-10 w-10 rounded-full bg-gray-200 border flex items-center justify-center font-bold text-xs text-[#FF9F1C]">
+                    <div class="h-10 w-10 rounded-full bg-gray-200 border flex items-center justify-center font-bold text-xs text-[#2fc276]">
                         AD
                     </div>
                     <div class="overflow-hidden">
@@ -230,7 +253,7 @@ onMounted(() => {
         <main class="lg:ml-72 flex-1 relative h-screen overflow-y-auto pt-20 lg:pt-0">
 
             <!-- Decorative Backgrounds (Visible only in Dark Mode) -->
-            <div v-if="isDark" class="fixed top-0 right-0 w-[500px] h-[500px] bg-[#FF9F1C]/5 blur-[120px] -z-10 rounded-full"></div>
+            <div v-if="isDark" class="fixed top-0 right-0 w-[500px] h-[500px] bg-[#2fc276]/5 blur-[120px] -z-10 rounded-full"></div>
             
             <div class="p-6 lg:p-12 max-w-7xl mx-auto">
                 <slot />
@@ -243,7 +266,7 @@ onMounted(() => {
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
 
 html.dark {
-    background-color: #0A0A0B;
+    background-color: #171235;
 }
 
 ::-webkit-scrollbar {
@@ -255,7 +278,7 @@ html.dark {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #FF9F1C;
+    background: #2fc276;
     border-radius: 10px;
 }
 </style>

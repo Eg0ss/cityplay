@@ -244,7 +244,6 @@ onMounted(() => {
             </main>
         </div>
 
-        <!-- Widget Audio Global (toujours visible sur toutes les pages) -->
         <AudioWidget />
 
         <!-- Floating Action Button (Mobile) -->

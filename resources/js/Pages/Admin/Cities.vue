@@ -1,6 +1,6 @@
 <script setup>
 import AdminLayout from './AdminLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
@@ -15,6 +15,19 @@ const confirm = useConfirm();
 const searchQuery = ref('');
 const isEditing = ref(false);
 const editingCityId = ref(null);
+const loadingCityId = ref(null);
+const statusLoadingId = ref(null);
+
+// Fonction pour changer le statut d'une cité
+const toggleStatus = (city) => {
+    statusLoadingId.value = city.id;
+    router.post(route('admin.cities.toggle', { city: city.id }), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            statusLoadingId.value = null;
+        },
+    });
+};
 
 //Filtrage des cités en fonction de la requête de recherche
 const filteredCities = computed(() => {
@@ -141,30 +154,30 @@ const progressWidth = computed(() => {
                 <div>
                     <!-- Titre principal avec style terminal/gaming -->
                     <h1 class="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-none dark:text-white text-gray-900">
-                        MATRICE DES <span class="text-[#FF9F1C]">CITÉS</span>
+                        UNIVERS DES <span class="text-[#2fc276]">CITÉS</span>
                     </h1>
                     <!-- Sous-titre descriptif -->
                     <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4">
-                        INITIALISATION DES ZONES DE DÉPLOIEMENT URBAIN
+                        INITIALISATION DES ZONES URBAINES
                     </p>
                 </div>
 
                 <!-- Barre de recherche -->
                 <div class="relative w-full lg:w-96 group">
-                    <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FF9F1C] transition-colors">
+                    <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#2fc276] transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                     </div>
                     <input 
                         v-model="searchQuery"
                         type="text" 
                         placeholder="RECHERCHER UNE CITÉ..." 
-                        class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-200 rounded-2xl py-5 pl-16 pr-8 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all placeholder:text-gray-500/50"
+                        class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-200 rounded-2xl py-5 pl-16 pr-8 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#2fc276]/50 transition-all placeholder:text-gray-500/50"
                     />
                 </div>
 
                 <!-- Bouton d'action pour lancer ou annuler l'initialisation -->
                 <button @click="showForm ? (showForm = false) : openCreateForm()" 
-                    :class="showForm ? 'bg-red-500 shadow-lg text-white' : 'bg-[#FF9F1C] shadow-lg text-black'"
+                    :class="showForm ? 'bg-red-500 shadow-lg text-white' : 'bg-[#2fc276] shadow-lg text-black'"
                     class="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all hover:scale-105 active:scale-95">
                     {{ showForm ? 'ANNULER L\'OPÉRATION' : 'INITIALISER UNE CITÉ' }}
                 </button>
@@ -176,7 +189,7 @@ const progressWidth = computed(() => {
                     
                     <!-- Barre de progression visuelle -->
                     <div class="absolute top-0 left-0 w-full h-1.5 bg-gray-100 dark:bg-white/5 overflow-hidden">
-                        <div class="h-full bg-[#FF9F1C] transition-all duration-700 ease-out shadow-[0_0_15px_#FF9F1C]" :style="{ width: progressWidth }"></div>
+                        <div class="h-full bg-[#2fc276] transition-all duration-700 ease-out shadow-[0_0_15px_#2fc276]" :style="{ width: progressWidth }"></div>
                     </div>
 
                     <div class="relative z-10">
@@ -184,8 +197,8 @@ const progressWidth = computed(() => {
                         <transition name="step-fade" mode="out-in">
                             <div v-if="currentStep === 1" key="step1" class="space-y-8 py-4">
                                 <div class="space-y-2">
-                                    <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 01</span>
-                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">INITIALISATION DE LA <span class="text-[#FF9F1C]">CITE</span></h3>
+                                    <span class="text-[10px] font-black text-[#2fc276] tracking-[0.5em] uppercase">Phase 01</span>
+                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">INITIALISATION DE LA <span class="text-[#2fc276]">CITE</span></h3>
                                 </div>
                                 <div class="space-y-4">
                                     <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Désignation de la Cité</label>
@@ -193,11 +206,11 @@ const progressWidth = computed(() => {
                                         v-model="form.name" 
                                         type="text" 
                                         autofocus
-                                        class="w-full text-2xl lg:text-4xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-black italic tracking-tighter placeholder:opacity-20" 
+                                        class="w-full text-2xl lg:text-4xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#2fc276]/20 dark:text-white text-gray-900 font-black italic tracking-tighter placeholder:opacity-20" 
                                         placeholder="EX: OUIDAH LA MYSTIQUE" 
                                     />
                                 </div>
-                                <button @click="nextStep" :disabled="!form.name" class="group flex items-center gap-4 bg-[#FF9F1C] text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-all disabled:opacity-30">
+                                <button @click="nextStep" :disabled="!form.name" class="group flex items-center gap-4 bg-[#2fc276] text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-all disabled:opacity-30">
                                     CONTINUER
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:translate-x-2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                                 </button>
@@ -206,8 +219,8 @@ const progressWidth = computed(() => {
                             <!-- Étape 2 : Localisation -->
                             <div v-else-if="currentStep === 2" key="step2" class="space-y-8 py-4">
                                 <div class="space-y-2">
-                                    <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 02</span>
-                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">DEPARTEMENT <span class="text-[#FF9F1C]">RATACHE</span></h3>
+                                    <span class="text-[10px] font-black text-[#2fc276] tracking-[0.5em] uppercase">Phase 02</span>
+                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">DEPARTEMENT <span class="text-[#2fc276]">RATACHE</span></h3>
                                 </div>
                                 <div class="space-y-4">
                                     <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Département (Optionnel)</label>
@@ -215,13 +228,13 @@ const progressWidth = computed(() => {
                                         v-model="form.departement" 
                                         type="text" 
                                         autofocus
-                                        class="w-full text-2xl lg:text-4xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-black italic tracking-tighter placeholder:opacity-20" 
+                                        class="w-full text-2xl lg:text-4xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#2fc276]/20 dark:text-white text-gray-900 font-black italic tracking-tighter placeholder:opacity-20" 
                                         placeholder="EX: ATLANTIQUE" 
                                     />
                                 </div>
                                 <div class="flex gap-4">
                                     <button @click="prevStep" class="px-8 py-6 rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-all">RETOUR</button>
-                                    <button @click="nextStep" class="group flex-1 flex items-center justify-center gap-4 bg-[#FF9F1C] text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-all">
+                                    <button @click="nextStep" class="group flex-1 flex items-center justify-center gap-4 bg-[#2fc276] text-black px-10 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-all">
                                         CONTINUER
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:translate-x-2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                                     </button>
@@ -231,8 +244,8 @@ const progressWidth = computed(() => {
                             <!-- Étape 3 : Narratif -->
                             <div v-else-if="currentStep === 3" key="step3" class="space-y-8 py-4">
                                 <div class="space-y-2">
-                                    <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Phase 03</span>
-                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">DESCRIPTION DE LA <span class="text-[#FF9F1C]">CITÉ</span></h3>
+                                    <span class="text-[10px] font-black text-[#2fc276] tracking-[0.5em] uppercase">Phase 03</span>
+                                    <h3 class="text-3xl font-black uppercase italic tracking-tighter">DESCRIPTION DE LA <span class="text-[#2fc276]">CITÉ</span></h3>
                                 </div>
                                 <div class="space-y-4">
                                     <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Séquence d'introduction (Description - Optionnelle)</label>
@@ -240,7 +253,7 @@ const progressWidth = computed(() => {
                                         v-model="form.description" 
                                         rows="4"
                                         autofocus
-                                        class="w-full text-xl lg:text-2xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-bold italic tracking-tight placeholder:opacity-20" 
+                                        class="w-full text-xl lg:text-2xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#2fc276]/20 dark:text-white text-gray-900 font-bold italic tracking-tight placeholder:opacity-20" 
                                         placeholder="L'HISTOIRE COMMENCE ICI..."
                                     ></textarea>
                                 </div>
@@ -264,29 +277,37 @@ const progressWidth = computed(() => {
             <!-- Liste des Cités existantes -->
             <div v-if="filteredCities.length > 0" class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                 <div v-for="city in filteredCities" :key="city.id" 
-                    class="dark:bg-[#111113]/40 bg-white border dark:border-white/5 border-gray-200 rounded-[2.5rem] overflow-hidden flex flex-col group hover:border-[#FF9F1C]/40 transition-all duration-500 shadow-xl hover:-translate-y-2">
+                    class="dark:bg-[#111113]/40 bg-white border dark:border-white/5 border-gray-200 rounded-[2.5rem] overflow-hidden flex flex-col group hover:border-[#2fc276]/40 transition-all duration-500 shadow-xl hover:-translate-y-2">
                     <div class="p-8 space-y-6 flex-1">
                         <div class="flex justify-between items-start">
                             <!-- Remplacement de l'emoji par une icône SVG Pro -->
-                            <div class="h-14 w-14 dark:bg-black/60 bg-gray-50 rounded-2xl flex items-center justify-center border dark:border-white/5 border-gray-200 group-hover:border-[#FF9F1C]/30 group-hover:text-[#FF9F1C] transition-all duration-500">
+                            <div class="h-14 w-14 dark:bg-black/60 bg-gray-50 rounded-2xl flex items-center justify-center border dark:border-white/5 border-gray-200 group-hover:border-[#2fc276]/30 group-hover:text-[#2fc276] transition-all duration-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V10a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12"/><path d="M18 22H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v4.5"/><path d="M22 22V15a2 2 0 0 0-2-2h-2"/><rect width="4" height="4" x="6" y="12" rx="1"/><rect width="4" height="4" x="10" y="12" rx="1"/></svg>
                             </div>
                             <div class="flex flex-col items-end gap-2">
-                                <span class="bg-[#FF9F1C]/10 text-[#FF9F1C] px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-[#FF9F1C]/20">
+                                <span class="bg-[#2fc276]/10 text-[#2fc276] px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-[#2fc276]/20">
                                     {{ city.places_count }} SECTEURS DÉPLOYÉS
                                 </span>
                                 <div class="flex gap-2">
+                                    <button @click.stop="toggleStatus(city)" 
+                                        :disabled="statusLoadingId === city.id"
+                                        :class="city.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500 hover:text-white' : 'bg-gray-500/10 text-gray-500 border-gray-500/20 hover:bg-gray-500 hover:text-white'"
+                                        class="p-2 rounded-lg border transition-all disabled:opacity-50"
+                                        :title="city.status === 'active' ? 'Désactiver' : 'Activer'">
+                                        <svg v-if="statusLoadingId === city.id" class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                                    </button>
                                     <button @click.stop="openEditForm(city)" class="p-2 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500 hover:text-white transition-all">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                     </button>
-                                    <button @click.stop="confirmDelete(city)" class="p-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">
+                                    <button @click.stop="confirmDelete(city)" :disabled="form.processing" class="p-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-black uppercase italic tracking-tighter dark:text-white text-gray-900 mb-2 group-hover:text-[#FF9F1C] transition-colors">{{ city.name }}</h3>
+                            <h3 class="text-2xl font-black uppercase italic tracking-tighter dark:text-white text-gray-900 mb-2 group-hover:text-[#2fc276] transition-colors">{{ city.name }}</h3>
                             <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 italic">{{ city.departement }}</p>
                             <p class="text-xs dark:text-gray-400 text-gray-600 line-clamp-3 leading-relaxed font-medium">
                                 {{ city.description }}
@@ -295,9 +316,20 @@ const progressWidth = computed(() => {
                     </div>
                     <div class="p-2">
                         <Link :href="route('admin.cities.places', { city: city.id })" 
-                            class="w-full flex items-center justify-center gap-3 bg-gray-100 dark:bg-white/5 dark:text-white text-gray-700 py-6 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest hover:bg-[#FF9F1C] hover:text-black transition-all group-hover:shadow-[0_0_20px_rgba(255,159,28,0.2)]">
-                            ACCÉDER AUX LIEUX
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            @click="loadingCityId = city.id"
+                            :class="{ 'opacity-50 pointer-events-none cursor-not-allowed': loadingCityId === city.id }"
+                            class="w-full flex items-center justify-center gap-3 bg-gray-100 dark:bg-white/5 dark:text-white text-gray-700 py-6 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest hover:bg-[#2fc276] hover:text-black transition-all group-hover:shadow-[0_0_20px_rgba(47,194,118,0.2)]">
+                            <template v-if="loadingCityId === city.id">
+                                <svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                CHARGEMENT...
+                            </template>
+                            <template v-else>
+                                ACCÉDER AUX LIEUX
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            </template>
                         </Link>
                     </div>
                 </div>
@@ -342,6 +374,6 @@ const progressWidth = computed(() => {
 /* Style des inputs focus type Gaming */
 input:focus, textarea:focus {
     outline: none;
-    box-shadow: 0 0 0 4px rgba(255, 159, 28, 0.1);
+    box-shadow: 0 0 0 4px rgba(47, 194, 118, 0.1);
 }
 </style>
