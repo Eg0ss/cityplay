@@ -47,14 +47,53 @@ const page = usePage();
 const toast = useToast();
 const confirm = useConfirm();
 
+// Clé de stockage unique par session
+const storageKey = `game_state_${props.session.id}`;
+
+// Fonction pour charger l'état depuis localStorage
+const loadGameState = () => {
+    try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Erreur lors du chargement de l\'état:', e);
+    }
+    return null;
+};
+
+// Fonction pour sauvegarder l'état dans localStorage
+const saveGameState = () => {
+    try {
+        const state = {
+            currentPlaceIndex: currentPlaceIndex.value,
+            modeChoisi: modeChoisi.value,
+            isPlaying: isPlaying.value,
+            timeLeft: timeLeft.value,
+            totalTime: totalTime.value,
+            endTime: endTime.value,
+            isPaused: isPaused.value,
+            decisionState: decisionState.value,
+            timestamp: Date.now(),
+        };
+        localStorage.setItem(storageKey, JSON.stringify(state));
+    } catch (e) {
+        console.error('Erreur lors de la sauvegarde de l\'état:', e);
+    }
+};
+
+// Charger l'état sauvegardé ou initialiser
+const savedState = loadGameState();
+
 // État local du jeu
-const currentPlaceIndex = ref(0);
-const modeChoisi = ref(null); // Pour le mode 'mixte'
-const isPlaying = ref(false);
-const timeLeft = ref(0);
-const totalTime = ref(0);
-const endTime = ref(null); // Timestamp de fin attendu
-const isPaused = ref(false);
+const currentPlaceIndex = ref(savedState?.currentPlaceIndex ?? 0);
+const modeChoisi = ref(savedState?.modeChoisi ?? null); // Pour le mode 'mixte'
+const isPlaying = ref(savedState?.isPlaying ?? false);
+const timeLeft = ref(savedState?.timeLeft ?? 0);
+const totalTime = ref(savedState?.totalTime ?? 0);
+const endTime = ref(savedState?.endTime ?? null);
+const isPaused = ref(savedState?.isPaused ?? false);
 const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
 
@@ -73,15 +112,23 @@ const triggerHint = () => {
     }, 1000);
 };
 
+// État de décision intermédiaire ('win', 'lose', 'already_solved' ou null)
+const decisionState = ref(savedState?.decisionState ?? null);
+
 // Réinitialiser l'état quand on change d'énigme
 watch([currentPlaceIndex], () => {
     showFlashHint.value = false;
+    saveGameState(); // Sauvegarder quand on change d'énigme
 });
 
-// État de décision intermédiaire ('win', 'lose', 'already_solved' ou null)
-const decisionState = ref(null);
+// Sauvegarder l'état à chaque changement important
+watch([currentPlaceIndex, modeChoisi, isPlaying, timeLeft, isPaused, decisionState], () => {
+    saveGameState();
+}, { deep: true });
+
 const alreadySolvedMessage = ref('');
 const isNavigating = ref(false);
+const isLoading = ref(false); // État global pour désactiver les boutons pendant les requêtes
 
 let timerInterval = null;
 const sessionEndHandled = ref(false);
@@ -138,15 +185,23 @@ const finishSessionRedirect = (message) => {
     }
     isPaused.value = false;
     stopBackgroundMusic();
+    
+    // Nettoyer le localStorage
+    try {
+        localStorage.removeItem(storageKey);
+    } catch (e) {
+        console.error('Erreur lors du nettoyage du localStorage:', e);
+    }
+    
     toast.add({
         severity: 'success',
         summary: 'Session terminée ! 🏆',
         detail: message || 'L\'équipe a atteint l\'objectif d\'énigmes. Bravo !',
-        life: 2000,
+        life: 3000,
     });
     setTimeout(() => {
         router.get(route('game.dashboard'));
-    }, 300);
+    }, 3500);
 };
 
 // Trouver la première énigme non tentée dans le mode participants
@@ -244,6 +299,7 @@ const compassRotation = computed(() => {
 
 // Enregistrement des résultats en DB via route Laravel
 const recordAttemptOnBackend = async (status, pointsEarned) => {
+    isLoading.value = true;
     try {
         const response = await axios.post('/game/play/record', {
             session_id: props.session.id,
@@ -281,6 +337,8 @@ const recordAttemptOnBackend = async (status, pointsEarned) => {
     } catch (e) {
         console.error("Erreur d'enregistrement backend:", e);
         return false;
+    } finally {
+        isLoading.value = false;
     }
 };
 
@@ -292,6 +350,32 @@ onMounted(() => {
     if (props.session.statut === 'termine') {
         finishSessionRedirect();
         return;
+    }
+
+    // Restaurer le timer si la partie était en cours
+    if (savedState && savedState.isPlaying && savedState.endTime) {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((savedState.endTime - now) / 1000));
+        
+        if (remaining > 0) {
+            // Restaurer le timer
+            timeLeft.value = remaining;
+            totalTime.value = savedState.totalTime;
+            endTime.value = savedState.endTime;
+            isPlaying.value = true;
+            isPaused.value = savedState.isPaused;
+            
+            if (!isPaused.value) {
+                startChrono();
+            }
+        } else {
+            // Le temps est écoulé pendant l'absence
+            timeLeft.value = 0;
+            isPlaying.value = false;
+            if (modeChoisi.value === 'gaming') {
+                handleLose();
+            }
+        }
     }
 
     // Démarrer la musique de fond dès le montage (sans interaction requise via autoplay)
@@ -369,6 +453,19 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    // Sauvegarder l'état avant de quitter (au cas où l'utilisateur reviendrait)
+    // Mais ne pas nettoyer si la session est terminée
+    if (props.session.statut !== 'termine' && !sessionEndHandled.value) {
+        saveGameState();
+    } else {
+        // Nettoyer si la session est terminée
+        try {
+            localStorage.removeItem(storageKey);
+        } catch (e) {
+            console.error('Erreur lors du nettoyage du localStorage:', e);
+        }
+    }
+    
     if (unsubscribeBefore) {
         unsubscribeBefore();
     }
@@ -507,26 +604,24 @@ const startChrono = () => {
             const now = Date.now();
             const remaining = Math.ceil((endTime.value - now) / 1000);
             
-            if (remaining > 0) {
-                // Si le temps a changé de manière significative (plus de 1s), on met à jour
-                // Cela gère le cas où le navigateur a throttlé le setInterval
-                if (remaining !== timeLeft.value) {
-                    timeLeft.value = remaining;
-                    
-                    // Sons d'alerte chrono
-                    if (timeLeft.value <= 5 && timeLeft.value > 0) {
-                        playCountdown();
-                    } else if (timeLeft.value <= 10 && timeLeft.value > 5) {
-                        playTick();
-                    }
-                }
-            } else {
-                timeLeft.value = 0;
+            timeLeft.value = Math.max(0, remaining);
+            
+            // Sauvegarder l'état du timer
+            saveGameState();
+            
+            if (timeLeft.value <= 0) {
                 clearInterval(timerInterval);
-                handleLose();
+                timerInterval = null;
+                isPlaying.value = false;
+                
+                if (modeChoisi.value === 'gaming') {
+                    handleLose();
+                }
+            } else if (timeLeft.value <= 5 && modeChoisi.value === 'gaming') {
+                playCountdown();
             }
         }
-    }, 200); // Check plus fréquent pour plus de précision
+    }, 100);
 };
 
 const handleVisibilityChange = () => {
@@ -573,6 +668,8 @@ const handleLose = async () => {
 };
 
 const submitDiscovery = async () => {
+    if (isLoading.value) return;
+    
     if (!distanceToPlace.value) {
         toast.add({ severity: 'warn', summary: 'Signal GPS faible', detail: 'Impossible de valider sans votre position GPS.', life: 4000 });
         return;
@@ -594,12 +691,15 @@ const submitDiscovery = async () => {
 };
 
 const submitQcm = (option) => {
+    if (isLoading.value) return;
     playClick();
     userAnswer.value = option;
     submitGaming();
 };
 
 const submitGaming = async () => {
+    if (isLoading.value) return;
+    
     playClick();
     const answer = userAnswer.value.trim().toLowerCase();
     const correctAnswer = currentRiddle.value.reponse.trim().toLowerCase();
@@ -613,7 +713,7 @@ const submitGaming = async () => {
 
 // Choix : Passer au lieu suivant
 const goToNextPlace = async () => {
-    if (isNavigating.value) return;
+    if (isNavigating.value || isLoading.value) return;
     isNavigating.value = true;
     
     playClick();
@@ -671,6 +771,8 @@ const goToNextPlace = async () => {
 
 // Choix : Autre énigme pour le même lieu
 const loadAnotherRiddle = () => {
+    if (isLoading.value) return;
+    
     // On cherche la prochaine étape qui a le même lieu
     const nextStepIndex = props.gameSteps.findIndex((step, index) => index > currentPlaceIndex.value && step.id === currentPlace.value?.id);
     
@@ -690,6 +792,8 @@ const loadAnotherRiddle = () => {
 
 // Choix : Perdre la session carrément
 const forfeitSession = () => {
+    if (isLoading.value) return;
+    
     confirm.require({
         message: 'Êtes-vous absolument sûr de vouloir abandonner cette session ? Toute votre progression pour cette partie sera perdue.',
         header: 'Abandonner la partie ⚠️',
@@ -699,6 +803,13 @@ const forfeitSession = () => {
         rejectClass: 'p-button-secondary p-button-outlined text-gray-300 border-gray-600 hover:bg-gray-850 px-4 py-2 rounded-lg mr-2',
         acceptClass: 'p-button-danger bg-red-600 border-red-600 text-white hover:bg-red-500 px-4 py-2 rounded-lg',
         accept: () => {
+            // Nettoyer le localStorage
+            try {
+                localStorage.removeItem(storageKey);
+            } catch (e) {
+                console.error('Erreur lors du nettoyage du localStorage:', e);
+            }
+            
             toast.add({ severity: 'info', summary: 'Session abandonnée', detail: 'Retour au tableau de bord...', life: 3000 });
             setTimeout(() => {
                 router.get(route('game.dashboard'));
@@ -781,7 +892,8 @@ const formatTime = (seconds) => {
                         <button
                             type="button"
                             @click="forfeitSession"
-                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 bg-[#1C1D24] text-xs font-black uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition-all"
+                            :disabled="isLoading"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 bg-[#1C1D24] text-xs font-black uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <LogOut :size="16" />
                             Quitter la partie
@@ -866,7 +978,7 @@ const formatTime = (seconds) => {
                                     <p class="text-xs text-gray-300 leading-relaxed italic mb-4">
                                         "{{ currentPlace?.verified_description || 'Un lieu emblématique chargé d\'histoire à découvrir.' }}"
                                     </p>
-                                    <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.lat},${currentPlace?.lng}`" 
+                                    <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.latitude},${currentPlace?.longitude}&destination_place_id=${currentPlace?.nom}`" 
                                        target="_blank"
                                        class="flex items-center justify-center gap-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all">
                                         <Compass :size="14" />
@@ -876,7 +988,7 @@ const formatTime = (seconds) => {
                                 
                                 <div class="flex flex-col gap-3 w-full max-w-xs">
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating"
+                                        :disabled="isNavigating || isLoading"
                                         class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b] disabled:opacity-50 disabled:cursor-not-allowed">
                                         <CheckCircle2 v-if="!isNavigating" :size="18" class="mr-2 inline" />
                                         <RotateCcw v-else :size="18" class="mr-2 inline animate-spin" />
@@ -908,7 +1020,7 @@ const formatTime = (seconds) => {
                                     <p class="text-xs text-gray-300 leading-relaxed italic mb-4 line-clamp-3">
                                         "{{ currentPlace?.verified_description || 'Un lieu emblématique chargé d\'histoire à découvrir.' }}"
                                     </p>
-                                    <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.lat},${currentPlace?.lng}`" 
+                                    <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.latitude},${currentPlace?.longitude}&destination_place_id=${currentPlace?.nom}`" 
                                        target="_blank"
                                        class="flex items-center justify-center gap-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all">
                                         <Compass :size="14" />
@@ -917,12 +1029,12 @@ const formatTime = (seconds) => {
                                 </div>
                                 
                                 <div class="flex flex-col gap-3 w-full max-w-xs">
-                                     <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2">
+                                     <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" :disabled="isLoading" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                          <RotateCcw :size="18" />
                                          Autre énigme sur ce lieu
                                      </button>
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating"
+                                        :disabled="isNavigating || isLoading"
                                         class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2 disabled:opacity-50">
                                         <template v-if="!isNavigating">
                                             {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
@@ -934,7 +1046,7 @@ const formatTime = (seconds) => {
                                             <RotateCcw :size="18" class="animate-spin" />
                                         </template>
                                     </button>
-                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100">
+                                    <button @click="forfeitSession" :disabled="isLoading" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed">
                                         Abandonner
                                     </button>
                                 </div>
@@ -948,7 +1060,7 @@ const formatTime = (seconds) => {
                                 
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating"
+                                        :disabled="isNavigating || isLoading"
                                         class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50">
                                         <template v-if="!isNavigating">
                                             {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
@@ -959,7 +1071,7 @@ const formatTime = (seconds) => {
                                             <RotateCcw :size="18" class="animate-spin" />
                                         </template>
                                     </button>
-                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
+                                    <button type="button" @click="forfeitSession" :disabled="isLoading" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                         <LogOut :size="14" />
                                         Quitter la partie
                                     </button>
@@ -1092,7 +1204,7 @@ const formatTime = (seconds) => {
                                 </span>
                             </div>
                             
-                            <button @click="submitDiscovery" class="btn-3d btn-3d-green w-full py-5 text-lg font-black shadow-[0_6px_0_#1e7d4b] tracking-widest">
+                            <button @click="submitDiscovery" :disabled="isLoading" class="btn-3d btn-3d-green w-full py-5 text-lg font-black shadow-[0_6px_0_#1e7d4b] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed">
                                 📍 JE SUIS SUR PLACE (VALIDER GPS)
                             </button>
                         </div>
@@ -1108,7 +1220,7 @@ const formatTime = (seconds) => {
                                     @keydown="playKey"
                                     @keydown.enter="submitGaming"
                                     class="w-full bg-[#0D0E12] border-2 border-[#26272F] focus:border-[#2fc276] focus:ring-0 rounded-2xl p-4.5 text-lg text-center text-white font-black uppercase tracking-widest transition-colors">
-                                <button @click="submitGaming" :disabled="!userAnswer" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b] flex items-center justify-center gap-2">
+                                <button @click="submitGaming" :disabled="!userAnswer || isLoading" class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                     SOUMETTRE LA RÉPONSE
                                     <Rocket :size="18" />
                                 </button>
@@ -1118,7 +1230,8 @@ const formatTime = (seconds) => {
                             <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <button v-for="option in parsedMcqOptions" :key="option"
                                     @click="submitQcm(option)"
-                                    class="btn-3d btn-3d-blue py-5 text-sm shadow-[0_4px_0_#1344a1] text-center">
+                                    :disabled="isLoading"
+                                    class="btn-3d btn-3d-blue py-5 text-sm shadow-[0_4px_0_#1344a1] text-center disabled:opacity-50 disabled:cursor-not-allowed">
                                     {{ option }}
                                 </button>
                             </div>
