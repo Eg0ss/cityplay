@@ -1,12 +1,16 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
+import Modal from '@/Components/Modal.vue';
 
 const gsap = window.gsap;
 
-defineProps({
+const props = defineProps({
     canResetPassword: { type: Boolean },
     status: { type: String },
+    requires2fa: { type: Boolean, default: false },
+    email: { type: String, default: '' },
+    remember: { type: Boolean, default: false },
 });
 
 const form = useForm({
@@ -15,11 +19,35 @@ const form = useForm({
     remember: false,
 });
 
+const show2faModal = ref(false);
+
+const form2fa = useForm({
+    email: '',
+    code: '',
+    remember: false,
+});
+
 const submit = () => {
     form.post(route('login'), {
-        onFinish: () => form.reset('password'),
+        onFinish: () => {
+            form.reset('password');
+        },
     });
 };
+
+const submit2fa = () => {
+    form2fa.post(route('login.2fa'), {
+        onFinish: () => form2fa.reset('code'),
+    });
+};
+
+watch(() => props.requires2fa, (newVal) => {
+    if (newVal) {
+        form2fa.email = props.email;
+        form2fa.remember = props.remember;
+        show2faModal.value = true;
+    }
+}, { immediate: true });
 
 onMounted(() => {
     if (!gsap) return;
@@ -198,6 +226,63 @@ onMounted(() => {
                 </div>
             </div>
         </div>
+
+        <!-- 2FA Verification Modal -->
+        <Modal :show="show2faModal" @close="show2faModal = false" maxWidth="md">
+            <div class="p-8 bg-[#10101c] border border-[#2a245c] rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                <!-- Decorative element -->
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-[#87d74e]/5 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="space-y-6 relative z-10">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 bg-[#87d74e]/20 rounded-xl flex items-center justify-center">
+                            <span class="text-xl">🛡️</span>
+                        </div>
+                        <h2 class="text-2xl font-black uppercase italic tracking-tighter text-white">
+                            Double <span class="text-[#87d74e]">Vérification</span>
+                        </h2>
+                    </div>
+
+                    <p class="text-gray-400 text-sm font-medium leading-relaxed">
+                        Un code de sécurité a été envoyé à l'adresse 
+                        <span class="text-white font-bold">{{ props.email }}</span>. 
+                        Veuillez le saisir ci-dessous pour continuer (Valable 1 minute).
+                    </p>
+
+                    <form @submit.prevent="submit2fa" class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Code de sécurité (5 caractères)</label>
+                            <input 
+                                v-model="form2fa.code"
+                                type="text" 
+                                required
+                                maxlength="5"
+                                class="w-full bg-[#171235] border border-[#2a245c] rounded-2xl py-5 px-6 focus:ring-2 focus:ring-[#87d74e] focus:border-[#87d74e] transition-all font-black text-white text-center text-2xl tracking-[0.5em] uppercase placeholder-gray-700"
+                                placeholder="XXXXX"
+                                autofocus
+                            />
+                            <div v-if="form2fa.errors.code" class="text-red-500 text-[10px] font-black uppercase mt-2 tracking-widest text-center">{{ form2fa.errors.code }}</div>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            :disabled="form2fa.processing"
+                            class="w-full btn-3d btn-3d-green py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_5px_0_#5d9933] flex items-center justify-center gap-2"
+                        >
+                            🚀 Valider et Démarrer
+                        </button>
+
+                        <button 
+                            type="button"
+                            @click="show2faModal = false"
+                            class="w-full text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
+                        >
+                            Annuler la connexion
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </Modal>
     </div>
 </template>
 

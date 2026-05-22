@@ -92,6 +92,8 @@ const decisionState = ref(null);
 const alreadySolvedMessage = ref('');
 const isNavigating = ref(false);
 
+const isProcessing = computed(() => isNavigating.value);
+
 let timerInterval = null;
 const sessionEndHandled = ref(false);
 
@@ -654,6 +656,7 @@ const goToNextPlace = async () => {
     
     if (props.session.statut === 'termine') {
         finishSessionRedirect();
+        // Keep isNavigating true as we are redirecting
         return;
     }
     
@@ -676,8 +679,9 @@ const goToNextPlace = async () => {
         if (currentPlaceIndex.value >= props.gameSteps.length) {
             toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 2000 });
             setTimeout(() => {
-                router.get(route('game.dashboard'));
-                isNavigating.value = false;
+                router.get(route('game.dashboard'), {}, {
+                    onFinish: () => { isNavigating.value = false; }
+                });
             }, 300);
         } else {
             // Un petit délai pour s'assurer que les computed props se mettent à jour
@@ -696,8 +700,9 @@ const goToNextPlace = async () => {
         } else {
             toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 2000 });
             setTimeout(() => {
-                router.get(route('game.dashboard'));
-                isNavigating.value = false;
+                router.get(route('game.dashboard'), {}, {
+                    onFinish: () => { isNavigating.value = false; }
+                });
             }, 300);
         }
     }
@@ -910,9 +915,9 @@ const formatTime = (seconds) => {
                                 
                                 <div class="flex flex-col gap-3 w-full max-w-xs">
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating"
+                                        :disabled="isProcessing"
                                         class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b] disabled:opacity-50 disabled:cursor-not-allowed">
-                                        <CheckCircle2 v-if="!isNavigating" :size="18" class="mr-2 inline" />
+                                        <CheckCircle2 v-if="!isProcessing" :size="18" class="mr-2 inline" />
                                         <RotateCcw v-else :size="18" class="mr-2 inline animate-spin" />
                                         {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
                                     </button>
@@ -956,9 +961,9 @@ const formatTime = (seconds) => {
                                          Autre énigme sur ce lieu
                                      </button>
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating"
+                                        :disabled="isProcessing"
                                         class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2 disabled:opacity-50">
-                                        <template v-if="!isNavigating">
+                                        <template v-if="!isProcessing">
                                             {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
                                             <ChevronRight v-if="hasNextPlace" :size="18" />
                                             <CheckCircle2 v-else :size="18" />
@@ -982,9 +987,9 @@ const formatTime = (seconds) => {
 
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating"
+                                        :disabled="isProcessing"
                                         class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50">
-                                        <template v-if="!isNavigating">
+                                        <template v-if="!isProcessing">
                                             {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
                                             <ChevronRight v-if="hasNextPlace" :size="18" />
                                             <CheckCircle2 v-else :size="18" />

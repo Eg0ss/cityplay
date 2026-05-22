@@ -24,6 +24,8 @@ class User extends Authenticatable
         'role',
         'is_admin',
         'is_partner',
+        'code',
+        'code_expires_at',
     ];
 
     public function gameSessions()
@@ -45,6 +47,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'code_expires_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'is_partner' => 'boolean',
