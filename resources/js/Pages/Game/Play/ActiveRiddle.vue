@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
+import { ref, onMounted, computed, onUnmounted, watch, nextTick } from 'vue';
 import { 
     Trophy, 
     CheckCircle2, 
@@ -97,6 +97,18 @@ const isPaused = ref(savedState?.isPaused ?? false);
 const userAnswer = ref('');
 const userCoords = ref({ lat: null, lng: null });
 
+// Moyen de transport pour le mode découverte
+const transportMode = ref(savedState?.transportMode ?? null); // 'pied' | 'moto' | 'voiture' | 'avion'
+const showTransportSelection = ref(false);
+
+// Vitesses (km/h) et marges (secondes) par moyen de transport
+const TRANSPORT_CONFIG = {
+    pied:    { speed: 5,   margin: 3 * 60,  minTime: 2 * 60,  emoji: '🚶', label: 'À pied',  sub: '~5 km/h' },
+    moto:    { speed: 40,  margin: 5 * 60,  minTime: 3 * 60,  emoji: '🏍️', label: 'Moto',    sub: '~40 km/h' },
+    voiture: { speed: 60,  margin: 5 * 60,  minTime: 3 * 60,  emoji: '🚗', label: 'Voiture', sub: '~60 km/h' },
+    avion:   { speed: 250, margin: 10 * 60, minTime: 5 * 60,  emoji: '✈️', label: 'Avion',   sub: '~250 km/h' },
+};
+
 // État des indices
 const showFlashHint = ref(false);
 
@@ -129,6 +141,7 @@ watch([currentPlaceIndex, modeChoisi, isPlaying, timeLeft, isPaused, decisionSta
 const alreadySolvedMessage = ref('');
 const isNavigating = ref(false);
 const isLoading = ref(false); // État global pour désactiver les boutons pendant les requêtes
+let recordPromise = null;
 
 let timerInterval = null;
 const sessionEndHandled = ref(false);
@@ -199,9 +212,7 @@ const finishSessionRedirect = (message) => {
         detail: message || 'L\'équipe a atteint l\'objectif d\'énigmes. Bravo !',
         life: 3000,
     });
-    setTimeout(() => {
-        router.get(route('game.dashboard'));
-    }, 3500);
+    router.get(route('game.dashboard'));
 };
 
 // Trouver la première énigme non tentée dans le mode participants
@@ -298,48 +309,52 @@ const compassRotation = computed(() => {
 });
 
 // Enregistrement des résultats en DB via route Laravel
-const recordAttemptOnBackend = async (status, pointsEarned) => {
+const recordAttemptOnBackend = (status, pointsEarned) => {
     isLoading.value = true;
-    try {
-        const response = await axios.post('/game/play/record', {
-            session_id: props.session.id,
-            riddle_id: currentRiddle.value.id,
-            status: status,
-            points: pointsEarned,
-            mode_choisi: modeChoisi.value || 'gaming',
-            temps_resolution: totalTime.value - timeLeft.value
-        });
-
-        if (response.data?.session_finished) {
-            if (response.data?.success) {
-                await router.reload({ only: ['session'] });
-            } else {
-                finishSessionRedirect(response.data?.message);
-            }
-            return false;
-        }
-        
-        if (response.data && response.data.already_solved) {
-            toast.add({ 
-                severity: 'warn', 
-                summary: 'Énigme déjà clôturée ⚠️', 
-                detail: response.data.message, 
-                life: 6000 
+    recordPromise = (async () => {
+        try {
+            const response = await axios.post('/game/play/record', {
+                session_id: props.session.id,
+                riddle_id: currentRiddle.value.id,
+                status: status,
+                points: pointsEarned,
+                mode_choisi: modeChoisi.value || 'gaming',
+                temps_resolution: totalTime.value - timeLeft.value
             });
-            decisionState.value = 'already_solved'; 
-            alreadySolvedMessage.value = response.data.message;
+
+            if (response.data?.session_finished) {
+                if (response.data?.success) {
+                    await router.reload({ only: ['session'] });
+                } else {
+                    finishSessionRedirect(response.data?.message);
+                }
+                return false;
+            }
+            
+            if (response.data && response.data.already_solved) {
+                toast.add({ 
+                    severity: 'warn', 
+                    summary: 'Énigme déjà clôturée ⚠️', 
+                    detail: response.data.message, 
+                    life: 6000 
+                });
+                decisionState.value = 'already_solved'; 
+                alreadySolvedMessage.value = response.data.message;
+                return false;
+            }
+            
+            // Force Inertia to update the local session state immediately!
+            await router.reload({ only: ['session'] });
+            return true;
+        } catch (e) {
+            console.error("Erreur d'enregistrement backend:", e);
             return false;
+        } finally {
+            isLoading.value = false;
+            recordPromise = null;
         }
-        
-        // Force Inertia to update the local session state immediately!
-        await router.reload({ only: ['session'] });
-        return true;
-    } catch (e) {
-        console.error("Erreur d'enregistrement backend:", e);
-        return false;
-    } finally {
-        isLoading.value = false;
-    }
+    })();
+    return recordPromise;
 };
 
 // Géolocalisation en temps réel pour le mode découverte
@@ -432,7 +447,11 @@ onMounted(() => {
     // Tenter de récupérer le mode global du joueur
     const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
     if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
-        startRiddle(player.global_mode);
+        if (player.global_mode === 'decouverte' && !transportMode.value) {
+            showTransportSelection.value = true;
+        } else {
+            startRiddle(player.global_mode);
+        }
     }
 
     if (navigator.geolocation) {
@@ -558,16 +577,35 @@ const recommendedTransport = computed(() => {
     return '🚗 Voiture / Transports en commun';
 });
 
-// Temps recommandé en secondes basé sur la distance
-const calculateChronoTimeForDiscovery = () => {
+// Temps calculé en secondes selon distance + moyen de transport + marge
+const calculateChronoTimeForDiscovery = (transport) => {
+    const mode = transport || transportMode.value || 'pied';
+    const cfg = TRANSPORT_CONFIG[mode] || TRANSPORT_CONFIG.pied;
     const dist = distanceToPlace.value;
-    if (dist === null) return 600; // 10 minutes par défaut
-    const meters = dist * 1000;
-    
-    if (meters < 200) return 180; // 3 min
-    if (meters < 1000) return 480; // 8 min
-    if (meters < 3000) return 900; // 15 min
-    return 1800; // 30 min max
+
+    if (dist === null) {
+        // Pas de GPS : on applique un temps par défaut raisonnable selon le transport
+        return Math.max(cfg.minTime, cfg.margin + Math.round(1 / cfg.speed * 3600));
+    }
+
+    // temps de trajet (h) × 3600 = secondes + marge de confort
+    const travelSeconds = Math.round((dist / cfg.speed) * 3600);
+    return Math.max(cfg.minTime, travelSeconds + cfg.margin);
+};
+
+// Démarre le flux découverte : affiche d'abord l'écran de choix du transport
+const requestTransportSelection = () => {
+    playClick();
+    transportMode.value = null;
+    showTransportSelection.value = true;
+};
+
+// Appelé quand le joueur choisit son transport → calcule le temps et lance le chrono
+const confirmTransportAndStart = (transport) => {
+    playClick();
+    transportMode.value = transport;
+    showTransportSelection.value = false;
+    startRiddle('decouverte');
 };
 
 const currentPlayer = computed(() => {
@@ -579,6 +617,9 @@ const startRiddle = (mode) => {
     // Initialiser l'AudioContext au premier geste utilisateur
     initAudioContext();
     playGameStart();
+
+    // Réinitialiser l'état de chargement pour que les boutons soient immédiatement cliquables
+    isLoading.value = false;
 
     modeChoisi.value = mode;
     isPlaying.value = true;
@@ -654,7 +695,7 @@ const handleWin = async () => {
     clearInterval(timerInterval);
     decisionState.value = 'win';
     playWin();
-    toast.add({ severity: 'success', summary: 'Bonne réponse ! 🎯', detail: `La réponse était bien : ${currentRiddle.value.reponse}`, life: 4000 });
+    toast.add({ severity: 'success', summary: 'Bonne réponse ! 🎯', detail: `La réponse était bien : ${currentRiddle.value.reponse}`, life: 1000 });
     userStatsStore.addPoints(riddlePoints.value);
     await recordAttemptOnBackend('gagne', riddlePoints.value);
 };
@@ -663,7 +704,7 @@ const handleLose = async () => {
     clearInterval(timerInterval);
     decisionState.value = 'lose';
     playLose();
-    toast.add({ severity: 'error', summary: 'Échec sur cette énigme', detail: 'Votre choix ou le temps écoulé a mené à un échec.', life: 5000 });
+    toast.add({ severity: 'error', summary: 'Échec sur cette énigme', detail: 'Votre choix ou le temps écoulé a mené à un échec.', life: 1000 });
     await recordAttemptOnBackend('perdu', 0);
 };
 
@@ -712,11 +753,19 @@ const submitGaming = async () => {
 };
 
 // Choix : Passer au lieu suivant
-const goToNextPlace = async () => {
-    if (isNavigating.value || isLoading.value) return;
+const goToNextPlace = () => {
+    if (isNavigating.value) return;
     isNavigating.value = true;
     
+    // Réinitialiser immédiatement isLoading pour que les boutons du prochain lieu soient cliquables
+    isLoading.value = false;
+    
     playClick();
+    
+    // L'enregistrement backend continue en tâche de fond, on ne bloque plus la navigation
+    if (recordPromise) {
+        recordPromise.catch(e => console.error("Erreur enregistrement backend (arrière-plan):", e));
+    }
     
     if (props.session.statut === 'termine') {
         finishSessionRedirect();
@@ -726,7 +775,13 @@ const goToNextPlace = async () => {
     const nextRiddleLogic = () => {
         const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
         if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
-            startRiddle(player.global_mode);
+            if (player.global_mode === 'decouverte') {
+                // Réinitialiser le transport pour que le joueur choisisse à nouveau
+                transportMode.value = null;
+                showTransportSelection.value = true;
+            } else {
+                startRiddle(player.global_mode);
+            }
         } else {
             // Mode mixte : isPlaying reste false pour afficher le choix du mode
             isPlaying.value = false;
@@ -741,37 +796,40 @@ const goToNextPlace = async () => {
         
         if (currentPlaceIndex.value >= props.gameSteps.length) {
             toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 2000 });
-            setTimeout(() => {
-                router.get(route('game.dashboard'));
-                isNavigating.value = false;
-            }, 300);
+            router.get(route('game.dashboard'));
+            isNavigating.value = false;
         } else {
-            // Un petit délai pour s'assurer que les computed props se mettent à jour
-            setTimeout(() => {
+            nextTick(() => {
                 nextRiddleLogic();
-            }, 50);
+            });
         }
     } else {
         if (hasNextPlace.value) {
             currentPlaceIndex.value++;
             decisionState.value = null;
-            // Un petit délai pour s'assurer que les computed props se mettent à jour
-            setTimeout(() => {
+            nextTick(() => {
                 nextRiddleLogic();
-            }, 50);
+            });
         } else {
             toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 2000 });
-            setTimeout(() => {
-                router.get(route('game.dashboard'));
-                isNavigating.value = false;
-            }, 300);
+            router.get(route('game.dashboard'));
+            isNavigating.value = false;
         }
     }
 };
 
 // Choix : Autre énigme pour le même lieu
-const loadAnotherRiddle = () => {
-    if (isLoading.value) return;
+const loadAnotherRiddle = async () => {
+    if (isNavigating.value) return;
+    isNavigating.value = true;
+    
+    if (recordPromise) {
+        try {
+            await recordPromise;
+        } catch (e) {
+            console.error("Erreur lors de l'attente de l'enregistrement backend:", e);
+        }
+    }
     
     // On cherche la prochaine étape qui a le même lieu
     const nextStepIndex = props.gameSteps.findIndex((step, index) => index > currentPlaceIndex.value && step.id === currentPlace.value?.id);
@@ -781,18 +839,24 @@ const loadAnotherRiddle = () => {
         decisionState.value = null;
         
         if (currentPlayer.value && (currentPlayer.value.global_mode === 'gaming' || currentPlayer.value.global_mode === 'decouverte')) {
-            startRiddle(currentPlayer.value.global_mode);
+            if (currentPlayer.value.global_mode === 'decouverte') {
+                transportMode.value = null;
+                showTransportSelection.value = true;
+            } else {
+                startRiddle(currentPlayer.value.global_mode);
+            }
         } else {
             isPlaying.value = false;
         }
     } else {
         toast.add({ severity: 'warn', summary: 'Énigmes épuisées', detail: 'Plus d\'énigmes de ce niveau pour ce lieu.', life: 4000 });
     }
+    isNavigating.value = false;
 };
 
 // Choix : Perdre la session carrément
 const forfeitSession = () => {
-    if (isLoading.value) return;
+    playClick();
     
     confirm.require({
         message: 'Êtes-vous absolument sûr de vouloir abandonner cette session ? Toute votre progression pour cette partie sera perdue.',
@@ -803,6 +867,7 @@ const forfeitSession = () => {
         rejectClass: 'p-button-secondary p-button-outlined text-gray-300 border-gray-600 hover:bg-gray-850 px-4 py-2 rounded-lg mr-2',
         acceptClass: 'p-button-danger bg-red-600 border-red-600 text-white hover:bg-red-500 px-4 py-2 rounded-lg',
         accept: () => {
+            playClick();
             // Nettoyer le localStorage
             try {
                 localStorage.removeItem(storageKey);
@@ -811,9 +876,7 @@ const forfeitSession = () => {
             }
             
             toast.add({ severity: 'info', summary: 'Session abandonnée', detail: 'Retour au tableau de bord...', life: 3000 });
-            setTimeout(() => {
-                router.get(route('game.dashboard'));
-            }, 2000);
+            router.get(route('game.dashboard'));
         }
     });
 };
@@ -917,7 +980,7 @@ const formatTime = (seconds) => {
                     </div>
 
                     <!-- Mode Selection Screen (If Mixte is chosen) -->
-                    <div v-if="!isPlaying" class="text-center animate-fade-in-up py-10">
+                    <div v-if="!isPlaying && !showTransportSelection" class="text-center animate-fade-in-up py-10">
                         <h2 class="text-3xl font-black uppercase italic tracking-tighter text-white mb-10">
                             CHOISISSEZ VOTRE <span class="text-[#2fc276]">MODE</span> DE RÉSOLUTION
                         </h2>
@@ -928,9 +991,9 @@ const formatTime = (seconds) => {
                                 <MapIcon :size="64" class="mb-4 text-[#f3a900] transform group-hover:scale-105 group-hover:rotate-6 transition-transform" />
                                 <h3 class="text-xl font-black text-[#f3a900] text-glow-yellow uppercase tracking-tight mb-2">Découverte</h3>
                                 <p class="text-xs text-gray-400 font-semibold mb-6">Validez vos coordonnées GPS physiques sur place.</p>
-                                <button @click="startRiddle('decouverte')" class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] flex items-center justify-center gap-2">
+                                <button @click="requestTransportSelection" class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] flex items-center justify-center gap-2">
                                     <MapPin :size="14" />
-                                    C'est parti !
+                                    Choisir mon transport
                                 </button>
                             </div>
                             
@@ -945,6 +1008,41 @@ const formatTime = (seconds) => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Transport Selection Screen (mode découverte) -->
+                    <div v-if="showTransportSelection" class="text-center animate-fade-in-up py-10">
+                        <h2 class="text-3xl font-black uppercase italic tracking-tighter text-white mb-2">
+                            COMMENT ALLEZ-VOUS <span class="text-[#f3a900]">VOUS DÉPLACER</span> ?
+                        </h2>
+                        <p class="text-xs text-gray-400 font-semibold mb-8">
+                            Votre chronomètre sera calculé en fonction de la distance au lieu et de votre moyen de transport.
+                        </p>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
+                            <div
+                                v-for="(cfg, key) in TRANSPORT_CONFIG"
+                                :key="key"
+                                @click="confirmTransportAndStart(key)"
+                                class="cursor-pointer group bg-[#1C1D24] p-6 rounded-3xl border-2 border-[#f3a900]/20 hover:border-[#f3a900] hover:bg-[#f3a900]/8 transition-all duration-300 flex flex-col items-center gap-3 select-none active:scale-95"
+                            >
+                                <span class="text-5xl group-hover:scale-110 transition-transform duration-200">{{ cfg.emoji }}</span>
+                                <div>
+                                    <h3 class="text-sm font-black text-white uppercase tracking-tight">{{ cfg.label }}</h3>
+                                    <p class="text-[10px] text-gray-500 font-bold">{{ cfg.sub }}</p>
+                                    <p class="text-[9px] text-[#f3a900]/70 font-black uppercase tracking-wider mt-1">
+                                        +{{ Math.round(cfg.margin / 60) }} min marge
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            @click="showTransportSelection = false"
+                            class="mt-8 text-xs text-gray-500 hover:text-white transition-colors font-bold uppercase tracking-widest"
+                        >
+                            ← Retour au choix du mode
+                        </button>
                     </div>
 
                     <!-- Active Riddle Board Console -->
@@ -980,6 +1078,7 @@ const formatTime = (seconds) => {
                                     </p>
                                     <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.latitude},${currentPlace?.longitude}&destination_place_id=${currentPlace?.nom}`" 
                                        target="_blank"
+                                       @click="playClick"
                                        class="flex items-center justify-center gap-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all">
                                         <Compass :size="14" />
                                         Ouvrir l'itinéraire GPS
@@ -988,7 +1087,7 @@ const formatTime = (seconds) => {
                                 
                                 <div class="flex flex-col gap-3 w-full max-w-xs">
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating || isLoading"
+                                        :disabled="isNavigating"
                                         class="btn-3d btn-3d-green w-full py-4 text-sm shadow-[0_5px_0_#1e7d4b] disabled:opacity-50 disabled:cursor-not-allowed">
                                         <CheckCircle2 v-if="!isNavigating" :size="18" class="mr-2 inline" />
                                         <RotateCcw v-else :size="18" class="mr-2 inline animate-spin" />
@@ -1022,6 +1121,7 @@ const formatTime = (seconds) => {
                                     </p>
                                     <a :href="`https://www.google.com/maps/dir/?api=1&destination=${currentPlace?.latitude},${currentPlace?.longitude}&destination_place_id=${currentPlace?.nom}`" 
                                        target="_blank"
+                                       @click="playClick"
                                        class="flex items-center justify-center gap-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all">
                                         <Compass :size="14" />
                                         S'y rendre quand même
@@ -1029,12 +1129,18 @@ const formatTime = (seconds) => {
                                 </div>
                                 
                                 <div class="flex flex-col gap-3 w-full max-w-xs">
-                                     <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" :disabled="isLoading" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                         <RotateCcw :size="18" />
-                                         Autre énigme sur ce lieu
+                                     <button v-if="hasMoreRiddlesForPlace" @click="loadAnotherRiddle" :disabled="isNavigating" class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                         <template v-if="!isNavigating">
+                                             <RotateCcw :size="18" />
+                                             Autre énigme sur ce lieu
+                                         </template>
+                                         <template v-else>
+                                             <RotateCcw :size="18" class="animate-spin" />
+                                             Chargement...
+                                         </template>
                                      </button>
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating || isLoading"
+                                        :disabled="isNavigating"
                                         class="btn-3d btn-3d-yellow w-full py-3 text-xs shadow-[0_4px_0_#9e6f00] text-black flex items-center justify-center gap-2 disabled:opacity-50">
                                         <template v-if="!isNavigating">
                                             {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
@@ -1046,7 +1152,7 @@ const formatTime = (seconds) => {
                                             <RotateCcw :size="18" class="animate-spin" />
                                         </template>
                                     </button>
-                                    <button @click="forfeitSession" :disabled="isLoading" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100">
                                         Abandonner
                                     </button>
                                 </div>
@@ -1060,7 +1166,7 @@ const formatTime = (seconds) => {
                                 
                                 <div class="flex flex-col gap-4 w-full max-w-xs">
                                     <button @click="goToNextPlace" 
-                                        :disabled="isNavigating || isLoading"
+                                        :disabled="isNavigating"
                                         class="btn-3d btn-3d-blue w-full py-4 text-sm shadow-[0_5px_0_#1344a1] flex items-center justify-center gap-2 disabled:opacity-50">
                                         <template v-if="!isNavigating">
                                             {{ hasNextPlace ? 'Passer au lieu suivant' : 'Terminer l\'aventure !' }}
@@ -1068,10 +1174,11 @@ const formatTime = (seconds) => {
                                             <CheckCircle2 v-else :size="18" />
                                         </template>
                                         <template v-else>
+                                            Chargement...
                                             <RotateCcw :size="18" class="animate-spin" />
                                         </template>
                                     </button>
-                                    <button type="button" @click="forfeitSession" :disabled="isLoading" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
                                         <LogOut :size="14" />
                                         Quitter la partie
                                     </button>
