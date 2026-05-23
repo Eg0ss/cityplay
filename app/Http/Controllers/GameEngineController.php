@@ -180,6 +180,7 @@ class GameEngineController extends Controller
     // Gère la création de la session de jeu
     public function createSession(Request $request)
     {
+        // Validation des paramètres de configuration envoyés par le client (Admin ou Joueur)
         $validated = $request->validate([
             'level' => 'required|string|in:facile,intermediaire,difficile',
             'location_type' => 'required|string|in:departement,commune,city,place',
@@ -191,6 +192,7 @@ class GameEngineController extends Controller
             'global_mode' => 'nullable|string|in:decouverte,gaming,mixte',
             'user_lat' => 'required|numeric',
             'user_lng' => 'required|numeric',
+            'participate' => 'boolean', // Nouveau : Indique si le créateur (Admin) participe à la partie
         ]);
 
         $levelMapping = [
@@ -200,27 +202,36 @@ class GameEngineController extends Controller
         ];
         $niveauInt = $levelMapping[$validated['level']];
 
-        // 1. Trouver les lieux les plus proches qui APPARTIENNENT STRICTEMENT à la ville choisie et qui ONT des énigmes de ce niveau
+        // 1. Trouver les lieux les plus proches selon le type de localisation choisi (Ville ou Lieu précis)
         $lat = $validated['user_lat'];
         $lng = $validated['user_lng'];
 
-        $closestPlaces = \App\Models\Place::select('places.*')
+        $query = \App\Models\Place::select('places.*')
             ->selectRaw(
                 '(6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance',
                 [$lat, $lng, $lat]
-            )
-            ->where('city_id', $validated['location_id'])
-            ->whereHas('riddles', function($query) use ($niveauInt) {
+            );
+
+        if ($validated['location_type'] === 'place') {
+            // Si l'admin a choisi un lieu spécifique, on se restreint à celui-ci
+            $query->where('id', $validated['location_id']);
+        } else {
+            // Sinon on prend tous les lieux de la cité
+            $query->where('city_id', $validated['location_id']);
+        }
+
+        $closestPlaces = $query->whereHas('riddles', function($query) use ($niveauInt) {
                 $query->where('niveau', $niveauInt);
             })
             ->orderBy('distance', 'asc')
-            ->get(); // Récupérer tous les lieux disponibles
+            ->get();
 
-        // S'il n'y a pas de lieux avec énigmes pour cette ville et ce niveau
+        // Vérification de la disponibilité des énigmes pour le niveau choisi
         if ($closestPlaces->isEmpty()) {
-            return redirect()->back()->with('error', "Il n'y a pas d'énigme disponible pour le niveau " . $validated['level'] . " dans cette ville. La mairie se hâtera d'y ajouter des énigmes palpitantes ! 🏛️");
+            return redirect()->back()->with('error', "Il n'y a pas d'énigme disponible pour le niveau " . $validated['level'] . " dans cette zone. 🏛️");
         }
 
+        // Création de la session de jeu avec un Token unique pour le partage
         $token = Str::random(10);
         $session = GameSession::create([
             'statut' => 'en_attente',
@@ -229,30 +240,33 @@ class GameEngineController extends Controller
             'level' => $validated['level'],
             'location_type' => $validated['location_type'],
             'location_id' => $validated['location_id'],
-            'riddles_count' => $validated['riddles_count'], // Garder le nombre demandé
+            'riddles_count' => $validated['riddles_count'],
             'type' => $validated['type'],
             'challenger_mode' => $validated['challenger_mode'],
         ]);
 
-        // Ajouter le créateur comme joueur
-        GamePlayer::create([
-            'session_id' => $session->id,
-            'user_id' => auth()->id(),
-            'statut' => 'pret',
-            'global_mode' => $validated['global_mode']
-        ]);
+        // LOGIQUE DE PARTICIPATION : 
+        // On n'ajoute le créateur comme joueur QUE s'il a choisi de participer (participate = true)
+        // Par défaut, pour un joueur standard, c'est toujours vrai. Pour un Admin, c'est optionnel.
+        if (!isset($validated['participate']) || $validated['participate']) {
+            GamePlayer::create([
+                'session_id' => $session->id,
+                'user_id' => auth()->id(),
+                'statut' => 'pret',
+                'global_mode' => $validated['global_mode'] ?: 'mixte'
+            ]);
+        }
 
-        // 2. Sélectionner le nombre exact d'énigmes demandé en parcourant les lieux
+        // 2. Sélection et association des énigmes à la session de jeu
         $usedRiddleIds = collect();
         $riddlesCreated = 0;
         $targetCount = $validated['riddles_count'];
         
-        // Boucler sur les lieux jusqu'à avoir le nombre d'énigmes demandé
         $placeIndex = 0;
         while ($riddlesCreated < $targetCount && $placeIndex < $closestPlaces->count()) {
             $place = $closestPlaces[$placeIndex];
             
-            // Récupérer une énigme non utilisée de ce lieu
+            // On pioche des énigmes aléatoirement dans les lieux trouvés
             $riddle = Riddle::where('place_id', $place->id)
                 ->where('niveau', $niveauInt)
                 ->whereNotIn('id', $usedRiddleIds)
@@ -268,31 +282,23 @@ class GameEngineController extends Controller
                 $riddlesCreated++;
             }
             
-            // Passer au lieu suivant (ou revenir au début si on a parcouru tous les lieux)
             $placeIndex++;
             if ($placeIndex >= $closestPlaces->count() && $riddlesCreated < $targetCount) {
-                // Si on a parcouru tous les lieux mais qu'on n'a pas assez d'énigmes,
-                // on recommence depuis le début pour prendre d'autres énigmes des mêmes lieux
                 $placeIndex = 0;
-                
-                // Vérifier s'il reste des énigmes disponibles
                 $remainingRiddles = Riddle::whereIn('place_id', $closestPlaces->pluck('id'))
                     ->where('niveau', $niveauInt)
                     ->whereNotIn('id', $usedRiddleIds)
-                    ->count();
-                
-                if ($remainingRiddles == 0) {
-                    // Plus d'énigmes disponibles, on arrête
-                    break;
-                }
+                    ->exists();
+                if (!$remainingRiddles) break;
             }
         }
         
-        // Mettre à jour le nombre réel d'énigmes créées si différent
+        // Mise à jour du compteur final si moins d'énigmes trouvées que prévu
         if ($riddlesCreated < $targetCount) {
             $session->update(['riddles_count' => $riddlesCreated]);
         }
 
+        // Redirection vers le Lobby où le lien de partage sera affiché
         return redirect()->route('game.lobby', ['token' => $token]);
     }
 
@@ -457,8 +463,8 @@ class GameEngineController extends Controller
     {
         $session = GameSession::with('players.user')->where('lien_token', $token)->firstOrFail();
         
-        if ($session->type === 'solo') {
-            // Lancer la partie directement
+        // Si c'est une partie Solo et que l'utilisateur actuel est le joueur, on lance
+        if ($session->type === 'solo' && $session->players->firstWhere('user_id', auth()->id())) {
             $session->update(['statut' => 'en_cours']);
             return redirect()->route('game.play', ['token' => $token]);
         }
@@ -466,11 +472,13 @@ class GameEngineController extends Controller
         // Vérifier si l'utilisateur actuel est déjà inscrit dans cette session
         $currentPlayer = $session->players->firstWhere('user_id', auth()->id());
         
-        if (!$currentPlayer) {
-            // Si la session n'est pas pleine, ajouter le joueur
+        // LOGIQUE D'AUTO-AJOUT :
+        // On n'ajoute pas l'utilisateur s'il est déjà joueur, ou s'il est Admin (pour lui permettre d'être spectateur/générateur de lien)
+        if (!$currentPlayer && !auth()->user()->is_admin) {
+            // Si la session n'est pas pleine, ajouter le joueur automatiquement
             if ($session->players->count() < $session->max_joueurs) {
                 $creatorPlayer = $session->players->first();
-                $globalMode = $creatorPlayer ? $creatorPlayer->global_mode : 'gaming';
+                $globalMode = $creatorPlayer ? $creatorPlayer->global_mode : 'mixte';
 
                 GamePlayer::create([
                     'session_id' => $session->id,
@@ -482,10 +490,10 @@ class GameEngineController extends Controller
                 // Recharger la session avec le nouveau joueur
                 $session = GameSession::with('players.user')->where('lien_token', $token)->firstOrFail();
 
-                // Déclencher l'événement de mise à jour du lobby en temps réel !
+                // Déclencher l'événement de mise à jour du lobby
                 event(new \App\Events\LobbyUpdated($session));
-            } else {
-                // Session pleine, rediriger vers le dashboard avec un message
+            } else if ($session->type !== 'solo') {
+                // Session pleine (hors solo), rediriger vers le dashboard
                 return redirect()->route('game.dashboard')->with('error', 'Désolé, cette session de jeu est déjà complète.');
             }
         }

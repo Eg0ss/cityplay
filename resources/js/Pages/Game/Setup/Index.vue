@@ -38,7 +38,8 @@ const form = reactive({
     max_joueurs: 1,
     global_mode: 'mixte',
     user_lat: null,
-    user_lng: null
+    user_lng: null,
+    participate: true // Nouveau : permet à l'admin de choisir s'il participe ou non
 });
 
 // Set default city on mount
@@ -267,6 +268,20 @@ const submitForm = () => {
                                 <component :is="mode.icon" :size="48" class="mb-4" :class="form.type === mode.id ? 'text-[#87d74e]' : 'text-gray-500'" />
                                 <span class="text-xs font-black uppercase tracking-[0.2em]" :class="form.type === mode.id ? 'text-white' : 'text-gray-500'">{{ mode.label }}</span>
                             </label>
+                        </div>
+
+                        <!-- Choix de participation (Optionnel pour l'Admin) -->
+                        <div v-if="$page.props.auth.user.is_admin" class="p-6 rounded-2xl bg-[#10101c] border border-[#2a245c] animate-fade-in">
+                            <div class="flex items-center justify-between">
+                                <div class="space-y-1">
+                                    <span class="block font-black text-sm text-white uppercase tracking-tight">Souhaitez-vous participer à la partie ?</span>
+                                    <span class="text-[10px] text-gray-500 font-bold">Si non, vous ne prendrez pas de place dans la session et pourrez simplement partager le lien.</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" v-model="form.participate" class="sr-only peer">
+                                    <div class="w-14 h-7 bg-[#2a245c] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#87d74e]"></div>
+                                </label>
+                            </div>
                         </div>
 
                         <!-- Co-op Max Players Widget -->
