@@ -354,14 +354,15 @@ const confirmDelete = (place) => {
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                             RETOUR AUX VILLES
                         </Link>
-                        <span class="opacity-30">/</span>
-                        <span class="text-white">{{ city.name }}</span>
+                        <!-- <span class="opacity-30">/</span>
+                        <span class="text-white">{{ city.name }}</span> -->
                     </div>
-                    <h1 class="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-none dark:text-white text-gray-900">
-                        UNIVERS DES <span class="text-[#FF9F1C]">LIEUX</span>
+                    <h1 class="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-none text-[#FF9F1C]">
+                        UNIVERS DES <span class="text-[#2fc276]">LIEUX</span>
                     </h1>
-                    <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4">
-                        CONFIGURATION DES LIEUX : POUR {{ city.name.toUpperCase() }}
+                    <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4 flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-[#2fc276] animate-pulse"></span>
+                        Cityplay Bénin
                     </p>
                 </div>
 
@@ -374,13 +375,13 @@ const confirmDelete = (place) => {
                         v-model="searchQuery"
                         type="text" 
                         placeholder="RECHERCHER UNE BALISE..." 
-                        class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-200 rounded-2xl py-5 pl-16 pr-8 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all placeholder:text-gray-500/50"
+                        class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-200 rounded-2xl py-5 pl-16 pr-8 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all placeholder:text-gray-500/50 text-gray-900 dark:text-white"
                     />
                 </div>
 
                 <!-- Bouton d'action principale -->
                 <button @click="showForm ? (showForm = false) : openCreateForm()" 
-                    :class="showForm ? 'bg-red-500 shadow-lg text-white' : 'bg-[#FF9F1C] shadow-lg text-black'"
+                    :class="showForm ? 'bg-red-500 shadow-lg text-white' : 'bg-[#2fc276] shadow-lg text-black'"
                     class="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all hover:scale-105 active:scale-95">
                     {{ showForm ? 'ANNULER L\'OPÉRATION' : 'creer un lieu' }}
                 </button>
@@ -388,27 +389,27 @@ const confirmDelete = (place) => {
 
             <!-- Interface de création de lieu (Formulaire Unique) -->
             <transition name="gaming-slide">
-                <div v-if="showForm" class="dark:bg-[#111113] bg-white p-6 lg:p-12 rounded-[2.5rem] border dark:border-white/5 border-gray-200 shadow-2xl relative overflow-hidden">
+                <div v-if="showForm" class="dark:bg-[#1c183a] bg-white p-6 lg:p-12 rounded-[2.5rem] border dark:border-white/10 border-gray-200 shadow-2xl relative overflow-hidden">
                     
                     <div class="relative z-10 space-y-12">
                         <div class="space-y-2">
                             <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Initialisation</span>
-                            <h3 class="text-3xl font-black uppercase italic tracking-tighter">CONFIGURER LE <span class="text-[#FF9F1C]">NOUVEAU LIEU</span></h3>
+                            <h3 class="text-3xl font-black uppercase italic tracking-tighter dark:text-white">CONFIGURER LE <span class="text-[#FF9F1C]">NOUVEAU LIEU</span></h3>
                         </div>
 
                         <div class="grid gap-12 lg:grid-cols-2">
                             <!-- Colonne Gauche : Identité & Description -->
                             <div class="space-y-8">
                                 <div class="space-y-4 relative search-container">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Nom du Lieu</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Nom du Lieu</label>
                                     <div class="relative">
                                         <input v-model="form.nom" type="text" autofocus
-                                            class="w-full text-2xl lg:text-3xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-black italic tracking-tighter placeholder:opacity-20" 
+                                            class="w-full text-2xl lg:text-3xl dark:bg-[#10101c]/60 bg-gray-50 border-none rounded-3xl py-8 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-black italic tracking-tighter placeholder:opacity-20" 
                                             placeholder="EX: PLACE DES MARTYRS" />
                                         
                                         <!-- Liste des suggestions -->
                                         <transition name="step-fade">
-                                            <div v-if="suggestions.length > 0" class="absolute z-[100] top-full left-0 w-full mt-2 dark:bg-[#0A0A0B] bg-white border dark:border-[#FF9F1C]/30 border-gray-200 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden backdrop-blur-xl">
+                                            <div v-if="suggestions.length > 0" class="absolute z-[100] top-full left-0 w-full mt-2 dark:bg-[#10101c] bg-white border dark:border-[#FF9F1C]/30 border-gray-200 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden backdrop-blur-xl">
                                                 <div class="p-2">
                                                     <button v-for="(suggestion, index) in suggestions" :key="index"
                                                         @click="selectSuggestion(suggestion)"
@@ -418,7 +419,7 @@ const confirmDelete = (place) => {
                                                         </div>
                                                         <div class="flex-1 min-w-0">
                                                             <p class="font-black uppercase italic tracking-tighter text-sm truncate group-hover:text-black dark:text-white text-gray-900">{{ suggestion.name }}</p>
-                                                            <p class="text-[8px] font-bold uppercase tracking-widest text-gray-500 truncate group-hover:text-black/60">{{ suggestion.display_name }}</p>
+                                                            <p class="text-[8px] font-bold uppercase tracking-widest dark:text-gray-400 text-gray-500 truncate group-hover:text-black/60">{{ suggestion.display_name }}</p>
                                                         </div>
                                                     </button>
                                                 </div>
@@ -433,11 +434,11 @@ const confirmDelete = (place) => {
                                 </div>
 
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Fichier du Lieu</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Fichier du Lieu</label>
                                     <div class="relative group h-[200px]">
                                         <input type="file" @change="onFileChange" 
                                             class="absolute inset-0 opacity-0 cursor-pointer z-20" />
-                                        <div class="h-full dark:bg-black/40 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-3xl flex flex-col items-center justify-center p-4 group-hover:border-[#FF9F1C]/50 transition-all overflow-hidden relative">
+                                        <div class="h-full dark:bg-[#10101c]/60 bg-gray-50 border-2 border-dashed dark:border-white/10 border-gray-200 rounded-3xl flex flex-col items-center justify-center p-4 group-hover:border-[#FF9F1C]/50 transition-all overflow-hidden relative">
                                             <template v-if="!form.image">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mb-2 text-gray-500 group-hover:text-[#FF9F1C] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                                                 <p class="text-[10px] font-black uppercase tracking-widest dark:text-white text-gray-900">Charger un fichier</p>
@@ -457,9 +458,9 @@ const confirmDelete = (place) => {
                                 </div>
 
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Séquence Narrative</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Séquence Narrative</label>
                                     <textarea v-model="form.verified_description" rows="4"
-                                        class="w-full text-xl dark:bg-black/40 bg-gray-50 border-none rounded-3xl py-6 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-bold italic tracking-tight placeholder:opacity-20" 
+                                        class="w-full text-xl dark:bg-[#10101c]/60 bg-gray-50 border-none rounded-3xl py-6 px-8 focus:ring-4 focus:ring-[#FF9F1C]/20 dark:text-white text-gray-900 font-bold italic tracking-tight placeholder:opacity-20" 
                                         placeholder="L'HISTOIRE DE CE LIEU EST..."></textarea>
                                 </div>
                             </div>
@@ -467,26 +468,26 @@ const confirmDelete = (place) => {
                             <!-- Colonne Droite : Radar Géo-Spatial -->
                             <div class="space-y-8">
                                 <div class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Localisation map</label>
-                                    <div id="map-selector" class="w-full h-[350px] lg:h-[450px] rounded-[2rem] border-4 dark:border-white/5 border-gray-100 overflow-hidden shadow-inner"></div>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Localisation map</label>
+                                    <div id="map-selector" class="w-full h-[350px] lg:h-[450px] rounded-[2rem] border-4 dark:border-white/10 border-gray-100 overflow-hidden shadow-inner"></div>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-4">
-                                    <div class="p-4 rounded-2xl dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-200">
-                                        <label class="block text-[8px] font-black uppercase text-gray-500 mb-1">LATITUDE</label>
+                                    <div class="p-4 rounded-2xl dark:bg-[#10101c]/60 bg-gray-50 border dark:border-white/10 border-gray-200">
+                                        <label class="block text-[8px] font-black uppercase dark:text-gray-400 text-gray-500 mb-1">LATITUDE</label>
                                         <input v-model="form.lat" type="number" step="0.000001" 
                                             class="w-full bg-transparent border-none p-0 font-mono font-black text-[#FF9F1C] focus:ring-0 text-sm" />
                                     </div>
-                                    <div class="p-4 rounded-2xl dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-200">
-                                        <label class="block text-[8px] font-black uppercase text-gray-500 mb-1">LONGITUDE</label>
+                                    <div class="p-4 rounded-2xl dark:bg-[#10101c]/60 bg-gray-50 border dark:border-white/10 border-gray-200">
+                                        <label class="block text-[8px] font-black uppercase dark:text-gray-400 text-gray-500 mb-1">LONGITUDE</label>
                                         <input v-model="form.lng" type="number" step="0.000001" 
                                             class="w-full bg-transparent border-none p-0 font-mono font-black text-[#FF9F1C] focus:ring-0 text-sm" />
                                     </div>
                                 </div>
 
                                 <div class="grid grid-cols-1 gap-4">
-                                    <div class="p-4 rounded-2xl dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-200">
-                                        <label class="block text-[8px] font-black uppercase text-gray-500 mb-1">MARGE VALIDATION GPS (M)</label>
+                                    <div class="p-4 rounded-2xl dark:bg-[#10101c]/60 bg-gray-50 border dark:border-white/10 border-gray-200">
+                                        <label class="block text-[8px] font-black uppercase dark:text-gray-400 text-gray-500 mb-1">MARGE VALIDATION GPS (M)</label>
                                         <input v-model="form.marge_validation_gps" type="number" min="1"
                                             class="w-full bg-transparent border-none p-0 font-mono font-black text-green-500 focus:ring-0 text-sm" />
                                     </div>
@@ -495,7 +496,7 @@ const confirmDelete = (place) => {
                         </div>
 
                         <!-- Bouton de validation finale -->
-                        <div class="pt-8 border-t dark:border-white/5 border-gray-100">
+                        <div class="pt-8 border-t dark:border-white/10 border-gray-100">
                             <button @click="submit" :disabled="form.processing || !form.nom" 
                                 class="w-full group flex items-center justify-center gap-4 bg-white text-black px-10 py-8 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm shadow-[0_0_50px_rgba(255,255,255,0.1)] hover:scale-[1.02] transition-all disabled:opacity-30">
                                 INITIALISER LE LIEU
@@ -505,18 +506,18 @@ const confirmDelete = (place) => {
                     </div>
 
                     <!-- Éléments HUD décoratifs -->
-                    <!-- <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em] animate-pulse">GPS Signal: Locked</div> -->
-                    <!-- <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Unit stable</div> -->
+                    <div class="absolute bottom-4 right-8 text-[8px] font-black text-gray-500 uppercase tracking-[0.4em] animate-pulse">GPS Signal: Locked</div>
+                    <div class="absolute bottom-4 left-8 text-[8px] font-black text-gray-500 uppercase tracking-[0.4em]">Unit stable</div>
                 </div>
             </transition>
 
             <!-- Liste des Balises (Lieux) déployées -->
             <div v-if="filteredPlaces.length > 0" class="grid gap-6">
                 <div v-for="place in filteredPlaces" :key="place.id" 
-                    class="dark:bg-[#111113]/40 bg-white backdrop-blur-md border dark:border-white/5 border-gray-200 rounded-[2.5rem] p-6 lg:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 group hover:border-[#FF9F1C]/40 transition-all duration-500 shadow-xl">
+                    class="dark:bg-[#1c183a]/40 bg-white backdrop-blur-md border dark:border-white/10 border-gray-200 rounded-[2.5rem] p-6 lg:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 group hover:border-[#FF9F1C]/40 transition-all duration-500 shadow-xl">
                     <div class="flex items-center gap-6 lg:gap-8">
                         <!-- Badge d'identification Balise / Image -->
-                        <div class="h-20 w-20 dark:bg-black/60 bg-gray-50 rounded-[1.8rem] flex flex-col items-center justify-center border dark:border-white/5 border-gray-200 group-hover:border-[#FF9F1C]/30 transition-all duration-500 overflow-hidden relative">
+                        <div class="h-20 w-20 dark:bg-[#10101c]/60 bg-gray-50 rounded-[1.8rem] flex flex-col items-center justify-center border dark:border-white/10 border-gray-200 group-hover:border-[#FF9F1C]/30 transition-all duration-500 overflow-hidden relative">
                             <template v-if="place.image">
                                 <img :src="'/storage/' + place.image" class="w-full h-full object-cover" alt="Lieu image" />
                                 <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
@@ -534,15 +535,8 @@ const confirmDelete = (place) => {
                                     class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border">
                                     {{ place.is_active ? 'Opérationnel' : 'Hors-Ligne' }}
                                 </span>
-                                <Link :href="route('admin.places.generate_session', { place: place.id })" method="post" as="button"
-                                    @click="loadingPlaceId = 'session-' + place.id"
-                                    :disabled="loadingPlaceId === 'session-' + place.id"
-                                    class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-blue-500/20 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <template v-if="loadingPlaceId === 'session-' + place.id">Génération...</template>
-                                    <template v-else>Générer Lien Partage</template>
-                                </Link>
                             </div>
-                            <div class="flex flex-wrap items-center gap-4 lg:gap-6 text-gray-500 font-bold text-[8px] lg:text-[10px] uppercase tracking-widest">
+                            <div class="flex flex-wrap items-center gap-4 lg:gap-6 dark:text-gray-400 text-gray-500 font-bold text-[8px] lg:text-[10px] uppercase tracking-widest">
                                 <span class="flex items-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                                     {{ city.name }}
@@ -557,11 +551,29 @@ const confirmDelete = (place) => {
                     </div>
 
                     <div class="flex items-center gap-4 w-full lg:w-auto">
+                        <!-- Générer lien partage -->
+                        <Link :href="route('admin.places.generate_session', { place: place.id })" method="post" as="button"
+                            @click="loadingPlaceId = 'session-' + place.id"
+                            :disabled="loadingPlaceId === 'session-' + place.id"
+                            class="group/btn flex-1 lg:flex-none flex items-center justify-center gap-3 dark:bg-white/10 bg-gray-100 px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-[#2fc276] hover:text-black dark:text-white text-gray-700 disabled:opacity-50">
+                            <template v-if="loadingPlaceId === 'session-' + place.id">
+                                <svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                GÉNÉRATION...
+                            </template>
+                            <template v-else>
+                                GÉNÉRER LIEN
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+                            </template>
+                        </Link>
+
                         <!-- Accès aux énigmes -->
                         <Link :href="route('admin.enigmas', { place: place.id })" 
                             @click="loadingPlaceId = place.id"
                             :class="{ 'opacity-50 pointer-events-none cursor-not-allowed': loadingPlaceId === place.id }"
-                            class="group/btn flex-1 lg:flex-none flex items-center justify-center gap-3 dark:bg-white/5 bg-gray-100 px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-[#FF9F1C] hover:text-black dark:text-white text-gray-700">
+                            class="group/btn flex-1 lg:flex-none flex items-center justify-center gap-3 dark:bg-white/10 bg-gray-100 px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-[#FF9F1C] hover:text-black dark:text-white text-gray-700">
                             <template v-if="loadingPlaceId === place.id">
                                 <svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -576,13 +588,14 @@ const confirmDelete = (place) => {
                         </Link>
                         <!-- Modification -->
                         <button @click="openEditForm(place)" :disabled="form.processing"
-                            class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-blue-500/50 hover:text-blue-500 transition-all group/btn disabled:opacity-50 disabled:cursor-not-allowed">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                            class="p-3 md:p-5 rounded-xl md:rounded-2xl border bg-blue-50 border-blue-100 dark:bg-blue-500/10 dark:border-blue-500/50 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white transition-all group/btn disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                         </button>
+
                         <!-- Suppression -->
                         <button @click="confirmDelete(place)" :disabled="form.processing"
-                            class="p-5 rounded-2xl border dark:border-white/5 border-gray-200 hover:border-red-500/50 hover:text-red-500 transition-all group/btn disabled:opacity-50 disabled:cursor-not-allowed">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            class="p-3 md:p-5 rounded-xl md:rounded-2xl border bg-red-50 border-red-100 dark:bg-red-500/10 dark:border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-all group/btn disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                         </button>
                     </div>
                 </div>

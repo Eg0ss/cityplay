@@ -137,18 +137,19 @@ const confirmDelete = (enigma) => {
         <div class="space-y-8 lg:space-y-12">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
-                    <h1 class="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-none dark:text-white text-gray-900">
-                        UNIVERS <span class="text-[#FF9F1C]">ÉNIGMES</span>
+                    <h1 class="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-none text-[#FF9F1C]">
+                        UNIVERS <span class="text-[#2fc276]">ÉNIGMES</span>
                     </h1>
-                    <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4">
-                        LISTE INTÉGRALE DES DÉFIS DÉPLOYÉS SUR LE RÉSEAU
+                    <p class="text-gray-500 font-bold uppercase tracking-[0.3em] text-[10px] mt-4 flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-[#2fc276] animate-pulse"></span>
+                        Cityplay Bénin
                     </p>
                 </div>
 
                 <div class="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
                     <!-- Bouton Créer une énigme -->
                     <button @click="showCreateModal = true" 
-                        class="w-full md:w-auto bg-[#FF9F1C] text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg hover:scale-105 active:scale-95 transition-all">
+                        class="w-full md:w-auto bg-[#2fc276] text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg hover:scale-105 active:scale-95 transition-all">
                         FORGER UNE ÉNIGME
                     </button>
 
@@ -156,10 +157,10 @@ const confirmDelete = (enigma) => {
                     <div class="w-full md:w-64">
                         <select 
                             v-model="selectedPlaceFilter" 
-                            class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-100 rounded-2xl py-4 px-6 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all appearance-none cursor-pointer"
+                            class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-100 rounded-2xl py-4 px-6 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all appearance-none cursor-pointer text-gray-900 dark:text-white"
                         >
-                            <option value="">TOUS LES LIEUX</option>
-                            <option v-for="place in places" :key="place.id" :value="place.id">
+                            <option value="" class="dark:bg-[#111113] dark:text-white">TOUS LES LIEUX</option>
+                            <option v-for="place in places" :key="place.id" :value="place.id" class="dark:bg-[#111113] dark:text-white">
                                 {{ place.nom.toUpperCase() }}
                             </option>
                         </select>
@@ -174,7 +175,7 @@ const confirmDelete = (enigma) => {
                             v-model="searchQuery"
                             type="text" 
                             placeholder="RECHERCHER..." 
-                            class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-100 rounded-2xl py-5 pl-16 pr-8 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all placeholder:text-gray-500/50"
+                            class="w-full bg-white dark:bg-[#111113] border-2 dark:border-white/5 border-gray-100 rounded-2xl py-5 pl-16 pr-8 text-xs font-black uppercase tracking-widest focus:ring-0 focus:border-[#FF9F1C]/50 transition-all placeholder:text-gray-500/50 text-gray-900 dark:text-white"
                         />
                     </div>
                 </div>
@@ -183,7 +184,7 @@ const confirmDelete = (enigma) => {
             <!-- Modal de sélection de lieu pour création -->
             <transition name="step-fade">
                 <div v-if="showCreateModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
-                    <div class="w-full max-w-xl dark:bg-[#111113] bg-white rounded-[2.5rem] p-10 border dark:border-white/5 border-gray-100 shadow-2xl relative">
+                    <div class="w-full max-w-xl dark:bg-[#1c183a] bg-white rounded-[2.5rem] p-10 border dark:border-white/10 border-gray-100 shadow-2xl relative">
                         <button @click="showCreateModal = false" class="absolute top-8 right-8 text-gray-500 hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                         </button>
@@ -191,14 +192,14 @@ const confirmDelete = (enigma) => {
                         <div class="space-y-8">
                             <div class="space-y-2">
                                 <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Initialisation</span>
-                                <h3 class="text-3xl font-black uppercase italic tracking-tighter">CIBLER UNE <span class="text-[#FF9F1C]">UNITÉ</span></h3>
+                                <h3 class="text-3xl font-black uppercase italic tracking-tighter dark:text-white">CIBLER UNE <span class="text-[#FF9F1C]">UNITÉ</span></h3>
                                 <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Sélectionnez le lieu où déployer ce nouveau défi.</p>
                             </div>
 
                             <div class="space-y-4">
-                                <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Lieu de Déploiement</label>
+                                <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Lieu de Déploiement</label>
                                 <select v-model="selectedPlaceFilter"
-                                    class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-6 px-8 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all cursor-pointer appearance-none">
+                                    class="w-full bg-gray-50 dark:bg-[#10101c]/60 border-none rounded-2xl py-6 px-8 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all cursor-pointer appearance-none dark:text-white">
                                     <option value="" disabled>SÉLECTIONNEZ UN LIEU...</option>
                                     <option v-for="place in places" :key="place.id" :value="place.id">
                                         {{ place.nom.toUpperCase() }}
@@ -218,7 +219,7 @@ const confirmDelete = (enigma) => {
             <!-- Modal d'édition d'énigme -->
             <transition name="step-fade">
                 <div v-if="showEditModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
-                    <div class="w-full max-w-2xl dark:bg-[#111113] bg-white rounded-[2.5rem] p-10 border dark:border-white/5 border-gray-100 shadow-2xl relative overflow-y-auto max-h-[90vh]">
+                    <div class="w-full max-w-2xl dark:bg-[#1c183a] bg-white rounded-[2.5rem] p-10 border dark:border-white/10 border-gray-100 shadow-2xl relative overflow-y-auto max-h-[90vh]">
                         <button @click="showEditModal = false" class="absolute top-8 right-8 text-gray-500 hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                         </button>
@@ -226,7 +227,7 @@ const confirmDelete = (enigma) => {
                         <div class="space-y-8">
                             <div class="space-y-2">
                                 <span class="text-[10px] font-black text-[#FF9F1C] tracking-[0.5em] uppercase">Mise à jour</span>
-                                <h3 class="text-3xl font-black uppercase italic tracking-tighter">ÉDITER L'<span class="text-[#FF9F1C]">ÉNIGME</span></h3>
+                                <h3 class="text-3xl font-black uppercase italic tracking-tighter dark:text-white">ÉDITER L'<span class="text-[#FF9F1C]">ÉNIGME</span></h3>
                                 <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Modifiez les paramètres de ce défi.</p>
                             </div>
 
@@ -234,8 +235,8 @@ const confirmDelete = (enigma) => {
                                 <div class="grid grid-cols-2 gap-6">
                                     <!-- Niveau -->
                                     <div class="space-y-2">
-                                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Niveau de difficulté</label>
-                                        <select v-model="form.niveau" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all">
+                                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Niveau de difficulté</label>
+                                        <select v-model="form.niveau" class="w-full bg-gray-50 dark:bg-[#10101c]/60 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all dark:text-white">
                                             <option :value="1">LVL 1 - FACILE</option>
                                             <option :value="2">LVL 2 - INTERMÉDIAIRE</option>
                                             <option :value="3">LVL 3 - LÉGENDAIRE</option>
@@ -243,36 +244,36 @@ const confirmDelete = (enigma) => {
                                     </div>
                                     <!-- Réponse -->
                                     <div class="space-y-2">
-                                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Réponse attendue</label>
-                                        <input v-model="form.reponse" type="text" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all" />
+                                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Réponse attendue</label>
+                                        <input v-model="form.reponse" type="text" class="w-full bg-gray-50 dark:bg-[#10101c]/60 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all dark:text-white" />
                                     </div>
                                 </div>
 
                                 <!-- Description -->
                                 <div class="space-y-2">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Énoncé de l'énigme</label>
-                                    <textarea v-model="form.description" rows="4" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-4 px-6 text-sm font-bold italic tracking-tight focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all"></textarea>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Énoncé de l'énigme</label>
+                                    <textarea v-model="form.description" rows="4" class="w-full bg-gray-50 dark:bg-[#10101c]/60 border-none rounded-2xl py-4 px-6 text-sm font-bold italic tracking-tight focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all dark:text-white"></textarea>
                                 </div>
 
                                 <!-- Options QCM (Seulement LVL 1 & 2) -->
                                 <div v-if="form.niveau < 3" class="space-y-4">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Options QCM (Fausse pistes)</label>
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Options QCM (Fausse pistes)</label>
                                     <div class="grid grid-cols-2 gap-4">
                                         <div v-for="(opt, index) in form.mcq_options" :key="index" class="relative">
-                                            <input v-model="form.mcq_options[index]" type="text" :placeholder="'Option ' + (index + 1)" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-xl py-3 px-4 text-xs font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all" />
+                                            <input v-model="form.mcq_options[index]" type="text" :placeholder="'Option ' + (index + 1)" class="w-full bg-gray-50 dark:bg-[#10101c]/60 border-none rounded-xl py-3 px-4 text-xs font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all dark:text-white" />
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Mot-clé d'indice -->
                                 <div class="space-y-2">
-                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ms-2">Mot-clé d'indice (Optionnel)</label>
-                                    <input v-model="form.hint_keyword" type="text" placeholder="EX: HISTOIRE" class="w-full bg-gray-50 dark:bg-black/40 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all" />
+                                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] dark:text-gray-400 text-gray-500 ms-2">Mot-clé d'indice (Optionnel)</label>
+                                    <input v-model="form.hint_keyword" type="text" placeholder="EX: HISTOIRE" class="w-full bg-gray-50 dark:bg-[#10101c]/60 border-none rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest focus:ring-4 focus:ring-[#FF9F1C]/20 transition-all dark:text-white" />
                                 </div>
 
                                 <div class="flex gap-4 pt-4">
-                                    <button type="button" @click="showEditModal = false" class="flex-1 px-8 py-5 rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-xs hover:bg-gray-100 dark:hover:bg-white/5 transition-all">ANNULER</button>
-                                    <button type="submit" :disabled="form.processing" class="flex-[2] bg-[#FF9F1C] text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3">
+                                    <button type="button" @click="showEditModal = false" class="flex-1 px-8 py-5 rounded-2xl border-2 dark:border-white/10 border-gray-200 font-black uppercase tracking-widest text-xs dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all">ANNULER</button>
+                                    <button type="submit" :disabled="form.processing" class="flex-[2] dark:bg-[#2fc276] bg-[#FF9F1C] text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3">
                                         <svg v-if="form.processing" class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -289,7 +290,7 @@ const confirmDelete = (enigma) => {
             <!-- Liste des énigmes -->
             <div v-if="filteredEnigmas.length > 0" class="grid gap-6">
                 <div v-for="enigma in filteredEnigmas" :key="enigma.id" 
-                    class="dark:bg-[#111113]/40 bg-white border dark:border-white/5 border-gray-200 p-8 rounded-[2.5rem] group hover:border-[#FF9F1C]/40 transition-all duration-500 shadow-xl">
+                    class="dark:bg-[#1c183a]/40 bg-white border dark:border-white/10 border-gray-200 p-8 rounded-[2.5rem] group hover:border-[#FF9F1C]/40 transition-all duration-500 shadow-xl">
                     <div class="flex flex-col lg:flex-row justify-between gap-6">
                         <div class="flex-1 space-y-4">
                             <div class="flex flex-wrap items-center gap-3">
@@ -297,22 +298,22 @@ const confirmDelete = (enigma) => {
                                     class="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border">
                                     LVL {{ enigma.niveau }} - {{ enigma.niveau === 1 ? 'FACILE' : enigma.niveau === 2 ? 'INTERMÉDIAIRE' : 'LÉGENDAIRE' }}
                                 </div>
-                                <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                <span class="text-[10px] font-black dark:text-gray-400 text-gray-500 uppercase tracking-widest">
                                     LIEU : <span class="dark:text-white text-gray-900">{{ enigma.place?.nom }}</span>
                                 </span>
                             </div>
                             
                             <p class="dark:text-gray-300 text-gray-700 font-bold italic leading-relaxed text-lg">"{{ enigma.description }}"</p>
                             
-                            <div class="flex items-center gap-8 pt-4 border-t dark:border-white/5 border-gray-100">
+                            <div class="flex items-center gap-8 pt-4 border-t dark:border-white/10 border-gray-100">
                                 <div class="space-y-1">
-                                    <p class="text-[8px] font-black uppercase text-gray-500 tracking-widest">CODE DE VALIDATION</p>
+                                    <p class="text-[8px] font-black uppercase dark:text-gray-400 text-gray-500 tracking-widest">CODE DE VALIDATION</p>
                                     <p class="text-sm font-black uppercase dark:text-[#FF9F1C] text-gray-900 tracking-tighter">{{ enigma.reponse }}</p>
                                 </div>
                                 <div v-if="enigma.images && enigma.images.length > 0" class="flex items-center gap-2">
-                                    <p class="text-[8px] font-black uppercase text-gray-500 tracking-widest mr-2">ARTEFACTS</p>
+                                    <p class="text-[8px] font-black uppercase dark:text-gray-400 text-gray-500 tracking-widest mr-2">ARTEFACTS</p>
                                     <div class="flex -space-x-2">
-                                        <div v-for="(img, idx) in enigma.images" :key="idx" class="h-8 w-8 rounded-lg border-2 dark:border-[#111113] border-white overflow-hidden bg-black/40">
+                                        <div v-for="(img, idx) in enigma.images" :key="idx" class="h-8 w-8 rounded-lg border-2 dark:border-[#1c183a] border-white overflow-hidden bg-black/40">
                                             <img :src="'/storage/' + img.image_path" class="w-full h-full object-cover" />
                                         </div>
                                     </div>
@@ -322,12 +323,12 @@ const confirmDelete = (enigma) => {
 
                         <div class="flex lg:flex-col items-center justify-center gap-3">
                             <button @click="openEditModal(enigma)" 
-                                class="h-14 w-14 dark:bg-white/5 bg-gray-50 rounded-2xl flex items-center justify-center hover:bg-[#FF9F1C] hover:text-black transition-all group shadow-lg"
+                                class="h-14 w-14 bg-blue-50 border border-blue-100 dark:bg-blue-500/10 dark:border-blue-500/50 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white transition-all group shadow-sm"
                                 title="Éditer l'énigme">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                             </button>
                             <button @click="confirmDelete(enigma)" 
-                                class="h-14 w-14 dark:bg-white/5 bg-gray-50 rounded-2xl flex items-center justify-center hover:bg-red-500/20 hover:text-red-500 transition-all group shadow-lg text-gray-400"
+                                class="h-14 w-14 bg-red-50 border border-red-100 dark:bg-red-500/10 dark:border-red-500/50 rounded-2xl flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-all group shadow-sm"
                                 title="Supprimer">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                             </button>

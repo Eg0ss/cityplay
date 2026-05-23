@@ -130,7 +130,7 @@ onMounted(() => {
                     <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                 </div>
                 <div class="flex flex-col">
-                    <span class="font-black uppercase italic text-sm tracking-tighter leading-none">Cityplay</span>
+                    <span class="font-black uppercase italic text-sm tracking-tighter leading-none text-[#FF9F1C]">Cityplay</span>
                     <span class="text-[8px] text-[#2fc276] font-bold tracking-widest uppercase opacity-80">Admin</span>
                 </div>
             </div>
@@ -160,7 +160,7 @@ onMounted(() => {
                         <img src="/images/cityplay.png" class="h-full w-full object-contain" alt="Logo" />
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-2xl font-black uppercase italic tracking-tighter leading-none dark:text-white text-gray-900 group-hover:text-[#2fc276] transition-colors">Cityplay</span>
+                        <span class="text-2xl font-black uppercase italic tracking-tighter leading-none text-[#FF9F1C] transition-colors">Cityplay</span>
                     </div>
                 </Link>
             </div>
