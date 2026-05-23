@@ -251,14 +251,14 @@ onMounted(() => {
 
                     <form @submit.prevent="submit2fa" class="space-y-6">
                         <div class="space-y-2">
-                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Code de sécurité (5 caractères)</label>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Code de sécurité (6 chiffres)</label>
                             <input 
                                 v-model="form2fa.code"
                                 type="text" 
                                 required
-                                maxlength="5"
+                                maxlength="6"
                                 class="w-full bg-[#171235] border border-[#2a245c] rounded-2xl py-5 px-6 focus:ring-2 focus:ring-[#87d74e] focus:border-[#87d74e] transition-all font-black text-white text-center text-2xl tracking-[0.5em] uppercase placeholder-gray-700"
-                                placeholder="XXXXX"
+                                placeholder="XXXXXX"
                                 autofocus
                             />
                             <div v-if="form2fa.errors.code" class="text-red-500 text-[10px] font-black uppercase mt-2 tracking-widest text-center">{{ form2fa.errors.code }}</div>

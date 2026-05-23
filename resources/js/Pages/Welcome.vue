@@ -85,14 +85,12 @@ onMounted(() => {
                     </Link>
                     <nav class="hidden lg:flex items-center gap-6">
                         <Link :href="route('how-to-play')" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Comment jouer</Link>
-                        <Link href="#" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Rejoindre via un code</Link>
-                        <Link :href="$page.props.auth.user?.role === 'admin' ? route('admin.cities') : route('explore')" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer des villes</Link>
+                        <Link v-if="$page.props.auth.user?.is_admin" :href="route('admin.cities')" class="text-[10px] font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer des villes</Link>
                     </nav>
                 </div>
 
                 <div class="flex items-center gap-4 lg:gap-6">
                     <div class="hidden lg:flex items-center gap-4">
-                        <Link :href="route('login')" class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#87d74e] transition-colors">Connexion</Link>
                         <Link :href="route('register')" class="btn-3d btn-3d-green px-6 py-3 text-[10px] font-black uppercase tracking-widest shadow-[0_4px_0_#5d9933]">Jouer Maintenant</Link>
                     </div>
 
@@ -108,11 +106,9 @@ onMounted(() => {
             <div v-if="isMobileMenuOpen" class="lg:hidden border-t bg-[#10101c] border-[#2a245c] px-6 py-8 space-y-6">
                 <nav class="flex flex-col gap-6">
                     <Link :href="route('how-to-play')" class="text-xs font-black uppercase tracking-widest">Comment jouer</Link>
-                    <Link href="#" class="text-xs font-black uppercase tracking-widest">Rejoindre via un code</Link>
-                    <Link :href="$page.props.auth.user?.role === 'admin' ? route('admin.cities') : route('explore')" class="text-xs font-black uppercase tracking-widest">Explorer des villes</Link>
+                    <Link v-if="$page.props.auth.user?.is_admin" :href="route('admin.cities')" class="text-xs font-black uppercase tracking-widest">Explorer des villes</Link>
                 </nav>
                 <div class="pt-6 border-t border-[#2a245c] flex flex-col gap-4">
-                    <Link :href="route('login')" class="text-center py-4 text-xs font-black uppercase tracking-widest text-white hover:text-[#87d74e]">Connexion</Link>
                     <Link :href="route('register')" class="btn-3d btn-3d-green text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-[0_4px_0_#5d9933]">Jouer Maintenant</Link>
                 </div>
             </div>
@@ -168,44 +164,6 @@ onMounted(() => {
                             Voir le Classement
                             <Trophy :size="18" />
                         </button>
-                    </div>
-                </div>
-
-                <!-- FLOATING CARD (Access Panel Modal - Strictly Agenced Color Scheme) -->
-                <!-- Uses #10101c base, #7751de purple outline & glow, #ffc628 gold headers, #4769b0 & #7751de buttons, #171235 shadows -->
-                <div class="w-full max-w-md bg-[#10101c] p-5 sm:p-8 lg:p-10 rounded-[2.5rem] border-2 border-[#7751de] shadow-[0_0_35px_rgba(119,81,222,0.4)] relative hover-lift card-reveal mx-auto lg:mx-0">
-                    <div class="absolute -top-10 -left-10 w-32 h-32 bg-[#7751de]/10 rounded-full blur-3xl pointer-events-none"></div>
-                    
-                    <h3 class="text-xl font-black uppercase italic mb-8 text-[#ffc628] text-glow-yellow text-center tracking-tighter flex items-center justify-center gap-3">
-                        <Target :size="24" class="text-[#ffc628]" />
-                        Accès à l'aventure
-                    </h3>
-                    
-                    <div class="space-y-4">
-                        <!-- Google Link agenced in 3D Blue (#4769b0) -->
-                        <button class="w-full btn-3d btn-3d-blue py-4 px-3 sm:px-4 rounded-2xl font-black uppercase text-[9px] min-[375px]:text-[10px] sm:text-xs tracking-wider sm:tracking-widest shadow-[0_4px_0_#2b3f6b] flex items-center justify-center gap-3">
-                            <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
-                            Continuer via Session Bleue
-                        </button>
-                        
-                        <!-- Direct Link agenced in 3D Purple (#7751de) -->
-                        <button class="w-full btn-3d btn-3d-purple py-4 px-3 sm:px-4 rounded-2xl font-black uppercase text-[9px] min-[375px]:text-[10px] sm:text-xs tracking-wider sm:tracking-widest shadow-[0_4px_0_#4d2f94] flex items-center justify-center gap-3">
-                            <div class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></div>
-                            Continuer par Session Directe
-                        </button>
-                    </div>
-                    
-                    <!-- Divider (Inner shadows with background #171235) -->
-                    <div class="relative my-8 flex items-center">
-                        <div class="flex-grow border-t border-[#2a245c]"></div>
-                        <span class="mx-4 text-[9px] font-black text-gray-500 uppercase tracking-widest">Ou rejoindre</span>
-                        <div class="flex-grow border-t border-[#2a245c]"></div>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-                        <Link :href="route('login')" class="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400 hover:text-[#ffc628] transition-colors">Connexion</Link>
-                        <div class="h-1.5 w-1.5 bg-[#2a245c] rounded-full"></div>
-                        <Link :href="route('register')" class="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400 hover:text-[#87d74e] transition-colors">Créer un compte</Link>
                     </div>
                 </div>
             </div>

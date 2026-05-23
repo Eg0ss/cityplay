@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref, markRaw } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { 
     MapPin, 
     Puzzle, 
@@ -25,6 +25,7 @@ import {
     LayoutDashboard
 } from 'lucide-vue-next';
 
+const page = usePage();
 const isDark = ref(true);
 
 const toggleTheme = () => {
@@ -97,7 +98,7 @@ const playerSteps = [
             </div>
 
             <!-- Part 1: Admin Workflow -->
-            <div class="space-y-16">
+            <div v-if="page.props.auth.user?.is_admin" class="space-y-16">
                 <div class="flex items-center gap-6">
                     <div class="h-px flex-1 dark:bg-white/10 bg-gray-200"></div>
                     <h2 class="text-2xl font-black uppercase tracking-[0.3em] text-[#FF9F1C] italic">01. TERMINAL ADMINISTRATEUR</h2>

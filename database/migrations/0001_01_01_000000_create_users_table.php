@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('code', 5)->nullable()->unique();
+            $table->string('code', 6)->nullable()->unique();
             $table->timestamp('code_expires_at')->nullable();
             $table->string('role')->default('player'); // admin ou player
             $table->boolean('is_admin')->default(false);

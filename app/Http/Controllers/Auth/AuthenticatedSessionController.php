@@ -5,11 +5,10 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
-use App\Mail\TwoFactorCodeMail;
+use App\Notifications\TwoFactorCodeNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -53,15 +52,15 @@ class AuthenticatedSessionController extends Controller
         // 1. Code is null (never connected)
         // 2. Code exists but is pending (expires_at is NOT null) AND has expired
         if (!$user->code || ($user->code_expires_at && $user->code_expires_at->isPast())) {
-            $code = Str::upper(Str::random(5));
+            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $user->update([
                 'code' => $code,
                 'code_expires_at' => now()->addMinute(),
             ]);
             try {
-                Mail::to($user->email)->send(new TwoFactorCodeMail($code));
+                $user->notify(new TwoFactorCodeNotification($code));
             } catch (\Exception $e) {
-                \Log::error("Failed to send 2FA email: " . $e->getMessage());
+                \Log::error("Failed to send 2FA notification: " . $e->getMessage());
             }
 
             RateLimiter::clear($request->throttleKey());
@@ -104,7 +103,7 @@ class AuthenticatedSessionController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'code' => 'required|string|size:5',
+            'code' => 'required|string|size:6',
             'remember' => 'boolean',
         ]);
 
