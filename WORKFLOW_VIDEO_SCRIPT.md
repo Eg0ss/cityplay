@@ -28,7 +28,7 @@ Ce document sert de guide pour la réalisation d'une vidéo de présentation du 
     - Rédiger la question.
     - Définir la réponse correcte.
     - Choisir le niveau de difficulté (Facile, Intermédiaire, Difficile).
-- **Visuel** : Formulaire de création d'énigme.
+- **Visuel** : Formulaire de création d'énigme avec le nouveau style visuel (Titres Orange/Vert).
 
 ### Étape 5 : Système d'Assistance (Indices)
 - **Action** : Dans le même formulaire, ajouter des indices.
@@ -36,6 +36,14 @@ Ce document sert de guide pour la réalisation d'une vidéo de présentation du 
     - Charger plusieurs images d'indices.
     - Ajouter des mots-clés textuels.
 - **Visuel** : Section "Indices" avec prévisualisation des fichiers chargés.
+
+### Étape 6 : Génération de Lien & Partage (Nouveau)
+- **Action** : Dans le menu "Tous les lieux", cliquer sur "GÉNÉRER LIEN".
+- **Détail** : 
+    - Redirection vers le Setup de jeu.
+    - L'admin choisit les paramètres (Niveau, Mode).
+    - **Option de participation** : L'admin peut choisir de ne pas participer (mode "Maître du Jeu").
+- **Visuel** : Interface de configuration simplifiée et Lobby avec le lien de partage prêt à être copié.
 
 ---
 
@@ -45,11 +53,11 @@ Ce document sert de guide pour la réalisation d'une vidéo de présentation du 
 ### Étape 1 : Inscription & Profil
 - **Action** : Créer un compte joueur.
 - **Détail** : Personnalisation du profil et accès au "Dashboard Joueur".
-- **Visuel** : Interface de progression avec les badges et le niveau d'XP (Aspirant, Explorateur, etc.).
+- **Visuel** : Interface de progression modernisée avec support complet du Mode Sombre.
 
 ### Étape 2 : Exploration & Choix de Mission
 - **Action** : Cliquer sur "Jouer Maintenant" ou "Explorer".
-- **Détail** : Sélectionner une ville sur la carte du Bénin.
+- **Détail** : Sélectionner une ville ou utiliser un lien de partage généré par un admin.
 - **Visuel** : Carte immersive avec les cités disponibles.
 
 ### Étape 3 : Configuration du Mode de Jeu
@@ -58,20 +66,21 @@ Ce document sert de guide pour la réalisation d'une vidéo de présentation du 
     1. **Mode Solo** : Pour une aventure personnelle, lancement immédiat.
     2. **Mode Participants (Coop)** : Jouer ensemble pour résoudre la liste d'énigmes. Un joueur peut valider une énigme pour tout le groupe.
     3. **Mode Challengers (Compétition)** : Course au score. Qui résoudra le plus d'énigmes le plus rapidement ?
-- **Visuel** : Interface de configuration (Setup) avec sélection du niveau et du nombre d'énigmes.
+- **Visuel** : Interface de configuration (Setup) dynamique : si un lieu est déjà choisi via un lien admin, l'étape 1 est sautée automatiquement.
 
 ### Étape 4 : Le Lobby (Salle d'attente)
 - **Action** : (Si Multi) Partager le lien d'invitation.
 - **Détail** : Attendre que les amis rejoignent. L'hôte lance la partie.
-- **Visuel** : Interface de Lobby avec les avatars des joueurs qui apparaissent en temps réel.
+- **Visuel** : Interface de Lobby avec les avatars des joueurs. L'admin peut y être présent sans prendre de place de joueur.
 
 ### Étape 5 : Phase de Jeu Active
 - **Action** : Résoudre une énigme sur le terrain.
 - **Détail** :
     - Lecture de l'énigme liée au lieu.
-    - **Utilisation d'un indice** : Cliquer sur "Besoin d'aide ?" pour révéler une image ou un mot-clé (attention : réduit les points gagnés).
+    - **Mode Découverte** : Choix du moyen de transport (Pied, Moto, Voiture, Avion) pour adapter le chrono.
+    - **Utilisation d'un indice** : Cliquer sur "Besoin d'aide ?" pour révéler une image ou un mot-clé.
     - Saisie de la réponse.
-- **Visuel** : Interface `ActiveRiddle` avec le compte à rebours et la carte.
+- **Visuel** : Interface `ActiveRiddle` corrigée et optimisée (compte à rebours fluide, boussole interactive).
 
 ### Étape 6 : Triomphe & Progression
 - **Action** : Validation de la réponse.

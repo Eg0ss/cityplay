@@ -216,5 +216,33 @@ Ensuite, connectez-vous avec un utilisateur admin ou créez un compte, puis test
 
 ---
 
-*Document mis à jour le 21 mai 2026 par l'assistant IA.*
+## 10. Historique des modifications récentes (Mai 2026)
+
+### Phase 1 : Amélioration du Mode Sombre (Admin)
+- **Standardisation visuelle** : Harmonisation des couleurs entre le mode clair et le mode sombre sur toutes les pages d'administration.
+- **Titres** : Premier mot en Orange (`#FF9F1C`) et second mot en Vert (`#2fc276`) sur toutes les pages.
+- **Sous-titres** : Remplacement des descriptions par le style "Cityplay Bénin" avec puce animée, visible en blanc en mode sombre.
+- **Boutons CRUD** : Amélioration de la visibilité des boutons Éditer/Supprimer (fonds colorés légers et icônes contrastées).
+- **Filtres et Inputs** : Correction de la visibilité des textes de recherche et des menus déroulants en mode sombre.
+
+### Phase 2 : Moteur de Jeu & Partage Admin
+- **Génération de lien de partage** :
+  - Le bouton "GÉNÉRER LIEN" dans l'admin redirige désormais vers l'interface de configuration (`Game/Setup`).
+  - Ajout d'une option de participation pour l'administrateur : il peut choisir de créer une partie sans y participer.
+- **Optimisation du Setup** :
+  - Détection automatique d'un lieu présélectionné (`place_id`).
+  - Saut d'étape automatique vers le choix du niveau si un lieu est déjà choisi.
+- **Mise à jour du GameEngineController** :
+  - Support de la création de session par Lieu spécifique (`location_type = 'place'`).
+  - Gestion de la participation optionnelle du créateur (Admin).
+
+### Phase 3 : Maintenance & Correctifs
+- **Base de données** : Exécution de la migration pour ajouter la colonne `status` à la table `cities`.
+- **Bug Fixes Frontend** :
+  - Correction de doublons de déclarations de variables (`transportMode`, `decisionState`) dans `ActiveRiddle.vue`.
+  - Stabilisation de la logique `try/catch/finally` pour l'enregistrement des tentatives de jeu.
+
+---
+
+*Document mis à jour le 23 mai 2026 par l'assistant IA.*
 
