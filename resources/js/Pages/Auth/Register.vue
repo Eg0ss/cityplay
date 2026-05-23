@@ -2,7 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { onMounted } from 'vue';
 
-const gsap = window.gsap;
+import { gsap } from 'gsap';
 
 const form = useForm({
     name: '',

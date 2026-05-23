@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { useConfirm } from 'primevue/useconfirm';
 
@@ -21,6 +22,20 @@ const confirmLogout = () => {
         accept: () => {
             router.post(route('logout'));
         },
+    });
+};
+
+const isNavigating = ref(false);
+
+const startAdventure = () => {
+    if (isNavigating.value) return;
+    router.visit(route('game.setup'), {
+        onStart: () => {
+            isNavigating.value = true;
+        },
+        onFinish: () => {
+            isNavigating.value = false;
+        }
     });
 };
 </script>
@@ -61,9 +76,23 @@ const confirmLogout = () => {
                             </p>
                             
                             <!-- Bouncy 3D Action Button -->
-                            <Link :href="route('game.setup')" class="btn-3d btn-3d-green w-full py-4 text-lg font-black text-center shadow-[0_5px_0_#1e7d4b]">
-                                DÉMARRER L'AVENTURE 🚀
-                            </Link>
+                            <button 
+                                @click="startAdventure"
+                                :disabled="isNavigating"
+                                :class="isNavigating ? 'opacity-60 cursor-not-allowed pointer-events-none shadow-[0_2px_0_#1e7d4b] translate-y-1' : ''"
+                                class="btn-3d btn-3d-green w-full py-4 text-lg font-black text-center shadow-[0_5px_0_#1e7d4b] flex items-center justify-center gap-3 transition-all duration-150"
+                            >
+                                <template v-if="isNavigating">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Chargement...
+                                </template>
+                                <template v-else>
+                                    DÉMARRER L'AVENTURE 🚀
+                                </template>
+                            </button>
                         </div>
                     </div>
 

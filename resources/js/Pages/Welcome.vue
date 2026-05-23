@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
 import { 
     Compass, 
@@ -14,7 +14,7 @@ import {
     ArrowRight
 } from 'lucide-vue-next';
 
-const gsap = window.gsap;
+import { gsap } from 'gsap';
 
 defineProps({
     canLogin: Boolean,
@@ -22,6 +22,19 @@ defineProps({
 });
 
 const isMobileMenuOpen = ref(false);
+const isNavigating = ref(false);
+
+const startAdventure = () => {
+    if (isNavigating.value) return;
+    router.visit(route('register'), {
+        onStart: () => {
+            isNavigating.value = true;
+        },
+        onFinish: () => {
+            isNavigating.value = false;
+        }
+    });
+};
 
 const faqs = ref([
     { question: "Qu'est-ce que Cityplay ?", answer: "Cityplay est une plateforme d'aventure par énigmes géolocalisées qui vous permet de découvrir les trésors cachés du Bénin tout en jouant.", open: false },
@@ -160,10 +173,24 @@ onMounted(() => {
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-                        <Link :href="route('register')" class="btn-3d btn-3d-green px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-[0_5px_0_#5d9933] flex items-center justify-center gap-3">
-                            Démarrer l'Aventure
-                            <Rocket :size="18" />
-                        </Link>
+                        <button 
+                            @click="startAdventure"
+                            :disabled="isNavigating"
+                            :class="isNavigating ? 'opacity-60 cursor-not-allowed pointer-events-none shadow-[0_2px_0_#5d9933] translate-y-1' : ''"
+                            class="btn-3d btn-3d-green px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-[0_5px_0_#5d9933] flex items-center justify-center gap-3 transition-all duration-150"
+                        >
+                            <template v-if="isNavigating">
+                                <svg class="animate-spin h-4.5 w-4.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Chargement...
+                            </template>
+                            <template v-else>
+                                Démarrer l'Aventure
+                                <Rocket :size="18" />
+                            </template>
+                        </button>
                         <button class="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs bg-[#1c183a] border border-[#2a245c] text-white hover:text-[#87d74e] transition-colors flex items-center justify-center gap-3">
                             Voir le Classement
                             <Trophy :size="18" />

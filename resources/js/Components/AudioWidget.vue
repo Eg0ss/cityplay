@@ -26,7 +26,6 @@ const handleVolumeChange = (e) => {
                         :value="volume"
                         @input="handleVolumeChange"
                         class="volume-slider"
-                        orient="vertical"
                     />
                     <div class="volume-fill" :style="{ height: (volume * 100) + '%' }"></div>
                 </div>
@@ -176,8 +175,6 @@ const handleVolumeChange = (e) => {
 }
 
 .volume-slider {
-    -webkit-appearance: slider-vertical;
-    appearance: slider-vertical;
     writing-mode: vertical-lr;
     direction: rtl;
     width: 4px;

@@ -2,7 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 
-const gsap = window.gsap;
+import { gsap } from 'gsap';
 
 defineProps({
     canResetPassword: { type: Boolean },
