@@ -22,6 +22,9 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
+    Route::post('verify-2fa', [AuthenticatedSessionController::class, 'verify2fa'])
+        ->name('login.2fa');
+
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 

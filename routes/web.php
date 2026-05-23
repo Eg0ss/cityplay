@@ -9,23 +9,24 @@ use Inertia\Inertia;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\AdminController;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('Welcome', [
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+            'laravelVersion' => Application::VERSION,
+            'phpVersion' => PHP_VERSION,
+        ]);
+    });
 
-// Public Routes
-Route::get('/comment-jouer', [PageController::class, 'howToPlay'])->name('how-to-play');
-Route::get('/explorer', [PageController::class, 'explore'])->name('explore');
-Route::get('/classement', [PageController::class, 'leaderboard'])->name('leaderboard');
-Route::get('/blog', [PageController::class, 'blog'])->name('blog');
-Route::get('/a-propos', [PageController::class, 'about'])->name('about');
-Route::get('/contact', [PageController::class, 'contact'])->name('contact');
-Route::get('/lieux/{id}', [PageController::class, 'showPlace'])->name('places.show');
+    Route::get('/comment-jouer', [PageController::class, 'howToPlay'])->name('how-to-play');
+    Route::get('/explorer', [PageController::class, 'explore'])->name('explore');
+    Route::get('/classement', [PageController::class, 'leaderboard'])->name('leaderboard');
+    Route::get('/blog', [PageController::class, 'blog'])->name('blog');
+    Route::get('/a-propos', [PageController::class, 'about'])->name('about');
+    Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+    Route::get('/lieux/{id}', [PageController::class, 'showPlace'])->name('places.show');
+});
 
 // Dashboard Routes
 Route::get('/dashboard', function (Request $request) {

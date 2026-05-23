@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('session_id')->constrained('game_sessions')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('statut')->default('en_attente'); // en_attente, pret, en_jeu
-            $table->string('mode_choisi')->nullable(); // gaming, decouverte
+            // $table->string('mode_choisi')->nullable(); // gaming, decouverte
             $table->string('global_mode')->nullable(); // decouverte, gaming, mixte
             $table->timestamps();
         });

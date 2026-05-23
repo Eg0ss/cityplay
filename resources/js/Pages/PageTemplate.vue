@@ -23,7 +23,7 @@ defineProps({
                     </Link>
                     <nav class="hidden items-center gap-6 lg:flex">
                         <Link :href="route('how-to-play')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Championnat</Link>
-                        <Link :href="$page.props.auth.user?.role === 'admin' ? route('admin.cities') : route('explore')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer</Link>
+                        <Link v-if="$page.props.auth.user?.is_admin" :href="route('admin.cities')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Explorer</Link>
                         <Link :href="route('leaderboard')" class="text-xs font-black uppercase tracking-widest hover:text-[#FF9F1C] transition-colors">Classement</Link>
                     </nav>
                 </div>
