@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->prefix('game')->name('game.')->group(fu
     Route::get('/lobby/{token}', [GameEngineController::class, 'lobby'])->name('lobby');
     Route::post('/lobby/{token}/start', [GameEngineController::class, 'startGame'])->name('start');
     Route::get('/play/{token}', [GameEngineController::class, 'play'])->name('play');
+    Route::post('/play/lock',   [GameEngineController::class, 'lockRiddle'])->name('lock');
     Route::post('/play/record', [GameEngineController::class, 'recordResult'])->name('record');
     Route::get('/riddle/{riddleId}/hints', [GameEngineController::class, 'getHints'])->name('hints');
 });

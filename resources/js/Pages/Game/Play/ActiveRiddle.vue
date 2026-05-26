@@ -29,6 +29,7 @@ import Toast from 'primevue/toast';
 import axios from 'axios';
 import { userStatsStore } from '@/store.js';
 import { useAudio } from '@/composables/useAudio.js';
+import { useGameRealtime } from '@/composables/useGameRealtime.js';
 import AudioWidget from '@/Components/AudioWidget.vue';
 
 const {
@@ -140,17 +141,53 @@ watch([currentPlaceIndex, modeChoisi, isPlaying, timeLeft, isPaused, decisionSta
 
 const alreadySolvedMessage = ref('');
 const isNavigating = ref(false);
-const isLoading = ref(false); // État global pour désactiver les boutons pendant les requêtes
+const isLoading = ref(false);
 let recordPromise = null;
 
 let timerInterval = null;
 const sessionEndHandled = ref(false);
 
+// ── Temps réel ──────────────────────────────────────────────────────
+const {
+    lockedRiddles,
+    realtimeAttempts,
+    realtimePlayers,
+    sessionEnded: realtimeSessionEnded,
+    riddleNotification,
+    subscribe: subscribeRealtime,
+    unsubscribe: unsubscribeRealtime,
+} = useGameRealtime(props.session.lien_token, page.props.auth.user.id);
+
 // État local replicateur pour les mises à jour temps réel sans reload
 const localSessionData = ref({
     attempts: props.session.attempts || [],
-    players: props.session.players || [],
-    statut: props.session.statut,
+    players:  props.session.players  || [],
+    statut:   props.session.statut,
+});
+
+// ── Computed verrouillage de l'énigme courante ──────────────────────
+const currentGameRiddleId = computed(() => {
+    return props.gameSteps?.[currentPlaceIndex.value]?.game_riddle?.id ?? null;
+});
+
+const isCurrentRiddleLocked = computed(() => {
+    if (!currentGameRiddleId.value) return false;
+    return !!lockedRiddles.value[currentGameRiddleId.value];
+});
+
+const currentRiddleLockedBy = computed(() => {
+    if (!currentGameRiddleId.value) return null;
+    return lockedRiddles.value[currentGameRiddleId.value]?.locked_by_name ?? null;
+});
+
+// Initialiser lockedRiddles depuis les données serveur au chargement
+props.gameSteps?.forEach((step) => {
+    if (step.game_riddle?.statut === 'verrouille') {
+        lockedRiddles.value[step.game_riddle.id] = {
+            locked_by_player_id: step.game_riddle.locked_by_player_id,
+            locked_by_name:      step.game_riddle.locked_by_name,
+        };
+    }
 });
 
 // Classement de la session en direct
@@ -318,13 +355,56 @@ const recordAttemptOnBackend = (status, pointsEarned) => {
     isLoading.value = true;
     recordPromise = (async () => {
         try {
+            // Étape 1 : Verrouillage atomique avant d'enregistrer
+            const needsLock = (props.session.type === 'participants') ||
+                (props.session.type === 'challengers' && props.session.challenger_mode === 'reponse_par_membre');
+
+            if (needsLock) {
+                // Verrouillage optimiste : bloquer l'UI immédiatement
+                lockedRiddles.value[currentGameRiddleId.value] = {
+                    locked_by_user_id: page.props.auth.user.id,
+                    locked_by_name:    page.props.auth.user.name,
+                    locked_at:         new Date().toISOString(),
+                };
+
+                try {
+                    const lockRes = await axios.post('/game/play/lock', {
+                        session_id: props.session.id,
+                        riddle_id:  currentRiddle.value.id,
+                    });
+
+                    if (!lockRes.data.locked) {
+                        const locker = lockRes.data.locked_by_name ?? 'Un joueur';
+                        toast.add({
+                            severity: 'warn',
+                            summary:  'Trop tard ! 🔒',
+                            detail:   lockRes.data.message ?? `${locker} a verrouillé cette énigme !`,
+                            life:     6000,
+                        });
+                        decisionState.value = 'already_solved';
+                        alreadySolvedMessage.value = lockRes.data.message ?? `${locker} vient de verrouiller cette énigme.`;
+                        return false;
+                    }
+                } catch (lockErr) {
+                    if (lockErr.response?.status === 409) {
+                        const msg = lockErr.response.data?.message ?? 'Un autre joueur a verrouillé cette énigme.';
+                        toast.add({ severity: 'warn', summary: 'Trop tard ! 🔒', detail: msg, life: 6000 });
+                        decisionState.value = 'already_solved';
+                        alreadySolvedMessage.value = msg;
+                        return false;
+                    }
+                    throw lockErr;
+                }
+            }
+
+            // Étape 2 : Enregistrement de la réponse
             const response = await axios.post('/game/play/record', {
-                session_id: props.session.id,
-                riddle_id: currentRiddle.value.id,
-                status: status,
-                points: pointsEarned,
-                mode_choisi: modeChoisi.value || 'gaming',
-                temps_resolution: totalTime.value - timeLeft.value
+                session_id:        props.session.id,
+                riddle_id:         currentRiddle.value.id,
+                status:            status,
+                points:            pointsEarned,
+                mode_choisi:       modeChoisi.value || 'gaming',
+                temps_resolution:  totalTime.value - timeLeft.value,
             });
 
             if (response.data?.session_finished) {
@@ -335,22 +415,22 @@ const recordAttemptOnBackend = (status, pointsEarned) => {
                 }
                 return false;
             }
-            
-            if (response.data && response.data.already_solved) {
-                toast.add({ 
-                    severity: 'warn', 
-                    summary: 'Énigme déjà clôturée ⚠️', 
-                    detail: response.data.message, 
-                    life: 6000 
+
+            if (response.data?.already_solved) {
+                toast.add({
+                    severity: 'warn',
+                    summary:  'Énigme déjà clôturée ⚠️',
+                    detail:   response.data.message,
+                    life:     6000,
                 });
-                decisionState.value = 'already_solved'; 
+                decisionState.value = 'already_solved';
                 alreadySolvedMessage.value = response.data.message;
                 return false;
             }
-            
-            // Force Inertia to update the local session state immediately!
+
             await router.reload({ only: ['session'] });
             return true;
+
         } catch (e) {
             console.error("Erreur d'enregistrement backend:", e);
             return false;
@@ -403,36 +483,12 @@ onMounted(() => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Écouter le canal du jeu via Laravel Echo (seulement si disponible)
-    if (window.Echo) {
-        window.Echo.channel(`game.${props.session.lien_token}`)
-            .listen('.App\\Events\\GameUpdated', (e) => {
-                // Mise à jour directe des données sans reload complet
-                if (e.session) {
-                    // Mettre à jour les tentatives et les joueurs en doux
-                    if (e.session.attempts) {
-                        localSessionData.value.attempts = e.session.attempts;
-                    }
-                    if (e.session.players) {
-                        localSessionData.value.players = e.session.players;
-                    }
-                    if (e.session.statut) {
-                        localSessionData.value.statut = e.session.statut;
-                        
-                        // Vérifier si la session est terminée
-                        if (e.session.statut === 'termine' && props.session.statut !== 'termine') {
-                            finishSessionRedirect();
-                        }
-                    }
-                }
-            });
-    }
+    // Démarrer le canal WebSocket centralisé
+    subscribeRealtime();
 
     // Nettoyer tous les canaux, observateurs et timers dès qu'une navigation démarre
     unsubscribeBefore = router.on('before', () => {
-        if (window.Echo) {
-            window.Echo.leave(`game.${props.session.lien_token}`);
-        }
+        unsubscribeRealtime();
         stopBackgroundMusic();
         if (timerInterval) {
             clearInterval(timerInterval);
@@ -502,15 +558,46 @@ onUnmounted(() => {
     if (unsubscribeBefore) {
         unsubscribeBefore();
     }
-    if (window.Echo) {
-        window.Echo.leave(`game.${props.session.lien_token}`);
-    }
+    unsubscribeRealtime();
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     stopBackgroundMusic();
     if (watchId) navigator.geolocation.clearWatch(watchId);
     clearInterval(timerInterval);
 });
 
+// Synchroniser localSessionData depuis le temps réel
+watch(realtimeAttempts, (newAttempts) => {
+    if (newAttempts.length) localSessionData.value.attempts = newAttempts;
+}, { deep: true });
+
+watch(realtimePlayers, (newPlayers) => {
+    if (newPlayers.length) localSessionData.value.players = newPlayers;
+}, { deep: true });
+
+// Fin de session en temps réel
+watch(realtimeSessionEnded, (ended) => {
+    if (ended && !sessionEndHandled.value) {
+        finishSessionRedirect();
+    }
+});
+
+// Notification de verrouillage sur l'énigme courante
+watch(riddleNotification, (notif) => {
+    if (!notif) return;
+    if (notif.game_riddle_id !== currentGameRiddleId.value) return;
+    if (!decisionState.value) {
+        playAlreadySolved();
+        decisionState.value = 'already_solved';
+        clearInterval(timerInterval);
+        alreadySolvedMessage.value = notif.message;
+        toast.add({
+            severity: 'warn',
+            summary:  'Énigme verrouillée 🔒',
+            detail:   notif.message,
+            life:     6000,
+        });
+    }
+});
 // Détecter si l'énigme active actuelle (currentRiddle) a été clôturée par un autre joueur
 watch(() => localSessionData.value.attempts, (newAttempts) => {
     if (newAttempts && currentRiddle.value) {
@@ -993,7 +1080,7 @@ const formatTime = (seconds) => {
                         <button
                             type="button"
                             @click="forfeitSession"
-                            :disabled="isLoading"
+                            :disabled="isLoading || isCurrentRiddleLocked"
                             class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 bg-[#1C1D24] text-xs font-black uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <LogOut :size="16" />
@@ -1040,7 +1127,7 @@ const formatTime = (seconds) => {
                                 <Gamepad2 :size="64" class="mb-4 text-[#2c72f6] transform group-hover:scale-105 group-hover:-rotate-6 transition-transform" />
                                 <h3 class="text-xl font-black text-[#2c72f6] text-glow-blue uppercase tracking-tight mb-2">Gaming</h3>
                                 <p class="text-xs text-gray-400 font-semibold mb-6">Répondez intellectuellement depuis chez vous.</p>
-                                <button @click="startRiddle('gaming')" class="btn-3d btn-3d-blue w-full py-3 text-xs shadow-[0_4px_0_#1344a1] flex items-center justify-center gap-2">
+                                <button @click="startRiddle('gaming')" :disabled="isLoading || isCurrentRiddleLocked" class="btn-3d btn-3d-blue w-full py-3 text-xs shadow-[0_4px_0_#1344a1] flex items-center justify-center gap-2">
                                     <Zap :size="14" />
                                     C'est parti !
                                 </button>
@@ -1190,7 +1277,7 @@ const formatTime = (seconds) => {
                                             <RotateCcw :size="18" class="animate-spin" />
                                         </template>
                                     </button>
-                                    <button @click="forfeitSession" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100">
+                                    <button @click="forfeitSession" :disabled="isLoading || isCurrentRiddleLocked" class="btn-3d btn-3d-red w-full py-2 text-[10px] shadow-[0_3px_0_#9e2318] flex items-center justify-center gap-2 opacity-60 hover:opacity-100">
                                         Abandonner
                                     </button>
                                 </div>
@@ -1216,7 +1303,7 @@ const formatTime = (seconds) => {
                                             <RotateCcw :size="18" class="animate-spin" />
                                         </template>
                                     </button>
-                                    <button type="button" @click="forfeitSession" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
+                                    <button type="button" @click="forfeitSession" :disabled="isLoading || isCurrentRiddleLocked" class="btn-3d btn-3d-red w-full py-3 text-xs shadow-[0_4px_0_#9e2318] flex items-center justify-center gap-2">
                                         <LogOut :size="14" />
                                         Quitter la partie
                                     </button>
@@ -1357,6 +1444,13 @@ const formatTime = (seconds) => {
                         <!-- COLUMN ACTION : Gaming (Couch Selection) -->
                         <div v-if="modeChoisi === 'gaming'" class="space-y-6">
                             <!-- Difficult Text input answer OR if MCQ options are missing -->
+                            <div
+                                v-if="isCurrentRiddleLocked && !decisionState"
+                                class="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 mb-4 text-yellow-400 text-sm font-semibold"
+                            >
+                                <span class="text-xl">🔒</span>
+                                <span>{{ currentRiddleLockedBy }} est en train de répondre…</span>
+                            </div>
                             <div v-if="session.level === 'difficile' || parsedMcqOptions.length === 0" class="space-y-4">
                                 <label class="block text-xs font-black uppercase tracking-widest text-gray-500 text-center">
                                     {{ parsedMcqOptions.length === 0 ? 'Aucun choix disponible : Saisissez le nom du lieu' : 'Quel est le nom de ce lieu ?' }}
@@ -1373,6 +1467,13 @@ const formatTime = (seconds) => {
                             
                             <!-- Easy/Intermediate MCQ grids -->
                             <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div
+                                    v-if="isCurrentRiddleLocked && !decisionState"
+                                    class="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 mb-4 text-yellow-400 text-sm font-semibold"
+                                >
+                                    <span class="text-xl">🔒</span>
+                                    <span>{{ currentRiddleLockedBy }} est en train de répondre…</span>
+                                </div>
                                 <button v-for="option in parsedMcqOptions" :key="option"
                                     @click="submitQcm(option)"
                                     :disabled="isLoading"
@@ -1387,6 +1488,7 @@ const formatTime = (seconds) => {
         </div>
     </AuthenticatedLayout>
 </template>
+
 <style scoped>
 .animate-fade-in-up {
     animation: fadeInUp 0.5s ease-out forwards;

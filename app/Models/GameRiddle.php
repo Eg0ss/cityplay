@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class GameRiddle extends Model
 {
-    protected $fillable = ['session_id', 'riddle_id', 'repondu_par', 'verrouille_a'];
+    protected $fillable = [
+        'session_id',
+        'riddle_id',
+        'repondu_par',
+        'verrouille_a',
+        'statut',
+        'locked_by_player_id',
+    ];
 
     protected $casts = [
         'verrouille_a' => 'datetime',
@@ -30,5 +37,10 @@ class GameRiddle extends Model
     public function attempts()
     {
         return $this->hasMany(GamePlayerRiddleAttempt::class, 'game_riddle_id');
+    }
+
+    public function lockedByPlayer()
+    {
+        return $this->belongsTo(GamePlayer::class, 'locked_by_player_id');
     }
 }
