@@ -199,6 +199,11 @@ const finishSessionRedirect = (message) => {
     isPaused.value = false;
     stopBackgroundMusic();
     
+    // Verrouiller le bouton retour avant la redirection finale
+    lockNavigation();
+    // Libérer l'écouteur après verrouillage (la page va changer de toute façon)
+    window.removeEventListener('popstate', handlePopState);
+    
     // Nettoyer le localStorage
     try {
         localStorage.removeItem(storageKey);
@@ -447,11 +452,17 @@ onMounted(() => {
     // Tenter de récupérer le mode global du joueur
     const player = props.session.players?.find(p => p.user_id === page.props.auth.user.id);
     if (player && (player.global_mode === 'gaming' || player.global_mode === 'decouverte')) {
-        if (player.global_mode === 'decouverte' && !transportMode.value) {
-            showTransportSelection.value = true;
-        } else {
-            startRiddle(player.global_mode);
+        // Ne relancer startRiddle() que si aucun timer n'était déjà en cours
+        // (évite d'écraser le chrono restauré depuis localStorage après un F5)
+        const timerAlreadyRestored = savedState && savedState.isPlaying;
+        if (!timerAlreadyRestored) {
+            if (player.global_mode === 'decouverte' && !transportMode.value) {
+                showTransportSelection.value = true;
+            } else {
+                startRiddle(player.global_mode);
+            }
         }
+        // Si le timer était déjà restauré, startChrono() a déjà été appelé plus haut
     }
 
     if (navigator.geolocation) {
@@ -484,6 +495,9 @@ onUnmounted(() => {
             console.error('Erreur lors du nettoyage du localStorage:', e);
         }
     }
+    
+    // Libérer le verrou du bouton retour
+    window.removeEventListener('popstate', handlePopState);
     
     if (unsubscribeBefore) {
         unsubscribeBefore();
@@ -612,6 +626,15 @@ const currentPlayer = computed(() => {
     return props.session.players?.find(p => p.user_id === page.props.auth.user.id);
 });
 
+// Verrou une seule fois le bouton retour du navigateur (appelé au moment de la redirection finale)
+let navLocked = false;
+const lockNavigation = () => {
+    if (navLocked) return;
+    navLocked = true;
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+};
+
 // Initialisation d'une énigme
 const startRiddle = (mode) => {
     // Initialiser l'AudioContext au premier geste utilisateur
@@ -676,6 +699,20 @@ const handleVisibilityChange = () => {
             clearInterval(timerInterval);
             handleLose();
         }
+    }
+};
+
+// Bloque le bouton retour du navigateur pendant la partie
+const handlePopState = () => {
+    if (!sessionEndHandled.value) {
+        // Repousser immédiatement un état pour annuler le retour arrière
+        window.history.pushState(null, '', window.location.href);
+        toast.add({
+            severity: 'warn',
+            summary: 'Navigation bloquée 🚫',
+            detail: 'Utilisez les boutons Pause ou Quitter pour gérer votre partie.',
+            life: 4000,
+        });
     }
 };
 
@@ -796,8 +833,9 @@ const goToNextPlace = () => {
         
         if (currentPlaceIndex.value >= props.gameSteps.length) {
             toast.add({ severity: 'success', summary: 'Session terminée ! 🏆', detail: 'Toutes les énigmes ont été clôturées par la session !', life: 2000 });
+            lockNavigation(); // Bloquer le retour avant la redirection
             router.get(route('game.dashboard'));
-            isNavigating.value = false;
+            // isNavigating reste true : le bouton reste désactivé pendant la redirection
         } else {
             nextTick(() => {
                 nextRiddleLogic();
@@ -813,7 +851,7 @@ const goToNextPlace = () => {
         } else {
             toast.add({ severity: 'success', summary: 'Partie terminée ! 🏆', detail: 'Vous avez complété l\'aventure ! En route vers le Dashboard.', life: 2000 });
             router.get(route('game.dashboard'));
-            isNavigating.value = false;
+            // isNavigating reste true : le bouton reste désactivé pendant la redirection
         }
     }
 };
@@ -874,7 +912,7 @@ const forfeitSession = () => {
             } catch (e) {
                 console.error('Erreur lors du nettoyage du localStorage:', e);
             }
-            
+            lockNavigation(); // Bloquer le retour avant la redirection
             toast.add({ severity: 'info', summary: 'Session abandonnée', detail: 'Retour au tableau de bord...', life: 3000 });
             router.get(route('game.dashboard'));
         }

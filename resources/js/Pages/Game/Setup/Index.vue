@@ -361,7 +361,7 @@ const submitForm = () => {
                     <div v-show="currentStep === 5" class="space-y-8 animate-fade-in-up">
                         <div class="space-y-2 border-b border-[#2a245c] pb-4 mb-6">
                             <h2 class="text-2xl font-black uppercase italic tracking-tighter">Prêt pour l'exploration ?</h2>
-                            <p class="text-gray-400 text-xs font-medium">Passez en revue votre configuration avant l'allumage.</p>
+                            <p class="text-gray-400 text-xs font-medium">Passez en revue votre configuration avant le démarrage.</p>
                         </div>
                         
                         <div class="bg-[#10101c] p-6 rounded-2xl border border-[#2a245c] space-y-4">

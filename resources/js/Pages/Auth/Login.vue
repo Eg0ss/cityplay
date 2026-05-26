@@ -147,12 +147,6 @@ onMounted(() => {
 
         <!-- Right Side: Login Form -->
         <div class="flex-1 flex items-center justify-center p-6 sm:p-12 lg:p-20 relative z-10 overflow-y-auto">
-            <!-- Back Button -->
-            <Link href="/" class="absolute top-8 right-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#87d74e] transition-all">
-                <span>←</span>
-                <span>Retour à l'accueil</span>
-            </Link>
-
             <!-- Gaming Panel Card -->
             <div class="w-full max-w-md space-y-10 panel-glass p-8 sm:p-10 rounded-[2.5rem] border border-[#2a245c] shadow-2xl relative hover-lift form-card-reveal">
                 <div class="absolute -top-10 -left-10 w-32 h-32 bg-[#87d74e]/5 rounded-full blur-3xl pointer-events-none"></div>
