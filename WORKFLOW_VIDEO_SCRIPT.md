@@ -28,7 +28,7 @@ Ce document sert de guide pour la réalisation d'une vidéo de présentation du 
     - Rédiger la question.
     - Définir la réponse correcte.
     - Choisir le niveau de difficulté (Facile, Intermédiaire, Difficile).
-- **Visuel** : Formulaire de création d'énigme avec le nouveau style visuel (Titres Orange/Vert).
+- **Visuel** : Formulaire de création d'énigme avec le nouveau style visuel
 
 ### Étape 5 : Système d'Assistance (Indices)
 - **Action** : Dans le même formulaire, ajouter des indices.
@@ -72,17 +72,18 @@ Ce document sert de guide pour la réalisation d'une vidéo de présentation du 
 - **Action** : (Si Multi) Partager le lien d'invitation.
 - **Détail** : Attendre que les amis rejoignent. L'hôte lance la partie.
 - **Visuel** : Interface de Lobby avec les avatars des joueurs. L'admin peut y être présent sans prendre de place de joueur.
+- **Visuel** : On peut rabattre la salle d'attente pour faire autre chose sur l'application (tout autre chose même entamer une autre session ou quitter l'application) et revenir dans la salle d'attente continuer la session en cours
 
 ### Étape 5 : Phase de Jeu Active
 - **Action** : Résoudre une énigme sur le terrain.
 - **Détail** :
     - Lecture de l'énigme liée au lieu.
-    - **Mode Découverte** : Choix du moyen de transport (Pied, Moto, Voiture, Avion) pour adapter le chrono.
+    - **Mode Découverte** : Choix du moyen de transport (Pied, Moto, Voiture, Avion) pour adapter le chrono. Le chrono ne doit pas etre en dur, il doit dependre de la distance entre la localisation actuelle du l'utilisateur et la localisation du lieu à decouvrir selon le maps et le moyen de deplacement 
     - **Utilisation d'un indice** : Cliquer sur "Besoin d'aide ?" pour révéler une image ou un mot-clé.
     - Saisie de la réponse.
 - **Visuel** : Interface `ActiveRiddle` corrigée et optimisée (compte à rebours fluide, boussole interactive).
 
 ### Étape 6 : Triomphe & Progression
 - **Action** : Validation de la réponse.
-- **Détail** : Gain d'XP et mise à jour du classement (Leaderboard).
+- **Détail** : Gain d'XP et mise à jour du classement (Leaderboard). les gains XP peuvent être utilisés pour debloquer des niveaux, gagner ou ajouter du temps au chrono, acheter des choses sur la plateforme.
 - **Visuel** : Écran de victoire avec les points récoltés et barre de progression de niveau.
