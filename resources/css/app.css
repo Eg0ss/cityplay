@@ -5,7 +5,7 @@
 
 @layer base {
     :root {
-        /* GeoGuessr Official Hex Codes */
+        /* CityPlay / GeoGuessr Color System */
         --geoguessr-green: #87d74e;
         --geoguessr-green-hover: #77be43;
         --geoguessr-green-shadow: #5d9933;
@@ -26,21 +26,44 @@
         --geoguessr-red-hover: #d33426;
         --geoguessr-red-shadow: #9e2318;
         
-        --geoguessr-bg-dark: #171235;      /* Base lower page color */
-        --geoguessr-nav-dark: #10101c;     /* Navbar background */
-        --geoguessr-card-dark: #1c183a;    /* Card panel background */
-        --geoguessr-border-dark: #2a245c;  /* Technical tech-lines border */
+        --geoguessr-bg-dark: #171235;
+        --geoguessr-nav-dark: #10101c;
+        --geoguessr-card-dark: #1c183a;
+        --geoguessr-border-dark: #2a245c;
+
+        /* Safe area support (iPhone notch, home bar) */
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     
+    * {
+        /* Supprime le délai de 300ms au tap sur mobile - CRITIQUE pour la fluidité */
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+        /* Défilement fluide natif */
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+
     body {
         font-family: 'Outfit', 'Inter', sans-serif !important;
         background-color: var(--geoguessr-bg-dark);
         color: #FFFFFF;
         overflow-x: hidden;
+        /* Évite le bounce scroll iOS qui casse l'immersion */
+        overscroll-behavior: none;
+    }
+
+    /* Empêcher le zoom sur focus input sur iOS */
+    input, select, textarea {
+        font-size: 16px !important;
     }
 }
 
-/* --- BOUNCY 3D GEOGUESSR BUTTONS --- */
+/* ── BOUNCY 3D GEOGUESSR BUTTONS ─────────────────────────────────── */
 .btn-3d {
     position: relative;
     font-weight: 900;
@@ -49,102 +72,96 @@
     border-radius: 12px;
     border: none;
     cursor: pointer;
-    transition: all 0.1s ease-in-out;
+    /* Transition ultra-rapide pour feedback immédiat */
+    transition: transform 80ms ease-in-out, box-shadow 80ms ease-in-out, background-color 80ms ease-in-out;
+    /* Accélération matérielle pour fluidité */
+    will-change: transform;
+    user-select: none;
 }
 
-/* Green 3D Button (#87d74e) */
+/* Green */
 .btn-3d-green {
     background-color: var(--geoguessr-green);
     color: #0d0e15;
-    box-shadow: 0 5px 0 var(--geoguessr-green-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 0 var(--geoguessr-green-shadow), 0 8px 15px rgba(0,0,0,0.3);
     transform: translateY(-2px);
 }
-.btn-3d-green:hover:not(:disabled) {
-    background-color: var(--geoguessr-green-hover);
-}
+.btn-3d-green:hover:not(:disabled) { background-color: var(--geoguessr-green-hover); }
 .btn-3d-green:active:not(:disabled) {
     transform: translateY(3px);
-    box-shadow: 0 0px 0 var(--geoguessr-green-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0px 0 var(--geoguessr-green-shadow), 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Yellow 3D Button (#ffc628) */
+/* Yellow */
 .btn-3d-yellow {
     background-color: var(--geoguessr-yellow);
     color: #0d0e15;
-    box-shadow: 0 5px 0 var(--geoguessr-yellow-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 0 var(--geoguessr-yellow-shadow), 0 8px 15px rgba(0,0,0,0.3);
     transform: translateY(-2px);
 }
-.btn-3d-yellow:hover:not(:disabled) {
-    background-color: var(--geoguessr-yellow-hover);
-}
+.btn-3d-yellow:hover:not(:disabled) { background-color: var(--geoguessr-yellow-hover); }
 .btn-3d-yellow:active:not(:disabled) {
     transform: translateY(3px);
-    box-shadow: 0 0px 0 var(--geoguessr-yellow-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0px 0 var(--geoguessr-yellow-shadow), 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Blue 3D Button (#4769b0) */
+/* Blue */
 .btn-3d-blue {
     background-color: var(--geoguessr-blue);
     color: #FFFFFF;
-    box-shadow: 0 5px 0 var(--geoguessr-blue-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 0 var(--geoguessr-blue-shadow), 0 8px 15px rgba(0,0,0,0.3);
     transform: translateY(-2px);
 }
-.btn-3d-blue:hover:not(:disabled) {
-    background-color: var(--geoguessr-blue-hover);
-}
+.btn-3d-blue:hover:not(:disabled) { background-color: var(--geoguessr-blue-hover); }
 .btn-3d-blue:active:not(:disabled) {
     transform: translateY(3px);
-    box-shadow: 0 0px 0 var(--geoguessr-blue-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0px 0 var(--geoguessr-blue-shadow), 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Purple 3D Button (#7751de) */
+/* Purple */
 .btn-3d-purple {
     background-color: var(--geoguessr-purple);
     color: #FFFFFF;
-    box-shadow: 0 5px 0 var(--geoguessr-purple-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 0 var(--geoguessr-purple-shadow), 0 8px 15px rgba(0,0,0,0.3);
     transform: translateY(-2px);
 }
-.btn-3d-purple:hover:not(:disabled) {
-    background-color: var(--geoguessr-purple-hover);
-}
+.btn-3d-purple:hover:not(:disabled) { background-color: var(--geoguessr-purple-hover); }
 .btn-3d-purple:active:not(:disabled) {
     transform: translateY(3px);
-    box-shadow: 0 0px 0 var(--geoguessr-purple-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0px 0 var(--geoguessr-purple-shadow), 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Red 3D Button */
+/* Red */
 .btn-3d-red {
     background-color: var(--geoguessr-red);
     color: #FFFFFF;
-    box-shadow: 0 5px 0 var(--geoguessr-red-shadow), 0 8px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 0 var(--geoguessr-red-shadow), 0 8px 15px rgba(0,0,0,0.3);
     transform: translateY(-2px);
 }
-.btn-3d-red:hover:not(:disabled) {
-    background-color: var(--geoguessr-red-hover);
-}
+.btn-3d-red:hover:not(:disabled) { background-color: var(--geoguessr-red-hover); }
 .btn-3d-red:active:not(:disabled) {
     transform: translateY(3px);
-    box-shadow: 0 0px 0 var(--geoguessr-red-shadow), 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0px 0 var(--geoguessr-red-shadow), 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Disabled State for all 3D buttons */
+/* Disabled */
 .btn-3d:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
     transform: translateY(0);
     box-shadow: none !important;
+    pointer-events: none;
 }
 
-/* --- GLASSMORPHIC PREMIUM PANELS --- */
+/* ── GLASSMORPHIC PANELS ──────────────────────────────────────────── */
 .panel-glass {
-    background: rgba(28, 24, 58, 0.85); /* Deep rich purple backdrop */
+    background: rgba(28, 24, 58, 0.9);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 24px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
-
 .panel-glass-light {
     background: rgba(255, 255, 255, 0.04);
     backdrop-filter: blur(12px);
@@ -153,123 +170,139 @@
     border-radius: 20px;
 }
 
-/* --- NEON GLOW EFFECTS --- */
-.glow-green {
-    box-shadow: 0 0 25px rgba(135, 215, 78, 0.3);
-    border-color: rgba(135, 215, 78, 0.4) !important;
-}
-.glow-yellow {
-    box-shadow: 0 0 25px rgba(255, 198, 40, 0.3);
-    border-color: rgba(255, 198, 40, 0.4) !important;
-}
-.glow-blue {
-    box-shadow: 0 0 25px rgba(71, 105, 176, 0.3);
-    border-color: rgba(71, 105, 176, 0.4) !important;
-}
-.glow-purple {
-    box-shadow: 0 0 25px rgba(119, 81, 222, 0.3);
-    border-color: rgba(119, 81, 222, 0.4) !important;
-}
+/* ── NEON GLOW ────────────────────────────────────────────────────── */
+.glow-green  { box-shadow: 0 0 25px rgba(135,215,78,0.3);  border-color: rgba(135,215,78,0.4)  !important; }
+.glow-yellow { box-shadow: 0 0 25px rgba(255,198,40,0.3);  border-color: rgba(255,198,40,0.4)  !important; }
+.glow-blue   { box-shadow: 0 0 25px rgba(71,105,176,0.3);  border-color: rgba(71,105,176,0.4)  !important; }
+.glow-purple { box-shadow: 0 0 25px rgba(119,81,222,0.3);  border-color: rgba(119,81,222,0.4)  !important; }
 
-.text-glow-green {
-    text-shadow: 0 0 10px rgba(135, 215, 78, 0.6);
-}
-.text-glow-yellow {
-    text-shadow: 0 0 10px rgba(255, 198, 40, 0.6);
-}
+.text-glow-green  { text-shadow: 0 0 10px rgba(135,215,78,0.6); }
+.text-glow-yellow { text-shadow: 0 0 10px rgba(255,198,40,0.6); }
+.text-glow-blue   { text-shadow: 0 0 10px rgba(71,105,176,0.6); }
+.text-glow-red    { text-shadow: 0 0 10px rgba(234,67,53,0.6); }
 
-/* --- KEYFRAME ANIMATIONS --- */
+/* ── KEYFRAME ANIMATIONS ─────────────────────────────────────────── */
 @keyframes slideUp {
-    from {
-        transform: translateY(30px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
 }
-
+@keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+@keyframes slideInRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
 @keyframes float {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-8px);
-    }
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-8px); }
 }
-
 @keyframes glowPulse {
-    0%, 100% {
-        box-shadow: 0 0 15px rgba(135, 215, 78, 0.2);
-    }
-    50% {
-        box-shadow: 0 0 25px rgba(135, 215, 78, 0.4);
-    }
+    0%, 100% { box-shadow: 0 0 15px rgba(135,215,78,0.2); }
+    50%       { box-shadow: 0 0 25px rgba(135,215,78,0.4); }
+}
+@keyframes popIn {
+    0%   { transform: scale(0.8); opacity: 0; }
+    70%  { transform: scale(1.05); }
+    100% { transform: scale(1);   opacity: 1; }
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-4px); }
+    40%       { transform: translateX(4px); }
+    60%       { transform: translateX(-3px); }
+    80%       { transform: translateX(3px); }
 }
 
-.animate-slide-up {
-    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+.animate-slide-up    { animation: slideUp    0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-slide-down  { animation: slideDown  0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in-up  { animation: slideUp    0.4s ease-out forwards; }
+.animate-fade-in     { animation: fadeIn     0.3s ease-out forwards; }
+.animate-float       { animation: float      4s ease-in-out infinite; }
+.animate-glow-pulse  { animation: glowPulse  3s infinite; }
+.animate-pop-in      { animation: popIn      0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-shake       { animation: shake      0.4s ease-in-out; }
 
-.animate-float {
-    animation: float 4s ease-in-out infinite;
-}
-
-.animate-glow-pulse {
-    animation: glowPulse 3s infinite;
-}
-
-/* Card hover animation */
+/* Card hover */
 .hover-lift {
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+    transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease;
+    will-change: transform;
 }
 .hover-lift:hover {
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
 }
 
-/* --- PROGRESS BAR CUSTOMIZATION --- */
+/* ── PROGRESS BAR (NProgress / Inertia) ──────────────────────────── */
 #nprogress .bar {
-    height: 4px !important;
-    background-color: var(--geoguessr-green) !important;
-    transition: background-color 0.3s ease !important;
+    height: 3px !important;
+    background: linear-gradient(90deg, var(--geoguessr-green), var(--geoguessr-blue)) !important;
 }
-
 #nprogress .peg {
     box-shadow: 0 0 10px var(--geoguessr-green), 0 0 5px var(--geoguessr-green) !important;
 }
 
-html.dark #nprogress .bar {
-    background-color: var(--geoguessr-green) !important;
+/* ── SCROLLBARS ───────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--geoguessr-bg-dark); }
+::-webkit-scrollbar-thumb  { background: #2a245c; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #3c3482; }
+
+/* ── MOBILE GAME OPTIMIZATIONS ───────────────────────────────────── */
+
+/* Bottom nav safe area */
+.safe-bottom { padding-bottom: calc(0.5rem + var(--safe-bottom)); }
+
+/* Overlay de plein écran pour la phase active du jeu */
+.game-fullscreen {
+    position: fixed;
+    inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-html.dark #nprogress .peg {
-    box-shadow: 0 0 10px var(--geoguessr-green), 0 0 5px var(--geoguessr-green) !important;
+/* Boutons de jeu plein-touch */
+.btn-game-action {
+    min-height: 56px;
+    font-size: 0.9rem;
+}
+@media (max-width: 640px) {
+    .btn-game-action { min-height: 52px; }
 }
 
-.inertia-progress-bar {
-    height: 4px !important;
-    background-color: var(--geoguessr-green) !important;
+/* Toast mobile */
+:global(.p-toast) { max-width: calc(100vw - 1.5rem) !important; }
+@media (max-width: 480px) {
+    :global(.p-toast) {
+        width: calc(100vw - 1.5rem) !important;
+        left: 0.75rem !important;
+        right: 0.75rem !important;
+        top: 0.75rem !important;
+    }
+    :global(.p-toast-message) { margin: 0 0 0.75rem 0 !important; }
+    :global(.p-toast-message-content) { padding: 0.75rem !important; }
+    :global(.p-toast-summary) { font-size: 0.8rem !important; }
+    :global(.p-toast-detail)  { font-size: 0.7rem !important; }
 }
 
-html.dark .inertia-progress-bar {
-    background-color: var(--geoguessr-green) !important;
+/* Transitions de pages Inertia */
+.page-enter-active,
+.page-leave-active {
+    transition: opacity 0.18s ease, transform 0.18s ease;
 }
+.page-enter-from { opacity: 0; transform: translateY(6px); }
+.page-leave-to   { opacity: 0; transform: translateY(-6px); }
 
-/* --- PREMIUM SCROLLBARS --- */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+/* MCQ options — meilleur touch feedback */
+.mcq-option {
+    transition: transform 80ms ease, box-shadow 80ms ease, background-color 80ms ease;
+    will-change: transform;
 }
-::-webkit-scrollbar-track {
-    background: var(--geoguessr-bg-dark);
-}
-::-webkit-scrollbar-thumb {
-    background: #2a245c;
-    border-radius: 10px;
-    border: 2px solid var(--geoguessr-bg-dark);
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #3c3482;
+.mcq-option:active {
+    transform: scale(0.97) translateY(2px);
 }

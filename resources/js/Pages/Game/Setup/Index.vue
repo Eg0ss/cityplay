@@ -3,22 +3,9 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { 
-    ChevronLeft, 
-    ChevronRight, 
-    Map as MapIcon, 
-    AlertTriangle, 
-    CheckCircle2, 
-    Landmark, 
-    User, 
-    Users, 
-    Swords, 
-    Gamepad2, 
-    Layers,
-    MapPin,
-    Rocket,
-    Clock,
-    Zap,
-    Shield
+    ChevronLeft, ChevronRight, Map as MapIcon, AlertTriangle,
+    CheckCircle2, Landmark, User, Users, Swords, Gamepad2,
+    Layers, MapPin, Rocket, Zap, Shield
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -26,99 +13,70 @@ const props = defineProps({
 });
 
 const currentStep = ref(1);
-const isLocating = ref(false);
+const isLocating = ref(false); 
+const TOTAL_STEPS = 5;
 
 const form = reactive({
-    level: 'facile', // facile, intermediaire, difficile
+    level: 'facile',
     location_type: 'city',
     location_id: null,
     riddles_count: 5,
-    type: 'solo', // solo, participants, challengers
+    type: 'solo',
     challenger_mode: null,
     max_joueurs: 1,
     global_mode: 'mixte',
     user_lat: null,
     user_lng: null,
-    participate: true // Nouveau : permet à l'admin de choisir s'il participe ou non
+    participate: true
 });
 
-// Set default city on mount
 onMounted(() => {
-    if (props.cities && props.cities.length > 0) {
-        form.location_id = props.cities[0].id;
-    }
+    if (props.cities?.length > 0) form.location_id = props.cities[0].id;
 });
 
-const selectedCity = computed(() => {
-    return props.cities.find(c => c.id === form.location_id);
-});
-
-const isCityWithoutRiddles = computed(() => {
-    return selectedCity.value && selectedCity.value.riddles_count === 0;
-});
-
-// Nombre maximum d'énigmes disponibles pour le niveau sélectionné
+const selectedCity = computed(() => props.cities.find(c => c.id === form.location_id));
+const isCityWithoutRiddles = computed(() => selectedCity.value && selectedCity.value.riddles_count === 0);
 const maxRiddlesForLevel = computed(() => {
-    if (!selectedCity.value || !selectedCity.value.riddles_by_level) {
-        return 1;
-    }
-    const count = selectedCity.value.riddles_by_level[form.level] || 0;
-    return Math.max(1, count);
+    if (!selectedCity.value?.riddles_by_level) return 1;
+    return Math.max(1, selectedCity.value.riddles_by_level[form.level] || 0);
 });
 
-// Ajuster automatiquement riddles_count si dépasse le max du niveau
 const adjustRiddlesCount = () => {
-    if (form.riddles_count > maxRiddlesForLevel.value) {
-        form.riddles_count = maxRiddlesForLevel.value;
-    }
+    if (form.riddles_count > maxRiddlesForLevel.value) form.riddles_count = maxRiddlesForLevel.value;
 };
+
+const stepProgress = computed(() => Math.round(((currentStep.value - 1) / (TOTAL_STEPS - 1)) * 100));
+
+const STEP_LABELS = ['Ville', 'Niveau', 'Joueurs', 'Mode', 'Résumé'];
+
+const canGoNext = computed(() => {
+    if (currentStep.value === 1 && isCityWithoutRiddles.value) return false;
+    if (currentStep.value === 3 && form.type === 'challengers' && !form.challenger_mode) return false;
+    return true;
+});
 
 const nextStep = () => {
-    if (isCityWithoutRiddles.value && currentStep.value === 1) return;
-    
-    if (currentStep.value < 5) {
-        currentStep.value++;
-    } else {
-        startSubmission();
-    }
+    if (!canGoNext.value) return;
+    if (currentStep.value < TOTAL_STEPS) { currentStep.value++; }
+    else { startSubmission(); }
 };
-
-const prevStep = () => {
-    if (currentStep.value > 1) {
-        currentStep.value--;
-    }
-};
+const prevStep = () => { if (currentStep.value > 1) currentStep.value--; };
 
 const startSubmission = () => {
     isLocating.value = true;
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                form.user_lat = position.coords.latitude;
-                form.user_lng = position.coords.longitude;
-                submitForm();
-            },
-            (error) => {
-                // Silencieux si l'utilisateur a refusé, sinon on prévient gentiment
-                if (error.code !== 1) {
-                    console.warn("Erreur Géolocalisation, utilisation de coordonnées par défaut (Cotonou).", error);
-                }
-                form.user_lat = 6.3650;
-                form.user_lng = 2.4183;
-                submitForm();
-            },
+            (pos) => { form.user_lat = pos.coords.latitude; form.user_lng = pos.coords.longitude; submitForm(); },
+            () => { form.user_lat = 6.3650; form.user_lng = 2.4183; submitForm(); },
             { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
         );
     } else {
-        form.user_lat = 6.3650;
-        form.user_lng = 2.4183;
-        submitForm();
+        form.user_lat = 6.3650; form.user_lng = 2.4183; submitForm();
     }
 };
 
 const submitForm = () => {
     if (form.type === 'solo') form.max_joueurs = 1;
-    
     router.post(route('game.create'), form, {
         onFinish: () => { isLocating.value = false; }
     });
@@ -126,294 +84,258 @@ const submitForm = () => {
 </script>
 
 <template>
-    <AuthenticatedLayout title="Configuration de la Partie">
-        <div class="min-h-screen text-white font-sans py-8 px-4 relative">
-            <div class="max-w-3xl mx-auto">
-                
-                <!-- Header (Arcade Mode Creation Title) -->
-                <div class="text-center mb-10">
-                    <span class="inline-block text-[#87d74e] text-glow-green font-black text-xs tracking-[0.4em] uppercase italic mb-3">Nouvel itinéraire</span>
-                    <h1 class="text-4xl lg:text-7xl font-black tracking-tighter uppercase italic leading-none text-white mb-6 flex items-center justify-center gap-4">
-                        CRÉATION DE <span class="text-[#87d74e] text-glow-green">PARTIE</span>
-                        <MapIcon :size="48" class="text-[#87d74e]" />
-                    </h1>
-                    <p class="text-gray-400 font-semibold text-sm">Configurez les paramètres de votre prochaine aventure</p>
+    <AuthenticatedLayout title="Nouvelle Partie">
+        <div class="max-w-xl mx-auto animate-fade-in-up">
+
+            <!-- Header compact -->
+            <div class="text-center mb-4 sm:mb-6">
+                <span class="text-[9px] font-black tracking-[0.3em] text-[#87d74e] uppercase italic">Nouvel itinéraire</span>
+                <h1 class="text-2xl sm:text-3xl font-black uppercase italic tracking-tighter text-white mt-1">
+                    CRÉER UNE <span class="text-[#87d74e] text-glow-green">PARTIE</span>
+                </h1>
+            </div>
+
+            <!-- Stepper compact -->
+            <div class="mb-4 sm:mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Étape {{ currentStep }} / {{ TOTAL_STEPS }}</span>
+                    <span class="text-[9px] font-black text-[#87d74e] uppercase tracking-widest">{{ STEP_LABELS[currentStep - 1] }}</span>
+                </div>
+                <div class="h-2 bg-[#10101c] rounded-full border border-[#2a245c] overflow-hidden">
+                    <div :style="`width: ${stepProgress}%`"
+                         class="h-full bg-gradient-to-r from-[#7751de] to-[#87d74e] rounded-full transition-all duration-400 ease-out shadow-[0_0_8px_rgba(135,215,78,0.4)]"></div>
+                </div>
+                <!-- Dots -->
+                <div class="flex justify-between mt-2 px-0.5">
+                    <div v-for="i in TOTAL_STEPS" :key="i"
+                        class="w-2 h-2 rounded-full transition-all duration-300"
+                        :class="i <= currentStep ? 'bg-[#87d74e] shadow-[0_0_6px_rgba(135,215,78,0.6)]' : 'bg-[#2a245c]'">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Erreur backend -->
+            <div v-if="$page.props.errors.error || $page.props.flash?.error"
+                class="mb-4 bg-red-500/10 border border-red-500/30 p-3 rounded-2xl text-red-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                <AlertTriangle :size="14" />
+                <span>{{ $page.props.errors.error || $page.props.flash?.error }}</span>
+            </div>
+
+            <!-- Panel principal -->
+            <div class="panel-glass p-4 sm:p-6 border border-[#2a245c] relative overflow-hidden">
+
+                <!-- STEP 1 : Ville -->
+                <div v-show="currentStep === 1" class="animate-fade-in-up space-y-3">
+                    <div class="mb-3">
+                        <h2 class="text-lg font-black uppercase italic tracking-tighter">Dans quelle ville ?</h2>
+                        <p class="text-gray-400 text-[11px] font-medium mt-0.5">Choisissez une zone d'exploration active.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <label v-for="city in cities" :key="city.id"
+                            class="cursor-pointer relative rounded-xl border-2 p-3.5 flex items-center gap-3 transition-all duration-150 bg-[#10101c]"
+                            :class="form.location_id === city.id
+                                ? 'border-[#87d74e] bg-[#87d74e]/5 shadow-[0_0_12px_rgba(135,215,78,0.15)]'
+                                : 'border-[#2a245c] hover:border-gray-500 active:scale-98'">
+                            <input type="radio" v-model="form.location_id" :value="city.id" class="sr-only">
+                            <CheckCircle2 v-if="form.location_id === city.id" :size="16" class="text-[#87d74e] shrink-0" />
+                            <Landmark v-else :size="16" class="text-gray-500 shrink-0" />
+                            <div class="flex-1 min-w-0">
+                                <p class="font-black text-sm truncate" :class="form.location_id === city.id ? 'text-[#87d74e]' : 'text-white'">{{ city.name }}</p>
+                                <p class="text-[8px] font-black uppercase tracking-widest"
+                                    :class="city.riddles_count > 0 ? 'text-[#87d74e]/70' : 'text-red-500'">
+                                    {{ city.riddles_count }} énigme{{ city.riddles_count > 1 ? 's' : '' }}
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div v-if="isCityWithoutRiddles"
+                        class="p-4 rounded-xl border-2 border-dashed border-red-500/30 bg-red-500/5 text-center">
+                        <p class="text-xs font-black text-red-400 uppercase tracking-wider">Pas d'énigmes pour {{ selectedCity?.name }}</p>
+                        <p class="text-[10px] text-gray-400 mt-1">Des énigmes seront bientôt disponibles !</p>
+                    </div>
                 </div>
 
-                <!-- Stepper Progress Tracker (Vibrant Neon Line - 5 Steps) -->
-                <div class="mb-12 relative px-4">
-                    <div class="overflow-hidden h-3 mb-4 text-xs flex rounded-full bg-[#10101c] border border-[#2a245c]">
-                        <div :style="`width: ${((currentStep - 1) / 4) * 100}%`" 
-                             class="shadow-[0_0_15px_rgba(135,215,78,0.5)] rounded-full bg-[#87d74e] transition-all duration-500 ease-out"></div>
+                <!-- STEP 2 : Niveau & Nb d'énigmes -->
+                <div v-show="currentStep === 2" class="animate-fade-in-up space-y-5">
+                    <div class="mb-3">
+                        <h2 class="text-lg font-black uppercase italic tracking-tighter">Niveau de défi</h2>
+                        <p class="text-gray-400 text-[11px] font-medium mt-0.5">Choisissez la difficulté et le nombre d'énigmes.</p>
                     </div>
-                    <div class="flex justify-between text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
-                        <span :class="currentStep >= 1 ? 'text-[#87d74e] text-glow-green' : ''">1. Ville</span>
-                        <span :class="currentStep >= 2 ? 'text-[#87d74e] text-glow-green' : ''">2. Niveau</span>
-                        <span :class="currentStep >= 3 ? 'text-[#87d74e] text-glow-green' : ''">3. Joueurs</span>
-                        <span :class="currentStep >= 4 ? 'text-[#87d74e] text-glow-green' : ''">4. Mode</span>
-                        <span :class="currentStep >= 5 ? 'text-[#87d74e] text-glow-green' : ''">5. Résumé</span>
+
+                    <!-- Difficulté -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <label v-for="lvl in ['facile', 'intermediaire', 'difficile']" :key="lvl"
+                            class="cursor-pointer rounded-xl border-2 p-3 text-center transition-all duration-150 bg-[#10101c]"
+                            :class="form.level === lvl ? 'border-[#87d74e] bg-[#87d74e]/5' : 'border-[#2a245c] hover:border-gray-500'"
+                            @click="form.level = lvl; adjustRiddlesCount();">
+                            <input type="radio" v-model="form.level" :value="lvl" class="sr-only">
+                            <span class="block text-[10px] font-black capitalize tracking-wider" :class="form.level === lvl ? 'text-[#87d74e]' : 'text-gray-400'">
+                                {{ lvl === 'facile' ? '😊' : lvl === 'intermediaire' ? '🔥' : '💀' }}
+                            </span>
+                            <span class="block text-[9px] font-black capitalize" :class="form.level === lvl ? 'text-[#87d74e]' : 'text-gray-400'">{{ lvl }}</span>
+                            <span v-if="selectedCity?.riddles_by_level" class="text-[7px] text-gray-500 font-bold">
+                                {{ selectedCity.riddles_by_level[lvl] || 0 }} dispo
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Nombre d'énigmes -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre d'énigmes</span>
+                            <span class="text-[9px] font-bold text-gray-500">Max: {{ maxRiddlesForLevel }}</span>
+                        </div>
+                        <input type="range" v-model="form.riddles_count" min="1" :max="maxRiddlesForLevel"
+                            class="w-full accent-[#87d74e] h-2 rounded-full cursor-pointer bg-[#10101c]">
+                        <div class="text-center text-4xl font-black text-[#87d74e] text-glow-green tabular-nums">{{ form.riddles_count }}</div>
                     </div>
                 </div>
 
-                <!-- Backend Errors (Neon Red Warning Bar) -->
-                <div v-if="$page.props.errors.error || $page.props.flash?.error" class="mb-6 bg-red-500/10 border border-red-500/30 p-5 rounded-3xl text-red-500 text-xs font-black uppercase tracking-widest animate-fade-in flex items-center gap-3">
-                    <AlertTriangle :size="18" />
-                    <span>{{ $page.props.errors.error || $page.props.flash?.error }}</span>
+                <!-- STEP 3 : Mode joueurs -->
+                <div v-show="currentStep === 3" class="animate-fade-in-up space-y-4">
+                    <div class="mb-3">
+                        <h2 class="text-lg font-black uppercase italic tracking-tighter">Avec qui jouer ?</h2>
+                        <p class="text-gray-400 text-[11px] font-medium mt-0.5">Solo, coopération ou versus.</p>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <label v-for="mode in [
+                            { id: 'solo',         label: 'Solo',  emoji: '🧍', color: 'text-blue-400',    active: 'border-blue-400 bg-blue-400/5' },
+                            { id: 'participants', label: 'Coop',  emoji: '🤝', color: 'text-[#87d74e]',   active: 'border-[#87d74e] bg-[#87d74e]/5' },
+                            { id: 'challengers', label: 'Versus', emoji: '⚔️', color: 'text-red-400',     active: 'border-red-400 bg-red-400/5' }
+                        ]" :key="mode.id"
+                            class="relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all cursor-pointer"
+                            :class="form.type === mode.id ? mode.active : 'bg-[#10101c] border-[#2a245c] hover:border-gray-500'">
+                            <input type="radio" v-model="form.type" :value="mode.id" class="sr-only">
+                            <span class="text-2xl mb-1">{{ mode.emoji }}</span>
+                            <span class="text-[9px] font-black uppercase tracking-widest" :class="form.type === mode.id ? mode.color : 'text-gray-500'">
+                                {{ mode.label }}
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Participation admin -->
+                    <div v-if="$page.props.auth.user.is_admin"
+                        class="p-3 rounded-xl bg-[#10101c] border border-[#2a245c] flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-black text-white">Participer à la partie ?</p>
+                            <p class="text-[9px] text-gray-500">Sinon, tu partages juste le lien.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" v-model="form.participate" class="sr-only peer">
+                            <div class="w-11 h-6 bg-[#2a245c] rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#87d74e]"></div>
+                        </label>
+                    </div>
+
+                    <!-- Max joueurs (si multijoueur) -->
+                    <div v-if="form.type !== 'solo'" class="space-y-2">
+                        <label class="text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre de joueurs max</label>
+                        <input type="number" v-model="form.max_joueurs" min="2" max="50"
+                            class="w-full bg-[#10101c] border border-[#2a245c] rounded-xl p-3 text-white font-black text-center text-lg focus:ring-1 focus:ring-[#87d74e] focus:border-[#87d74e] focus:outline-none">
+                    </div>
+
+                    <!-- Options challengers -->
+                    <div v-if="form.type === 'challengers'" class="space-y-2 p-4 bg-[#10101c] rounded-xl border border-[#2a245c]">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-[#7751de] mb-2">Mode de compétition</p>
+                        <label v-for="opt in [
+                            { val: 'reponse_par_membre', label: '⚡ Rapide', sub: 'Le premier répond bloque l\'énigme.' },
+                            { val: 'reponse_par_tous', label: '🎯 Complet', sub: 'Chacun doit répondre individuellement.' }
+                        ]" :key="opt.val"
+                            class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                            :class="form.challenger_mode === opt.val ? 'bg-[#7751de]/10 border border-[#7751de]/30' : 'hover:bg-[#1c183a]'">
+                            <input type="radio" v-model="form.challenger_mode" :value="opt.val" class="text-[#7751de] focus:ring-0">
+                            <div>
+                                <p class="text-xs font-black text-white">{{ opt.label }}</p>
+                                <p class="text-[9px] text-gray-500 font-bold">{{ opt.sub }}</p>
+                            </div>
+                        </label>
+                        <p v-if="form.type === 'challengers' && !form.challenger_mode" class="text-[9px] text-red-400 font-black mt-1">Choisissez un mode de compétition.</p>
+                    </div>
                 </div>
 
-                <!-- Main Form Card Console -->
-                <div class="panel-glass p-6 sm:p-8 border border-[#2a245c] relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-[#87d74e]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                    
-                    <!-- STEP 1: Choisir une Ville (First Choice Screen) -->
-                    <div v-show="currentStep === 1" class="space-y-8 animate-fade-in-up">
-                        <div class="space-y-2 border-b border-[#2a245c] pb-4 mb-6">
-                            <h2 class="text-2xl font-black uppercase italic tracking-tighter">Dans quelle ville voulez-vous jouer ?</h2>
-                            <p class="text-gray-400 text-xs font-medium">Sélectionnez une zone d'exploration active au Bénin.</p>
-                        </div>
-                        
-                        <!-- City interactive card grid -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <label v-for="city in cities" :key="city.id" 
-                                   class="cursor-pointer relative rounded-2xl border-2 p-5 flex flex-col justify-between transition-all duration-200 bg-[#10101c] border-[#2a245c] min-h-[120px] hover-lift"
-                                   :class="form.location_id === city.id ? 'border-[#87d74e] bg-[#87d74e]/5 shadow-[0_0_15px_rgba(135,215,78,0.15)]' : 'hover:border-gray-500'">
-                                <input type="radio" v-model="form.location_id" :value="city.id" class="sr-only">
-                                
-                                <div class="flex items-center gap-3">
-                                    <CheckCircle2 v-if="form.location_id === city.id" class="w-5 h-5 text-[#87d74e]" />
-                                    <div class="space-y-1">
-                                        <span class="text-[8px] font-black uppercase tracking-widest text-gray-500 block">{{ city.departement }}</span>
-                                        <span class="font-black text-lg uppercase tracking-tight" :class="form.location_id === city.id ? 'text-[#87d74e] text-glow-green' : 'text-white'">{{ city.name }}</span>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4 flex items-center justify-between">
-                                    <div class="flex items-center gap-3">
-                                        <div class="h-10 w-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/5 transition-all">
-                                            <Landmark class="w-5 h-5 text-[#87d74e]" />
-                                        </div>
-                                        <span class="text-[9px] font-black uppercase tracking-widest py-1 px-3 rounded-full"
-                                              :class="city.riddles_count > 0 ? 'bg-[#87d74e]/10 text-[#87d74e]' : 'bg-red-500/10 text-red-500'">
-                                            {{ city.riddles_count }} {{ city.riddles_count > 1 ? 'énigmes' : 'énigme' }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-
-                        <!-- Warnings if chosen city has 0 riddles (Custom requested alert block) -->
-                        <div v-if="isCityWithoutRiddles" class="p-6 rounded-2xl border-2 border-dashed border-red-500/30 bg-red-500/5 text-center space-y-3 animate-fade-in">
-                            <Landmark class="w-12 h-12 mx-auto text-red-500" />
-                            <h4 class="text-sm font-black uppercase text-red-500 tracking-wider">Énigmes inexistantes pour {{ selectedCity?.name }}</h4>
-                            <p class="text-xs font-bold text-gray-400 leading-relaxed max-w-md mx-auto">
-                                Il n'y a pas encore d'énigmes enregistrées pour cette ville. Soyez sans crainte, la mairie se hâtera de remplir des énigmes palpitantes pour cette ville très bientôt !
-                            </p>
-                        </div>
+                <!-- STEP 4 : Mode de résolution -->
+                <div v-show="currentStep === 4" class="animate-fade-in-up space-y-3">
+                    <div class="mb-3">
+                        <h2 class="text-lg font-black uppercase italic tracking-tighter">Comment résoudre ?</h2>
+                        <p class="text-gray-400 text-[11px] font-medium mt-0.5">Physique, gaming ou les deux.</p>
                     </div>
 
-                    <!-- STEP 2: Niveau & Difficulté -->
-                    <div v-show="currentStep === 2" class="space-y-8 animate-fade-in-up">
-                        <div class="space-y-2 border-b border-[#2a245c] pb-4 mb-6">
-                            <h2 class="text-2xl font-black uppercase italic tracking-tighter">Paramètres de défi</h2>
-                            <p class="text-gray-400 text-xs font-medium">Ajustez la complexité et la quantité de vos énigmes.</p>
-                        </div>
-                        
-                        <!-- Difficulty Grid Selections -->
-                        <div class="space-y-4">
-                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Niveau de Difficulté</label>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <label v-for="lvl in ['facile', 'intermediaire', 'difficile']" :key="lvl" 
-                                    class="cursor-pointer relative rounded-2xl border-2 p-5 text-center flex flex-col items-center justify-center transition-all duration-200 bg-[#10101c] border-[#2a245c]"
-                                    :class="form.level === lvl ? 'border-[#87d74e] bg-[#87d74e]/5 shadow-[0_0_15px_rgba(135,215,78,0.15)]' : 'hover:border-gray-500'"
-                                    @click="form.level = lvl; adjustRiddlesCount();">
-                                    <input type="radio" v-model="form.level" :value="lvl" class="sr-only">
-                                    <span class="capitalize font-black text-sm tracking-wider" :class="form.level === lvl ? 'text-[#87d74e]' : 'text-gray-400'">{{ lvl }}</span>
-                                    <span class="text-[8px] font-bold text-gray-500 mt-2" v-if="selectedCity && selectedCity.riddles_by_level">
-                                        {{ selectedCity.riddles_by_level[lvl] || 0 }} dispo
-                                    </span>
-                                </label>
+                    <div class="space-y-2.5">
+                        <label v-for="gm in [
+                            { val: 'decouverte', emoji: '🗺️', label: 'Découverte', sub: 'Rendez-vous sur place, validation GPS.', color: '#ffc628', border: 'border-[#ffc628] bg-[#ffc628]/5' },
+                            { val: 'gaming',     emoji: '🎮', label: 'Gaming',     sub: 'Répondez depuis chez vous, pas de GPS.',  color: '#4769b0', border: 'border-[#4769b0] bg-[#4769b0]/5' },
+                            { val: 'mixte',      emoji: '⚡', label: 'Mixte',      sub: 'Choix libre à chaque énigme.',             color: '#87d74e', border: 'border-[#87d74e] bg-[#87d74e]/5' },
+                        ]" :key="gm.val"
+                            class="cursor-pointer rounded-xl border-2 p-4 flex items-center gap-4 transition-all duration-150 bg-[#10101c]"
+                            :class="form.global_mode === gm.val ? gm.border : 'border-[#2a245c] hover:border-gray-500'"
+                            @click="form.global_mode = gm.val">
+                            <input type="radio" v-model="form.global_mode" :value="gm.val" class="sr-only">
+                            <span class="text-2xl shrink-0">{{ gm.emoji }}</span>
+                            <div>
+                                <p class="font-black text-sm" :style="form.global_mode === gm.val ? `color: ${gm.color}` : 'color: white'">{{ gm.label }}</p>
+                                <p class="text-[9px] text-gray-500 font-bold mt-0.5">{{ gm.sub }}</p>
                             </div>
-                        </div>
+                            <CheckCircle2 v-if="form.global_mode === gm.val" :size="16" class="ml-auto shrink-0" :style="`color: ${gm.color}`" />
+                        </label>
+                    </div>
+                </div>
 
-                        <!-- Riddle Count Range Slider -->
-                        <div class="space-y-4 pt-4">
-                            <div class="flex justify-between items-center">
-                                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Nombre d'énigmes</label>
-                                <span class="text-[9px] font-bold text-gray-500" v-if="selectedCity">
-                                    Max pour niveau {{ form.level }} : {{ maxRiddlesForLevel }}
-                                </span>
-                            </div>
-                            <input type="range" v-model="form.riddles_count" min="1" :max="maxRiddlesForLevel" class="w-full accent-[#87d74e] bg-[#10101c] h-2 rounded-full cursor-pointer">
-                            <div class="text-center text-4xl font-black text-[#87d74e] text-glow-green tabular-nums">{{ form.riddles_count }}</div>
-                        </div>
+                <!-- STEP 5 : Résumé -->
+                <div v-show="currentStep === 5" class="animate-fade-in-up space-y-4">
+                    <div class="mb-3">
+                        <h2 class="text-lg font-black uppercase italic tracking-tighter">Tout est prêt ! 🚀</h2>
+                        <p class="text-gray-400 text-[11px] font-medium mt-0.5">Vérifie ta configuration avant de lancer.</p>
                     </div>
 
-                    <!-- STEP 3: Multijoueur -->
-                    <div v-show="currentStep === 3" class="space-y-8 animate-fade-in-up">
-                        <div class="space-y-2 border-b border-[#2a245c] pb-4 mb-6">
-                            <h2 class="text-2xl font-black uppercase italic tracking-tighter">Avec qui jouer ?</h2>
-                            <p class="text-gray-400 text-xs font-medium">Choisissez entre une quête solo ou une partie partagée.</p>
+                    <div class="bg-[#10101c] rounded-xl border border-[#2a245c] divide-y divide-[#2a245c]">
+                        <div class="flex justify-between items-center px-4 py-3">
+                            <span class="text-[10px] font-black uppercase text-gray-500">Ville</span>
+                            <span class="font-black text-sm text-[#ffc628] uppercase">{{ selectedCity?.name }}</span>
                         </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <label v-for="mode in [
-                                { id: 'solo', label: 'Solo', icon: User, color: 'text-blue-400' },
-                                { id: 'participants', label: 'Coop', icon: Users, color: 'text-[#87d74e]' },
-                                { id: 'challengers', label: 'Versus', icon: Swords, color: 'text-red-400' }
-                            ]" :key="mode.id"
-                                class="relative flex flex-col items-center justify-center p-8 rounded-3xl border-2 transition-all cursor-pointer group"
-                                :class="form.type === mode.id ? 'bg-[#87d74e]/10 border-[#87d74e] shadow-[0_0_20px_rgba(135,215,78,0.2)]' : 'bg-[#10101c] border-white/5 hover:border-white/10'">
-                                
-                                <input type="radio" v-model="form.type" :value="mode.id" class="sr-only">
-                                <component :is="mode.icon" :size="48" class="mb-4" :class="form.type === mode.id ? 'text-[#87d74e]' : 'text-gray-500'" />
-                                <span class="text-xs font-black uppercase tracking-[0.2em]" :class="form.type === mode.id ? 'text-white' : 'text-gray-500'">{{ mode.label }}</span>
-                            </label>
+                        <div class="flex justify-between items-center px-4 py-3">
+                            <span class="text-[10px] font-black uppercase text-gray-500">Niveau</span>
+                            <span class="font-black text-sm capitalize text-white">{{ form.level }}</span>
                         </div>
-
-                        <!-- Choix de participation (Optionnel pour l'Admin) -->
-                        <div v-if="$page.props.auth.user.is_admin" class="p-6 rounded-2xl bg-[#10101c] border border-[#2a245c] animate-fade-in">
-                            <div class="flex items-center justify-between">
-                                <div class="space-y-1">
-                                    <span class="block font-black text-sm text-white uppercase tracking-tight">Souhaitez-vous participer à la partie ?</span>
-                                    <span class="text-[10px] text-gray-500 font-bold">Si non, vous ne prendrez pas de place dans la session et pourrez simplement partager le lien.</span>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" v-model="form.participate" class="sr-only peer">
-                                    <div class="w-14 h-7 bg-[#2a245c] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#87d74e]"></div>
-                                </label>
-                            </div>
+                        <div class="flex justify-between items-center px-4 py-3">
+                            <span class="text-[10px] font-black uppercase text-gray-500">Énigmes</span>
+                            <span class="font-black text-sm text-[#87d74e] text-glow-green">{{ form.riddles_count }}</span>
                         </div>
-
-                        <!-- Co-op Max Players Widget -->
-                        <div v-if="form.type !== 'solo'" class="space-y-3 pt-4 animate-fade-in">
-                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Nombre de Joueurs (Max)</label>
-                            <input type="number" v-model="form.max_joueurs" min="2" max="50" class="w-full bg-[#10101c] border border-[#2a245c] rounded-2xl p-4.5 text-white font-black focus:ring-1 focus:ring-[#87d74e] focus:border-[#87d74e] focus:ring-0">
+                        <div class="flex justify-between items-center px-4 py-3">
+                            <span class="text-[10px] font-black uppercase text-gray-500">Mode</span>
+                            <span class="font-black text-sm capitalize text-white">
+                                {{ form.type }} <span v-if="form.type !== 'solo'" class="text-gray-400 font-normal">({{ form.max_joueurs }} max)</span>
+                            </span>
                         </div>
-
-                        <!-- Challengers Settings Widget -->
-                        <div v-if="form.type === 'challengers'" class="space-y-4 animate-fade-in p-5 bg-[#10101c] rounded-2xl border border-[#2a245c]">
-                            <label class="block text-[10px] font-black uppercase tracking-widest text-[#7751de] mb-2">Options de Compétition</label>
-                            
-                            <label class="flex items-center gap-4 p-3.5 rounded-xl hover:bg-[#1c183a] cursor-pointer transition-colors border border-transparent"
-                                   :class="form.challenger_mode === 'reponse_par_membre' ? 'border-[#7751de]/20 bg-[#7751de]/5' : ''">
-                                <input type="radio" v-model="form.challenger_mode" value="reponse_par_membre" class="text-[#7751de] focus:ring-0 bg-[#10101c] border-[#2a245c]">
-                                <div>
-                                    <span class="block font-black text-sm text-white">Rapide (Le premier rafle tout)</span>
-                                    <span class="text-[10px] text-gray-500 font-bold">L'énigme se verrouille dès qu'un joueur trouve la réponse.</span>
-                                </div>
-                            </label>
-                            
-                            <label class="flex items-center gap-4 p-3.5 rounded-xl hover:bg-[#1c183a] cursor-pointer transition-colors border border-transparent"
-                                   :class="form.challenger_mode === 'reponse_par_tous' ? 'border-[#7751de]/20 bg-[#7751de]/5' : ''">
-                                <input type="radio" v-model="form.challenger_mode" value="reponse_par_tous" class="text-[#7751de] focus:ring-0 bg-[#10101c] border-[#2a245c]">
-                                <div>
-                                    <span class="block font-black text-sm text-white">Complet (Chacun pour soi)</span>
-                                    <span class="text-[10px] text-gray-500 font-bold">Tout le monde doit répondre individuellement.</span>
-                                </div>
-                            </label>
+                        <div class="flex justify-between items-center px-4 py-3">
+                            <span class="text-[10px] font-black uppercase text-gray-500">Résolution</span>
+                            <span class="font-black text-sm capitalize text-white">{{ form.global_mode }}</span>
                         </div>
                     </div>
+                </div>
 
-                    <!-- STEP 4: Mode de Jeu -->
-                    <div v-show="currentStep === 4" class="space-y-8 animate-fade-in-up">
-                        <div class="space-y-2 border-b border-[#2a245c] pb-4 mb-6">
-                            <h2 class="text-2xl font-black uppercase italic tracking-tighter">Comment résoudre ?</h2>
-                            <p class="text-gray-400 text-xs font-medium">Déterminez le protocole de localisation physique.</p>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 gap-4">
-                            <!-- Découverte Mode -->
-                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex items-center gap-5 transition-all bg-[#10101c] border-[#2a245c]"
-                                :class="form.global_mode === 'decouverte' ? 'border-[#ffc628] bg-[#ffc628]/5 shadow-[0_0_15px_rgba(255,198,40,0.15)]' : 'hover:border-gray-500'">
-                                <input type="radio" v-model="form.global_mode" value="decouverte" class="sr-only">
-                                <MapIcon :size="32" class="text-[#ffc628]" />
-                                <div>
-                                    <span class="block font-black text-base" :class="form.global_mode === 'decouverte' ? 'text-[#ffc628]' : 'text-white'">Découverte & Voyage</span>
-                                    <span class="text-[10px] text-gray-500 font-bold block mt-1">Marchez vers le lieu réel et validez par coordonnées GPS en extérieur.</span>
-                                </div>
-                            </label>
+                <!-- Navigation -->
+                <div class="mt-5 flex justify-between items-center pt-4 border-t border-[#2a245c]">
+                    <button v-if="currentStep > 1" @click="prevStep"
+                        class="btn-3d btn-3d-purple px-5 py-3 text-[10px] shadow-[0_4px_0_#4d2f94]">
+                        <span class="flex items-center gap-1.5"><ChevronLeft :size="14" /> Retour</span>
+                    </button>
+                    <div v-else></div>
 
-                            <!-- Gaming Mode -->
-                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex items-center gap-5 transition-all bg-[#10101c] border-[#2a245c]"
-                                :class="form.global_mode === 'gaming' ? 'border-[#4769b0] bg-[#4769b0]/5 shadow-[0_0_15px_rgba(71,105,176,0.15)]' : 'hover:border-gray-500'">
-                                <input type="radio" v-model="form.global_mode" value="gaming" class="sr-only">
-                                <Gamepad2 :size="32" class="text-[#4769b0]" />
-                                <div>
-                                    <span class="block font-black text-base" :class="form.global_mode === 'gaming' ? 'text-[#4769b0]' : 'text-white'">Pure Gaming (Canapé)</span>
-                                    <span class="text-[10px] text-gray-500 font-bold block mt-1">Trouvez le nom exact du lieu géographique depuis chez vous.</span>
-                                </div>
-                            </label>
-
-                            <!-- Mixte Mode -->
-                            <label class="cursor-pointer rounded-2xl border-2 p-5 flex items-center gap-5 transition-all bg-[#10101c] border-[#2a245c]"
-                                :class="form.global_mode === 'mixte' ? 'border-[#87d74e] bg-[#87d74e]/5 shadow-[0_0_15px_rgba(135,215,78,0.15)]' : 'hover:border-gray-500'">
-                                <input type="radio" v-model="form.global_mode" value="mixte" class="sr-only">
-                                <Layers :size="32" class="text-[#87d74e]" />
-                                <div>
-                                    <span class="block font-black text-base" :class="form.global_mode === 'mixte' ? 'text-[#87d74e]' : 'text-white'">Les Deux (Choix libre)</span>
-                                    <span class="text-[10px] text-gray-500 font-bold block mt-1">Le jeu vous demandera de choisir à chaque énigme selon vos envies.</span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- STEP 5: Résumé -->
-                    <div v-show="currentStep === 5" class="space-y-8 animate-fade-in-up">
-                        <div class="space-y-2 border-b border-[#2a245c] pb-4 mb-6">
-                            <h2 class="text-2xl font-black uppercase italic tracking-tighter">Prêt pour l'exploration ?</h2>
-                            <p class="text-gray-400 text-xs font-medium">Passez en revue votre configuration avant le démarrage.</p>
-                        </div>
-                        
-                        <div class="bg-[#10101c] p-6 rounded-2xl border border-[#2a245c] space-y-4">
-                            <div class="flex justify-between border-b border-[#2a245c] pb-3">
-                                <span class="text-xs font-black uppercase text-gray-500">Ville d'exploration</span>
-                                <span class="font-black text-sm text-[#ffc628] uppercase">{{ selectedCity?.name }}</span>
-                            </div>
-                            <div class="flex justify-between border-b border-[#2a245c] pb-3">
-                                <span class="text-xs font-black uppercase text-gray-500">Niveau de difficulté</span>
-                                <span class="font-black text-sm capitalize text-white">{{ form.level }}</span>
-                            </div>
-                            <div class="flex justify-between border-b border-[#2a245c] pb-3">
-                                <span class="text-xs font-black uppercase text-gray-500">Nombre d'énigmes</span>
-                                <span class="font-black text-sm text-[#87d74e] text-glow-green">{{ form.riddles_count }}</span>
-                            </div>
-                            <div class="flex justify-between border-b border-[#2a245c] pb-3">
-                                <span class="text-xs font-black uppercase text-gray-500">Type d'aventure</span>
-                                <span class="font-black text-sm capitalize" :class="{
-                                    'text-[#87d74e]': form.type === 'solo',
-                                    'text-[#4769b0]': form.type === 'participants',
-                                    'text-[#7751de]': form.type === 'challengers'
-                                }">{{ form.type }} <span v-if="form.type !== 'solo'">({{ form.max_joueurs }} max)</span></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-xs font-black uppercase text-gray-500">Mode de Résolution</span>
-                                <span class="font-black text-sm capitalize text-white">{{ form.global_mode }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Navigation Action Buttons (Bouncy 3D Controls) -->
-                    <div class="mt-10 flex justify-between pt-6 border-t border-[#2a245c] relative z-10">
-                        <button v-if="currentStep > 1" @click="prevStep" 
-                            class="px-6 py-3.5 btn-3d btn-3d-purple text-xs font-black uppercase shadow-[0_4px_0_#4d2f94]">
-                            Retour
-                        </button>
-                        <div v-else></div>
-
-                        <button @click="nextStep" :disabled="isLocating || (currentStep === 1 && isCityWithoutRiddles)"
-                            class="px-8 py-3.5 btn-3d btn-3d-green text-xs font-black uppercase disabled:opacity-30 disabled:scale-100 disabled:pointer-events-none flex items-center gap-3"
-                            :class="currentStep === 5 ? 'shadow-[0_5px_0_#5d9933]' : 'shadow-[0_5px_0_#5d9933]'">
-                            <template v-if="isLocating">
-                                LOCALISATION...
-                                <MapPin :size="16" class="animate-bounce" />
-                            </template>
-                            <template v-else>
-                                {{ currentStep === 5 ? 'FORGER LA PARTIE' : 'Suivant' }}
-                                <Rocket v-if="currentStep === 5" :size="16" />
-                                <ChevronRight v-else :size="16" />
-                            </template>
-                        </button>
-                    </div>
+                    <button @click="nextStep"
+                        :disabled="isLocating || !canGoNext"
+                        class="btn-3d btn-3d-green px-6 py-3 text-[10px] shadow-[0_4px_0_#5d9933] disabled:opacity-30 flex items-center gap-2">
+                        <template v-if="isLocating">
+                            <MapPin :size="14" class="animate-bounce" /> GPS...
+                        </template>
+                        <template v-else-if="currentStep === TOTAL_STEPS">
+                            <Rocket :size="14" /> FORGER LA PARTIE
+                        </template>
+                        <template v-else>
+                            Suivant <ChevronRight :size="14" />
+                        </template>
+                    </button>
                 </div>
             </div>
         </div>
@@ -422,25 +344,10 @@ const submitForm = () => {
 
 <style scoped>
 .animate-fade-in-up {
-    animation: fadeInUp 0.4s ease-out forwards;
+    animation: fadeInUp 0.3s ease-out forwards;
 }
-.animate-fade-in {
-    animation: fadeIn 0.3s ease-out forwards;
-}
-
 @keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 </style>
