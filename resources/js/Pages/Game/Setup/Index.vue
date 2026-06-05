@@ -13,7 +13,7 @@ const props = defineProps({
 });
 
 const currentStep = ref(1);
-const isLocating = ref(false); 
+const isLocating = ref(false);
 const TOTAL_STEPS = 5;
 
 const form = reactive({

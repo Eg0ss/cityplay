@@ -50,7 +50,11 @@ Route::middleware(['auth', 'verified'])->prefix('game')->name('game.')->group(fu
     Route::get('/play/{token}', [GameEngineController::class, 'play'])->name('play');
     Route::post('/play/lock',   [GameEngineController::class, 'lockRiddle'])->name('lock');
     Route::post('/play/record', [GameEngineController::class, 'recordResult'])->name('record');
+    Route::post('/play/pause',  [GameEngineController::class, 'pauseSession'])->name('pause');   // ← ajouter
+    Route::get('/resume/{token}', [GameEngineController::class, 'resumeSession'])->name('resume'); // ← ajouter
     Route::get('/riddle/{riddleId}/hints', [GameEngineController::class, 'getHints'])->name('hints');
+    Route::post('/play/pause',       [GameEngineController::class, 'pauseSession'])->name('pause');
+    Route::get('/resume/{token}',    [GameEngineController::class, 'resumeSession'])->name('resume');
 });
 
 // Admin Routes
