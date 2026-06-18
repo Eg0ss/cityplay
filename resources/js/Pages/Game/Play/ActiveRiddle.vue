@@ -361,7 +361,6 @@ const recordAttempt = (status, pts) => {
             return true;
         } catch (e) {
             console.error('Erreur backend:', e);
-            toast.add({ severity: 'error', summary: 'Erreur serveur', detail: 'Tentative non enregistrée.', life: 4000 });
             return false;
         } finally {
             isLoading.value = false;
